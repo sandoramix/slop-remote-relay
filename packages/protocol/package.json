@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "vectors": "PRINT_VECTORS=1 npx tsx src/vectors.ts"
+    "vectors": "tsx src/vectors.ts"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
