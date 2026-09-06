@@ -88,10 +88,14 @@ class LanServerTransport(
             setPort(port)
         }
         val listener = object : NsdManager.RegistrationListener {
-            override fun onServiceRegistered(info: NsdServiceInfo) =
+            // Block bodies, not expression bodies: Log.i/Log.w return Int and the
+            // listener methods are void.
+            override fun onServiceRegistered(info: NsdServiceInfo) {
                 Log.i(TAG, "advertised as ${info.serviceName}")
-            override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) =
+            }
+            override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) {
                 Log.w(TAG, "mDNS registration failed: $code")
+            }
             override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
             override fun onUnregistrationFailed(info: NsdServiceInfo, code: Int) = Unit
         }
