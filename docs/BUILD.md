@@ -3,27 +3,36 @@
 Lo scheletro è coerente ma non è mai stato compilato. Questi sono i buchi noti,
 in ordine di lavoro.
 
-## Fase 0 — Receiver Android: farlo compilare
+## Fase 0 — Receiver Android: farlo compilare — FATTA
 
-Mancano risorse referenziate dal codice:
+`./gradlew assembleDebug` e `./gradlew test` passano (3 test, 0 fallimenti).
 
-- `res/drawable/ic_relay.xml` — icona della notifica persistente, referenziata da
-  `RelayForegroundService.buildNotification`. Basta un vector drawable monocromo.
-- `res/mipmap-*/ic_launcher` — referenziata dal manifest.
-- `res/values/themes.xml` con `Theme.Relay` — referenziato dal manifest.
-  `MainActivity` estende `Activity` (non AppCompat), quindi va bene un tema di
-  sistema come parent.
-- Gradle wrapper: `gradlew`, `gradlew.bat`, `gradle/wrapper/gradle-wrapper.jar`,
-  `gradle/wrapper/gradle-wrapper.properties`. Generabili con
-  `gradle wrapper --gradle-version 8.9` se hai Gradle installato, altrimenti
-  copiali da un progetto Android esistente.
+Risorse aggiunte:
 
-Problema noto nel manifest: `xmlns:tools` è dichiarato sull'elemento
-`uses-permission` di QUERY_ALL_PACKAGES anziché sull'elemento `<manifest>`. È XML
-valido ma va spostato in cima per pulizia.
+- `res/drawable/ic_relay.xml` — vector monocromo per la notifica persistente.
+- `res/drawable/ic_launcher_foreground.xml`, `res/mipmap-anydpi-v26/ic_launcher.xml`
+  e `res/values/colors.xml` — icona adattiva. Con `minSdk = 26` non serve la
+  scala di PNG per densità: `anydpi-v26` copre ogni dispositivo in grado di
+  installare l'app.
+- `res/values/themes.xml` con `Theme.Relay`, parent
+  `@android:style/Theme.Material.Light.DarkActionBar`. Il parent di piattaforma
+  è obbligato: `MainActivity` estende `Activity`, e un parent AppCompat farebbe
+  crashare `setContentView`.
+- Gradle wrapper alla **8.11.1**, non alla 8.9 suggerita prima: la 8.9 in cache
+  era un download interrotto, la 8.11.1 era già estratta. AGP 8.7.2 richiede
+  Gradle ≥ 8.9, quindi va bene.
+- `local.properties` con `sdk.dir`, non versionato.
+- `xmlns:tools` spostato sull'elemento `<manifest>`.
 
-Verifica della fase: `./gradlew assembleDebug` e `./gradlew test` (il secondo
-esegue `CodecTest`, che è la rete di sicurezza sul protocollo).
+Un errore di compilazione che qui non era previsto: in `LanServerTransport` due
+override di `NsdManager.RegistrationListener` avevano corpo a espressione,
+`override fun onServiceRegistered(info) = Log.i(...)`. `Log.i` ritorna `Int`, i
+metodi del listener sono `void`, e Kotlin rifiuta l'override. Risolto passando al
+corpo a blocco.
+
+Ambiente verificato su questa macchina: JDK 17 via `JAVA_HOME`, platform
+`android-35`, build-tools `35.0.0`, licenze SDK accettate. Il compilatore Kotlin
+non emette warning.
 
 ## Fase 1 — Controller: il progetto nativo non esiste
 
