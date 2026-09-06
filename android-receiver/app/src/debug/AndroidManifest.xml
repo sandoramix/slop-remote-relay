@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only.
+
+  The relay path dials out over WebSocket, and Android has blocked cleartext
+  since API 28. In release that is exactly right: a relay is a machine on the
+  public internet and must be wss://. But a relay running on a laptop during
+  development is ws://, and without this the receiver refuses to dial it with
+  "CLEARTEXT communication not permitted by network security policy" and then
+  redials forever.
+
+  This does not affect the LAN transport. That one is an inbound server, and the
+  policy only governs connections the app opens.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:usesCleartextTraffic="true" />
+</manifest>
