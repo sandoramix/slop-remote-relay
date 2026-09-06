@@ -1,0 +1,49 @@
+{
+  "com.google.android.youtube": {
+    "fullscreen": [
+      {
+        "kind": "node",
+        "descriptions": ["schermo intero", "full screen", "fullscreen"],
+        "viewIds": [":id/fullscreen_button"],
+        "climb": 2
+      },
+      { "kind": "reveal", "x": 0.5, "y": 0.28, "settleMs": 450 },
+      {
+        "kind": "node",
+        "descriptions": ["schermo intero", "full screen", "fullscreen"],
+        "viewIds": [":id/fullscreen_button"],
+        "climb": 2
+      },
+      { "kind": "rotate", "landscape": true }
+    ],
+    "seek": [{ "kind": "mediasession" }, { "kind": "tap", "x": 0.85, "y": 0.5, "double": true }]
+  },
+
+  "com.brave.browser": {
+    "fullscreen": [
+      {
+        "kind": "node",
+        "descriptions": ["schermo intero", "full screen", "enter full screen"],
+        "climb": 3
+      },
+      { "kind": "reveal", "x": 0.5, "y": 0.35, "settleMs": 500 },
+      {
+        "kind": "node",
+        "descriptions": ["schermo intero", "full screen", "enter full screen"],
+        "climb": 3
+      },
+      { "kind": "rotate", "landscape": true }
+    ],
+    "seek": [{ "kind": "mediasession" }, { "kind": "tap", "x": 0.85, "y": 0.5, "double": true }]
+  },
+
+  "com.android.chrome": {
+    "fullscreen": [
+      { "kind": "node", "descriptions": ["schermo intero", "full screen"], "climb": 3 },
+      { "kind": "reveal", "x": 0.5, "y": 0.35, "settleMs": 500 },
+      { "kind": "node", "descriptions": ["schermo intero", "full screen"], "climb": 3 },
+      { "kind": "rotate", "landscape": true }
+    ],
+    "seek": [{ "kind": "mediasession" }]
+  }
+}

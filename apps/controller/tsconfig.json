@@ -1,0 +1,9 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "paths": { "@relay/protocol": ["../../packages/protocol/src"] },
+    "baseUrl": "."
+  },
+  "include": ["src", "index.js"]
+}

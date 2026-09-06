@@ -1,0 +1,9 @@
+{
+  "name": "remote-relay",
+  "private": true,
+  "workspaces": ["packages/*", "apps/controller", "apps/relay"],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "relay": "npm run dev -w @relay/server"
+  }
+}
