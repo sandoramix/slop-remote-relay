@@ -2,8 +2,18 @@
   "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
     "strict": true,
+    "baseUrl": ".",
     "paths": { "@relay/protocol": ["../../packages/protocol/src"] },
-    "baseUrl": "."
+
+    // The React Native base config lists ["react-native", "jest"]. There is no
+    // Jest here and no @types/jest to find, so tsc fails on the type reference
+    // before it looks at a single source file.
+    "types": ["react-native"],
+
+    // The base config sets module to es2015, which predates dynamic import();
+    // both transports load their native library lazily so that a build without
+    // it still runs. Metro handles esnext modules natively.
+    "module": "esnext"
   },
   "include": ["src", "index.js"]
 }

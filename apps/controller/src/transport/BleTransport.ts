@@ -97,7 +97,9 @@ export class BleTransport implements Transport {
     const seq = frame[0];
     const index = frame[1];
     const total = frame[2];
-    const body = frame.subarray(3).toString('utf8');
+    // slice, not subarray: the `buffer` shim types subarray as Uint8Array's,
+    // which has a zero-argument toString. slice is declared to return a Buffer.
+    const body = frame.slice(3).toString('utf8');
 
     const parts = this.inbound.get(seq) ?? new Array<string>(total).fill('');
     parts[index] = body;

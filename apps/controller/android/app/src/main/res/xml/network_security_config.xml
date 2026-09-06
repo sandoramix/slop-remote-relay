@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The LAN transport speaks ws:// to the receiver, and Android has blocked
+  cleartext by default since API 28.
+
+  This cannot be narrowed the obvious way. A domain-config matches hostnames,
+  not CIDR ranges, and the receiver's address is whatever NSD resolved a second
+  ago — 192.168.1.x today, 10.0.0.x on someone else's router. There is no way to
+  write "the local subnet" here.
+
+  What makes it acceptable is that cleartext is not the same as unauthenticated:
+  every frame in both directions carries an HMAC-SHA256 over its canonical form,
+  keyed by the pairing code, and the receiver drops anything that fails to verify
+  or falls outside a 30 second skew window. An eavesdropper on the LAN can read
+  that someone pressed +30s; they cannot forge one.
+
+  The relay path is separate and must stay wss://.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
