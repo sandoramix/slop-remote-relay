@@ -5,10 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.relay.receiver.R
 import com.relay.receiver.actions.AccessibilityExecutor
 import com.relay.receiver.actions.ExecutorChain
@@ -176,6 +178,29 @@ class RelayForegroundService : Service() {
     }
 
     companion object {
+        /**
+         * Starts the relay if the platform currently allows it, and says so
+         * rather than dying if it does not.
+         *
+         * Android 12 onwards refuses startForegroundService from the background
+         * and throws ForegroundServiceStartNotAllowedException, which is fatal
+         * where it is called from. The call sites that matter are all allowed —
+         * an activity in the foreground, and BOOT_COMPLETED, which carries its
+         * own exemption — but MY_PACKAGE_REPLACED does not, and neither does a
+         * process the system revived on its own. Those cases have to degrade to
+         * "the user opens the app once", not to a crash loop.
+         */
+        fun ensureRunning(context: Context) {
+            try {
+                ContextCompat.startForegroundService(
+                    context,
+                    Intent(context, RelayForegroundService::class.java),
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot start the relay from here yet", e)
+            }
+        }
+
         const val PREFS = "relay.config"
         const val KEY_PAIR_CODE = "pairCode"
         const val KEY_RELAY_URL = "relayUrl"

@@ -10,7 +10,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import com.relay.receiver.service.RelayForegroundService
 
 /**
@@ -56,10 +55,7 @@ class MainActivity : Activity() {
                 .putString(RelayForegroundService.KEY_RELAY_URL, relayInput.text.toString().trim())
                 .apply()
             stopService(Intent(this, RelayForegroundService::class.java))
-            ContextCompat.startForegroundService(
-                this,
-                Intent(this, RelayForegroundService::class.java),
-            )
+            RelayForegroundService.ensureRunning(this)
             refreshStatus()
         })
 
@@ -88,6 +84,10 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // This is the one place a foreground service start is always permitted,
+        // so it is where the relay is brought back after the system has killed
+        // it or refused an earlier start from the background.
+        RelayForegroundService.ensureRunning(this)
         refreshStatus()
     }
 

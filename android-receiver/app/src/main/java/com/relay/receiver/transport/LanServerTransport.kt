@@ -85,7 +85,11 @@ class LanServerTransport(
         val info = NsdServiceInfo().apply {
             serviceName = "RelayReceiver"
             serviceType = "_relayctl._tcp"
-            setPort(port)
+            // Qualified on purpose. Inside apply, `this` is the NsdServiceInfo,
+            // so a bare `port` reads its own getPort() — which is 0 — and
+            // registerService throws "Invalid port number" on a background
+            // thread, taking the whole process down with it.
+            setPort(this@LanServerTransport.port)
         }
         val listener = object : NsdManager.RegistrationListener {
             // Block bodies, not expression bodies: Log.i/Log.w return Int and the
@@ -99,9 +103,15 @@ class LanServerTransport(
             override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
             override fun onUnregistrationFailed(info: NsdServiceInfo, code: Int) = Unit
         }
-        manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
-        nsd = manager
-        registration = listener
+        // Discovery is a convenience: the controller can always be given an
+        // address by hand. Losing it must not take down the WebSocket server,
+        // and this runs on Java-WebSocket's selector thread where an escaping
+        // exception is fatal to the process.
+        runCatching {
+            manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
+            nsd = manager
+            registration = listener
+        }.onFailure { Log.w(TAG, "mDNS advertisement unavailable", it) }
     }
 
     private companion object { const val TAG = "LanServerTransport" }

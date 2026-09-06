@@ -28,8 +28,14 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!--
+      No android:name. The Application subclass existed only to start the
+      foreground service, which Android 12+ refuses from the background: the
+      process is created for a broadcast, Application.onCreate fires, and
+      ForegroundServiceStartNotAllowedException takes the app down before it
+      has done anything. MainActivity and BootReceiver own that job now.
+    -->
     <application
-        android:name=".RelayApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
