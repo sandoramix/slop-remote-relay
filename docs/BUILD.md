@@ -34,39 +34,44 @@ Ambiente verificato su questa macchina: JDK 17 via `JAVA_HOME`, platform
 `android-35`, build-tools `35.0.0`, licenze SDK accettate. Il compilatore Kotlin
 non emette warning.
 
-## Fase 1 — Controller: il progetto nativo non esiste
+## Fase 1 — Controller: il progetto nativo — FATTA (iOS a parte)
 
-`apps/controller` contiene solo `src/`, `index.js`, `app.json` e i file di
-progetto. Mancano le cartelle native `android/` e `ios/`, senza le quali React
-Native non compila.
+`android/` e `ios/` generati da `@react-native-community/template` 0.76.5,
+rinominati in RelayController, package `com.relay.controller`.
 
-Approccio consigliato: inizializzare un progetto RN pulito in una cartella
-temporanea con la stessa versione indicata in `package.json`, poi copiare le
-cartelle `android/` e `ios/` generate dentro `apps/controller`, allineando
-`applicationId` e nome dell'app a quelli in `app.json`.
+Verificato: `npm run typecheck` pulito su tutti e tre i workspace,
+`./gradlew assembleDebug` e `assembleRelease`, e l'app avviata su emulatore che
+mostra la schermata impostazioni. iOS esiste come progetto ma non è mai stato
+aperto: serve un Mac.
 
-Poi vanno completate le configurazioni native delle librerie:
-- `react-native-ble-plx` richiede permessi Bluetooth nel manifest Android e le
-  chiavi `NSBluetoothAlwaysUsageDescription` in Info.plist su iOS.
-- `react-native-zeroconf` richiede su iOS `NSLocalNetworkUsageDescription` e
-  `NSBonjourServices` con `_relayctl._tcp`, altrimenti la discovery fallisce in
-  silenzio.
-- Android 9+ blocca il traffico in chiaro: il WebSocket LAN è `ws://`, quindi
-  serve una network security config che consenta il cleartext verso la rete
-  locale, oppure `usesCleartextTraffic` limitato.
+Le trappole del monorepo, tutte risolte: il plugin Gradle di React Native e
+`reactNativeDir`/`codegenDir`/`cliFile` puntano alla radice del repo, non alla
+cartella dell'app; `hermesCommand` idem, altrimenti il bundling release muore
+con "Couldn't determine Hermesc location"; `metro.config.js` guarda la radice e
+fissa la risoluzione, o Metro trova due copie di react. `@relay/protocol` ha ora
+un campo `react-native` che punta a `src/index.ts`, così l'app consuma il
+workspace come sorgente senza che nessuno debba ricordarsi di compilarlo.
 
-Verifica della fase: `npm run typecheck -w @relay/controller` pulito e l'app che
-si avvia sul dispositivo mostrando la schermata impostazioni.
+La nuova architettura è spenta di proposito: `react-native-ble-plx` e
+`react-native-zeroconf` sono moduli legacy senza codegen.
 
-## Fase 2 — Primo collaudo end-to-end, solo LAN + seek
+## Fase 2 — Primo collaudo end-to-end, solo LAN + seek — A METÀ
 
-Accoppia i due dispositivi con lo stesso codice, concedi sul receiver solo
-l'accesso alle notifiche (non ancora l'accessibilità), apri YouTube sul target e
-prova `+30s`.
+La parte di protocollo è verificata su emulatore, senza secondo telefono, con
+`npm run smoke`. Vedi `docs/STATO.md` per la procedura completa. Ultimo esito:
+21 controlli verdi, 10 su LAN, 10 sul relay, più il mirror dello stesso comando
+sui due percorsi che produce un solo ack.
 
-Cosa deve succedere: l'ack torna con `executedBy: "mediasession"` e il salto è
-esatto. Se il salto è di qualche centinaio di millisecondi fuori, il colpevole è
-l'estrapolazione della posizione in `MediaSessionExecutor.currentPositionMs`.
+Il controller vero, installato sullo stesso emulatore e puntato a `127.0.0.1`,
+chiude il giro: la dashboard passa a "Wi-Fi locale", legge il pacchetto in primo
+piano dal receiver, e un `+30s` torna con "Fatto via accessibility".
+
+**Cosa manca ed è il punto della fase.** Un emulatore non ha nessuna sessione
+media, quindi la catena cade sempre sui tap e il percorso principale — seek
+esatto via MediaSession — non è mai stato eseguito. `currentPositionMs` e la sua
+estrapolazione sono codice mai girato. Serve un telefono con YouTube in
+riproduzione e il solo accesso alle notifiche concesso. Attendersi
+`executedBy: "mediasession"` e un salto esatto.
 
 Se non torna nulla, nell'ordine: il receiver è raggiungibile sulla porta 47821?
 La firma verifica (cerca `signature` nei log)? Il notification listener risulta
@@ -81,6 +86,10 @@ risalita avvenga dopo ~15 secondi, non subito.
 
 Con `mirrorCritical` attivo, controlla nei log del receiver che i duplicati
 vengano scartati dalla `DedupeWindow`: un `+30s` non deve mai saltare 60.
+
+Questa metà è già verde senza hardware: `npm run smoke -- <codice> --relay <url>`
+apre LAN e relay insieme, manda lo stesso envelope sui due percorsi e pretende
+un solo ack. Resta da provare sul campo la risalita dopo ~15 secondi.
 
 ## Fase 4 — Fullscreen
 

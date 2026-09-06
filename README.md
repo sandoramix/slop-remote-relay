@@ -93,6 +93,7 @@ generico `signature` nei log, che non dice nulla su cosa sia cambiato.
 
 ## Documentazione
 
+- `docs/STATO.md` — dove siamo adesso, cosa è verificato e come riprodurlo
 - `docs/BUILD.md` — cosa manca per compilare, fase per fase
 - `docs/ARCHITETTURA.md` — perché il receiver è nativo e il controller no
 - `docs/DISTRIBUZIONE.md` — Restricted Settings, Advanced Protection Mode, verifica sviluppatore

@@ -18,6 +18,13 @@ react {
     codegenDir = file("../../../../node_modules/@react-native/codegen")
     cliFile = file("../../../../node_modules/react-native/cli.js")
 
+    /* Hermes */
+    //   The plugin's fallback for hermesc is a path relative to `root`, and
+    //   apps/controller has no node_modules of its own — release bundling then
+    //   dies with "Couldn't determine Hermesc location". %OS-BIN% is left in
+    //   place for the plugin to substitute, so this stays cross-platform.
+    hermesCommand = new File(rootDir, "../../../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc").canonicalPath
+
     /* Variants */
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. By default is just 'debug'.
