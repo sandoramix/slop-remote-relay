@@ -1,9 +1,21 @@
 {
   "name": "remote-relay",
   "private": true,
-  "workspaces": ["packages/*", "apps/controller", "apps/relay"],
+  "workspaces": [
+    "packages/*",
+    "apps/controller",
+    "apps/relay"
+  ],
   "scripts": {
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "relay": "npm run dev -w @relay/server"
+    "relay": "npm run dev -w @relay/server",
+    "vectors": "npm run vectors -w @relay/protocol",
+    "smoke": "tsx tools/receiver-smoke.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "ws": "^8.18.0"
   }
 }
