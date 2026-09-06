@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0B3D62</color>
+    <color name="relay_primary">#0B3D62</color>
+    <color name="relay_primary_dark">#07293F</color>
+    <color name="relay_accent">#2E9BD6</color>
+</resources>

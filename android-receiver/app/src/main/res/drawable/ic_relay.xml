@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Status bar icon for the persistent foreground notification.
+
+  Monochrome white on transparent by contract: the system tints small icons
+  itself and silently renders anything else as a grey blob. Shape is the relay
+  mark — a node broadcasting outwards — kept legible at 24dp.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Emitting node. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7.5A2,2 0 1,0 12,11.5A2,2 0 1,0 12,7.5Z" />
+
+    <!-- Mast. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11,10.5h2v9.5h-2z" />
+
+    <!-- Inner wavefront. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M8.1,5.6A6,6 0 0,0 8.1,13.4" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M15.9,5.6A6,6 0 0,1 15.9,13.4" />
+
+    <!-- Outer wavefront. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M5.2,3.1A9.5,9.5 0 0,0 5.2,15.9" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M18.8,3.1A9.5,9.5 0 0,1 18.8,15.9" />
+</vector>

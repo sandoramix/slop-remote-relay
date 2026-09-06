@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MainActivity extends android.app.Activity, not AppCompatActivity, so the
+  parent has to be a platform theme: an AppCompat parent would crash on
+  setContentView. There is no AndroidX appcompat dependency and the onboarding
+  screen does not need one.
+-->
+<resources>
+    <style name="Theme.Relay" parent="@android:style/Theme.Material.Light.DarkActionBar">
+        <item name="android:colorPrimary">@color/relay_primary</item>
+        <item name="android:colorPrimaryDark">@color/relay_primary_dark</item>
+        <item name="android:colorAccent">@color/relay_accent</item>
+    </style>
+</resources>
