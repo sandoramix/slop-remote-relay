@@ -72,6 +72,17 @@ class RecipeEngine(context: Context) {
         Step.Rotate(landscape = true),
     )
 
+    /**
+     * Same for seek. MediaSession first as a statement of preference — the
+     * executor chain has already tried it by the time anything reads this — then
+     * the coarse double-tap on the right-hand side of the player, which is the
+     * gesture YouTube and every web player built on it share.
+     */
+    fun fallbackSeek(): List<Step> = listOf(
+        Step.MediaSession,
+        Step.Tap(x = 0.85f, y = 0.5f, double = true),
+    )
+
     // ------------------------------------------------------------------ loading
 
     private fun loadBundled(context: Context): Map<String, Recipe> = try {

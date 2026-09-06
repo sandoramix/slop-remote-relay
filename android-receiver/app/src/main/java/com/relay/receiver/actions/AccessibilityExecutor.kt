@@ -37,8 +37,17 @@ class AccessibilityExecutor(
 
     override fun isAvailable(): Boolean = service != null
 
-    override fun canHandle(command: Command): Boolean =
-        service != null && command is Command.Fullscreen
+    /**
+     * Seek is included on purpose. MediaSession sits ahead of this executor in
+     * the chain and will take any seek it can, so the only way to reach here with
+     * one is that notification access is missing or the app publishes no session
+     * — which is exactly when the coarse tap fallback earns its keep. Leaving
+     * seek out made ExecutorChain answer "no executor available" instead.
+     */
+    override fun canHandle(command: Command): Boolean = when (command) {
+        is Command.Fullscreen, is Command.Seek -> service != null
+        else -> false
+    }
 
     override suspend fun execute(command: Command): ExecResult = when (command) {
         is Command.Fullscreen -> enterFullscreen()
@@ -185,22 +194,63 @@ class AccessibilityExecutor(
 
     /**
      * Last-resort seek: YouTube and most web players jump a fixed 10s per
-     * double-tap, so a 30s request becomes three taps. Imprecise by nature, only
-     * reached when the media session route is unavailable.
+     * double-tap, so a 30s request becomes three taps. Imprecise by nature, and
+     * only reached when the media session route is unavailable.
+     *
+     * Driven by the `seek` list in recipes.json, same as fullscreen — that list
+     * had no reader until now. A recipe's tap coordinate describes the forward
+     * side of the player; a rewind mirrors it across the screen rather than
+     * needing a second entry, which is why no recipe carries one.
      */
     private suspend fun seekByTapping(deltaMs: Long): ExecResult {
         val svc = service ?: return ExecResult.notHandled(id)
-        val taps = (kotlin.math.abs(deltaMs) / 10_000L).toInt().coerceIn(1, 12)
-        val x = if (deltaMs >= 0) 0.85f else 0.15f
+        val pkg = svc.foregroundPackage
+        val steps = recipes.forPackage(pkg)?.seek?.takeIf { it.isNotEmpty() }
+            ?: recipes.fallbackSeek()
 
-        repeat(taps) {
-            tap(svc, x, 0.5f, double = true)
-            delay(320)
+        for (step in steps) {
+            when (step) {
+                // MediaSession is ahead of this executor in the chain, so by the
+                // time we are here it has already declined. The step stays in the
+                // recipe as a record of the preferred order.
+                is Step.MediaSession -> Unit
+
+                is Step.Tap -> {
+                    val taps = (kotlin.math.abs(deltaMs) / SEEK_STEP_MS).toInt().coerceIn(1, 12)
+                    val x = if (deltaMs >= 0) step.x else 1f - step.x
+                    repeat(taps) {
+                        tap(svc, x, step.y, step.double)
+                        delay(TAP_SETTLE_MS)
+                    }
+                    return ExecResult.ok(
+                        id,
+                        "$taps tap da ${SEEK_STEP_MS / 1000}s su ${pkg ?: "?"} (impreciso)",
+                    )
+                }
+
+                is Step.Reveal -> {
+                    tap(svc, step.x, step.y, double = false)
+                    delay(step.settleMs)
+                }
+
+                is Step.Node -> if (clickMatchingNode(svc, step)) {
+                    return ExecResult.ok(id, "Node on ${pkg ?: "?"}")
+                }
+
+                // Rotating does nothing for playback position.
+                is Step.Rotate -> Unit
+            }
         }
-        return ExecResult.ok(id, "$taps double-tap da 10s (impreciso)")
+        return ExecResult.fail(id, "Nessuna strategia di seek su ${pkg ?: "app sconosciuta"}")
     }
 
     private companion object {
         const val TAG = "AccessibilityExecutor"
+
+        /** What one double-tap is worth in YouTube and in every web player we target. */
+        const val SEEK_STEP_MS = 10_000L
+
+        /** Long enough for the player to register the previous tap as a separate one. */
+        const val TAP_SETTLE_MS = 320L
     }
 }
