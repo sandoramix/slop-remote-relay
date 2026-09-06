@@ -1,0 +1,7 @@
+# Default: let Git normalise text in the repo, check out native on Windows.
+* text=auto
+
+# The wrapper script is run by sh; CRLF makes it unusable on Linux and macOS.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.jar binary
