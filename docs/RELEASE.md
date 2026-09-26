@@ -53,6 +53,26 @@ Without the secrets the workflow generates a throwaway key for that run and says
 so in the release notes: the APKs install, but cannot update an install from a
 different run.
 
+## Building signed APKs locally
+
+Keep the keystore and a properties file outside the repo, e.g.
+`~/.relay/relay-release.jks` and `~/.relay/signing.properties`:
+
+```properties
+storeFile=$HOME/.relay/relay-release.jks
+storePassword=…
+keyAlias=relay
+keyPassword=…
+```
+
+```bash
+tools/build-signed.sh v0.2.0        # → out/relay-{receiver,controller}-v0.2.0.apk
+```
+
+The script passes the same injected signing properties as the workflow, never
+prints the secrets, and ends by printing each APK's version and signing
+certificate — compare the SHA-256 with `keytool -list -v -keystore … -alias relay`.
+
 ## Before tagging
 
 ```bash
