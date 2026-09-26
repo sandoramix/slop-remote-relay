@@ -20,7 +20,15 @@ import {
   WebRtcTransport,
   type PeerConnectionFactory,
 } from '@relay/transports';
-import type { ActionResult, BrowserTransportId, ExtensionSettings, PathState, RuntimeMessage } from './shared';
+import {
+  type ActionResult,
+  type BrowserTransportId,
+  type ExtensionSettings,
+  type LastCommand,
+  PRESENCE_WINDOW_MS,
+  type ReceiverState,
+  type RuntimeMessage,
+} from './shared';
 
 /**
  * The receiver runtime. Lives in an offscreen document because it needs
@@ -45,10 +53,15 @@ interface Live {
   transport: Transport;
   up: boolean;
   stopped: boolean;
+  lastFrameAt: number | null;
 }
 
 let live = new Map<BrowserTransportId, Live>();
 const dedupe = new DedupeWindow(DEDUPE_WINDOW_SIZE);
+let configured = false;
+let lastFrameAt: number | null = null;
+let lastPath: BrowserTransportId | null = null;
+let lastCommand: LastCommand | null = null;
 
 async function envelope<T extends Envelope>(body: Omit<T, 'v' | 'id' | 'ts'> & { ts?: number }): Promise<string> {
   const env = { v: PROTOCOL_VERSION, id: crypto.randomUUID(), ts: Date.now(), ...body } as T;
@@ -62,6 +75,16 @@ async function handle(raw: string, from: BrowserTransportId): Promise<void> {
     return;
   }
   const env = result.envelope;
+  // Presence: only a frame that verified counts, so nobody without the pair
+  // code can make the popup say a phone is connected.
+  const now = Date.now();
+  const wasPresent = phonePresent();
+  lastFrameAt = now;
+  lastPath = from;
+  const entry = live.get(from);
+  if (entry) entry.lastFrameAt = now;
+  if (!wasPresent) publishState();
+
   const reply = (frame: string) => live.get(from)?.transport.send(frame).catch(() => undefined);
 
   if (env.type === 'ping') {
@@ -86,6 +109,9 @@ async function handle(raw: string, from: BrowserTransportId): Promise<void> {
   } catch (error) {
     res = { ok: false, detail: (error as Error).message };
   }
+  const { op, ...args } = cmd as { op: string } & LastCommand['args'];
+  lastCommand = { op, args, ok: res.ok, detail: res.detail, at: Date.now(), path: from };
+  publishState();
   await reply(
     await envelope<AckEnvelope>({
       type: 'ack',
@@ -98,10 +124,32 @@ async function handle(raw: string, from: BrowserTransportId): Promise<void> {
   );
 }
 
-function publishPaths(): void {
-  const paths: PathState[] = [...live.entries()].map(([id, l]) => ({ id, up: l.up }));
-  void chrome.runtime.sendMessage({ to: 'any', type: 'paths', paths } satisfies RuntimeMessage).catch(() => undefined);
+const phonePresent = () => lastFrameAt !== null && Date.now() - lastFrameAt < PRESENCE_WINDOW_MS;
+
+function state(): ReceiverState {
+  return {
+    configured,
+    paths: [...live.entries()].map(([id, l]) => ({ id, up: l.up, lastFrameAt: l.lastFrameAt })),
+    lastFrameAt,
+    lastPath,
+    lastCommand,
+  };
 }
+
+/** Tells the worker (toolbar badge) and an open popup that something changed. */
+function publishState(): void {
+  void chrome.runtime.sendMessage({ to: 'any', type: 'state', state: state() } satisfies RuntimeMessage).catch(() => undefined);
+}
+
+// Presence ends by silence, not by an event: notice when the phone goes quiet.
+let presentBefore = false;
+setInterval(() => {
+  const present = phonePresent();
+  if (present !== presentBefore) {
+    presentBefore = present;
+    publishState();
+  }
+}, 2000);
 
 /** Keeps one path up for as long as it is configured, redialling with backoff. */
 async function run(id: BrowserTransportId, entry: Live): Promise<void> {
@@ -116,19 +164,26 @@ async function run(id: BrowserTransportId, entry: Live): Promise<void> {
               if (state === 'connected') {
                 entry.up = true;
                 attempt = 0;
-                publishPaths();
+                publishState();
               } else if (state === 'failed' || state === 'degraded') {
                 entry.up = false;
-                publishPaths();
+                publishState();
                 reject(new Error(detail ?? state));
               }
             },
+          })
+          // connect() resolving means ready: the WebRTC answerer resolves once
+          // its signalling is up and waits there for the phone to offer.
+          .then(() => {
+            entry.up = true;
+            attempt = 0;
+            publishState();
           })
           .catch(reject);
       });
     } catch (error) {
       entry.up = false;
-      publishPaths();
+      publishState();
       if (entry.stopped) return;
       await entry.transport.close().catch(() => undefined);
       const wait = Math.min(1000 * 2 ** attempt++, 30_000) * (0.5 + Math.random() / 2);
@@ -144,7 +199,10 @@ async function configure(settings: ExtensionSettings): Promise<void> {
     void l.transport.close();
   }
   live = new Map();
-  if (!settings.pairCode) return publishPaths();
+  configured = !!settings.pairCode;
+  lastFrameAt = null;
+  lastPath = null;
+  if (!settings.pairCode) return publishState();
 
   const secret = await sha256Hex(`secret:${settings.pairCode}`);
   const room = (await sha256Hex(`room:${settings.pairCode}`)).slice(0, 24);
@@ -162,11 +220,11 @@ async function configure(settings: ExtensionSettings): Promise<void> {
     if (settings.disabled.includes(id)) continue;
     const transport = make();
     if (!transport) continue;
-    const entry: Live = { transport, up: false, stopped: false };
+    const entry: Live = { transport, up: false, stopped: false, lastFrameAt: null };
     live.set(id, entry);
     void run(id, entry);
   }
-  publishPaths();
+  publishState();
 }
 
 /** Status pushed on every live path, like the Android receiver's status loop. */
@@ -179,7 +237,7 @@ async function broadcast(status: DeviceStatus): Promise<void> {
 chrome.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, respond) => {
   if (msg.to !== 'offscreen') return false;
   if (msg.type === 'configure') void configure(msg.settings).then(() => respond(true));
-  else if (msg.type === 'getPaths') respond([...live.entries()].map(([id, l]) => ({ id, up: l.up })));
+  else if (msg.type === 'getState') respond(state());
   else if (msg.type === 'broadcastStatus') void broadcast(msg.status).then(() => respond(true));
   return true;
 });

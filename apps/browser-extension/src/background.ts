@@ -1,6 +1,15 @@
 import type { Command, DeviceStatus, ExecutorId } from '@relay/protocol';
 import sites from './sites.json';
-import { type ActionResult, type FrameAction, loadSettings, type MediaReport, type RuntimeMessage } from './shared';
+import {
+  type ActionResult,
+  type FrameAction,
+  loadSettings,
+  type MediaReport,
+  PRESENCE_WINDOW_MS,
+  type ReceiverState,
+  type RuntimeMessage,
+  type TargetInfo,
+} from './shared';
 
 /**
  * The service worker: owns the tabs. The offscreen document hands it verified
@@ -85,13 +94,27 @@ async function frameReports(tab: chrome.tabs.Tab): Promise<Target[]> {
  * within those, a playing video beats a paused one and a large one beats a
  * small one. Falls back to the active tab of the focused window.
  */
+/**
+ * The last tab whose content script reported media activity (play, pause,
+ * seek). Catches a muted video in a background tab, which is neither audible
+ * nor active. Kept in session storage: the worker is restarted often.
+ */
+async function lastMediaTab(): Promise<chrome.tabs.Tab | null> {
+  const { lastMediaTabId } = (await chrome.storage.session.get('lastMediaTabId')) as { lastMediaTabId?: number };
+  if (lastMediaTabId === undefined) return null;
+  return chrome.tabs.get(lastMediaTabId).catch(() => null);
+}
+
 async function pickTarget(): Promise<Target | null> {
-  const [audible, active] = await Promise.all([
+  const [audible, active, recent] = await Promise.all([
     chrome.tabs.query({ audible: true }),
     chrome.tabs.query({ active: true }),
+    lastMediaTab(),
   ]);
   const seen = new Set<number>();
-  const tabs = [...audible, ...active].filter((t) => t.id && !seen.has(t.id) && seen.add(t.id));
+  const tabs = [...audible, ...(recent ? [recent] : []), ...active].filter(
+    (t) => t.id && !seen.has(t.id) && seen.add(t.id),
+  );
   const reports = (await Promise.all(tabs.map(frameReports))).flat().filter((t) => t.report.hasMedia);
   if (reports.length === 0) {
     const [focused] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -158,7 +181,7 @@ const GENERIC_FULLSCREEN = `(() => {
 
 async function enterFullscreen(t: Target): Promise<ActionResult & { executedBy?: ExecutorId }> {
   if (!(await hasDebugger())) {
-    return { ok: false, detail: 'Apri il popup di Relay e consenti il permesso "debugger" per lo schermo intero' };
+    return { ok: false, detail: 'Fullscreen needs the debugger permission: open the Relay popup in the browser and allow it' };
   }
   const recipe = siteFor(t.report.url);
   await chrome.tabs.update(t.tabId, { active: true });
@@ -167,7 +190,7 @@ async function enterFullscreen(t: Target): Promise<ActionResult & { executedBy?:
   const how = await withDebugger(t.tabId, async (send) => {
     if (recipe?.fullscreenKey) {
       await pressKey(send, recipe.fullscreenKey);
-      return `tasto "${recipe.fullscreenKey}"`;
+      return `key "${recipe.fullscreenKey}"`;
     }
     const res = (await send('Runtime.evaluate', {
       expression: GENERIC_FULLSCREEN,
@@ -181,7 +204,7 @@ async function enterFullscreen(t: Target): Promise<ActionResult & { executedBy?:
   await sleep(600);
   const after = await pickTarget();
   const ok = !!after?.report.fullscreen;
-  return { ok, executedBy: 'cdp', detail: ok ? how : `${how}: la pagina non è andata a schermo intero` };
+  return { ok, executedBy: 'cdp', detail: ok ? how : `${how}: the page did not go fullscreen` };
 }
 
 async function exitFullscreen(t: Target): Promise<ActionResult & { executedBy?: ExecutorId }> {
@@ -191,7 +214,7 @@ async function exitFullscreen(t: Target): Promise<ActionResult & { executedBy?: 
 
 async function execute(cmd: Command): Promise<ActionResult & { executedBy?: ExecutorId }> {
   const t = await pickTarget();
-  if (!t) return { ok: false, detail: 'Nessuna scheda con un video' };
+  if (!t) return { ok: false, detail: 'No tab with a video' };
 
   switch (cmd.op) {
     case 'playback.seek':
@@ -224,7 +247,7 @@ async function execute(cmd: Command): Promise<ActionResult & { executedBy?: Exec
     case 'fullscreen.exit':
       return exitFullscreen(t);
     default:
-      return { ok: false, detail: `operazione non supportata: ${cmd.op}` };
+      return { ok: false, detail: `unsupported operation: ${cmd.op}` };
   }
 }
 
@@ -249,12 +272,48 @@ async function status(): Promise<DeviceStatus> {
   };
 }
 
+// ------------------------------------------------------------------ badge
+
+/**
+ * A green dot on the toolbar icon while a phone is connected, so the state is
+ * visible without opening the popup; an amber "!" when not set up.
+ */
+function updateBadge(state: ReceiverState): void {
+  const present = state.lastFrameAt !== null && Date.now() - state.lastFrameAt < PRESENCE_WINDOW_MS;
+  if (!state.configured) {
+    void chrome.action.setBadgeText({ text: '!' });
+    void chrome.action.setBadgeBackgroundColor({ color: '#E8B04B' });
+  } else if (present) {
+    void chrome.action.setBadgeText({ text: '●' });
+    void chrome.action.setBadgeBackgroundColor({ color: '#7FA88C' });
+  } else {
+    void chrome.action.setBadgeText({ text: '' });
+  }
+}
+
+async function targetInfo(): Promise<TargetInfo | null> {
+  const t = await pickTarget();
+  if (!t) return null;
+  const tab = await chrome.tabs.get(t.tabId).catch(() => null);
+  return {
+    title: tab?.title || t.report.title || t.report.url,
+    url: tab?.url ?? t.report.url,
+    favIconUrl: tab?.favIconUrl ?? null,
+    hasMedia: t.report.hasMedia,
+    playing: t.report.playing,
+    positionMs: t.report.positionMs,
+    durationMs: t.report.durationMs,
+    fullscreen: t.report.fullscreen,
+  };
+}
+
 // ----------------------------------------------------------------- wiring
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
-chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: true }, _sender, respond) => {
+chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: true }, sender, respond) => {
   if (!('to' in msg)) {
+    if (sender.tab?.id !== undefined) void chrome.storage.session.set({ lastMediaTabId: sender.tab.id });
     // Coalesce bursts (play + seeked + loadedmetadata) into one push.
     if (pushTimer) clearTimeout(pushTimer);
     pushTimer = setTimeout(async () => {
@@ -264,7 +323,15 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: tru
     }, 400);
     return false;
   }
+  if (msg.to === 'any' && msg.type === 'state') {
+    updateBadge(msg.state);
+    return false;
+  }
   if (msg.to !== 'worker') return false;
+  if (msg.type === 'getTarget') {
+    void targetInfo().then(respond);
+    return true;
+  }
   if (msg.type === 'execute') {
     execute(msg.cmd as Command)
       .then(respond)

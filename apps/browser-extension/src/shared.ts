@@ -59,7 +59,45 @@ export interface ActionResult {
 
 export interface PathState {
   id: BrowserTransportId;
+  /** Connected to its rendezvous (relay, broker) or, for WebRTC, the channel is open. */
   up: boolean;
+  /** Last signed frame from the phone on this path, epoch ms. */
+  lastFrameAt: number | null;
+}
+
+/** A phone counts as connected while its signed frames keep arriving. */
+export const PRESENCE_WINDOW_MS = 12_000;
+
+export interface LastCommand {
+  op: string;
+  /** The command's arguments, localized by the popup. */
+  args: { deltaMs?: number; positionMs?: number; play?: boolean; toggle?: boolean };
+  ok: boolean;
+  detail?: string;
+  at: number;
+  path: BrowserTransportId;
+}
+
+/** Everything the popup shows, from the offscreen document. */
+export interface ReceiverState {
+  configured: boolean;
+  paths: PathState[];
+  /** Last signed frame from the phone on any path. */
+  lastFrameAt: number | null;
+  lastPath: BrowserTransportId | null;
+  lastCommand: LastCommand | null;
+}
+
+/** The tab commands would go to right now, from the service worker. */
+export interface TargetInfo {
+  title: string;
+  url: string;
+  favIconUrl: string | null;
+  hasMedia: boolean;
+  playing: boolean;
+  positionMs: number | null;
+  durationMs: number | null;
+  fullscreen: boolean;
 }
 
 export type RuntimeMessage =
@@ -67,11 +105,13 @@ export type RuntimeMessage =
   | { to: 'worker'; type: 'execute'; cmd: unknown }
   // offscreen → worker: build a status snapshot
   | { to: 'worker'; type: 'status' }
-  // offscreen → worker/popup: path health changed
-  | { to: 'any'; type: 'paths'; paths: PathState[] }
+  // offscreen → worker/popup: something the popup shows changed
+  | { to: 'any'; type: 'state'; state: ReceiverState }
+  // popup → worker: the tab commands would go to
+  | { to: 'worker'; type: 'getTarget' }
   // worker → offscreen: (re)start with these settings
   | { to: 'offscreen'; type: 'configure'; settings: ExtensionSettings }
-  // popup → offscreen: current path health
-  | { to: 'offscreen'; type: 'getPaths' }
+  // popup → offscreen: current receiver state
+  | { to: 'offscreen'; type: 'getState' }
   // worker → offscreen: push an unsolicited status event
   | { to: 'offscreen'; type: 'broadcastStatus'; status: DeviceStatus };

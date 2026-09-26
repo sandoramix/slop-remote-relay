@@ -1,74 +1,101 @@
 <!doctype html>
-<html lang="it">
+<html>
 <head>
 <meta charset="utf-8" />
 <title>Relay</title>
 <style>
+  /* Same palette as the controller app (apps/controller/global.css). */
   :root {
-    --bg: #14181e; --card: #1d232b; --secondary: #252c36; --border: #313a46;
+    --bg: #14181e; --card: #1d232b; --secondary: #252c36; --accent: #2c3540; --border: #313a46;
     --fg: #ede9e3; --muted: #8b95a3; --primary: #e8b04b; --ink: #1b2027;
-    --ok: #7fa88c; --bad: #e86868;
+    --ok: #7fa88c; --warn: #e0a05a; --bad: #e86868;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; width: 360px; background: var(--bg); color: var(--fg);
-    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { padding: 16px; display: grid; gap: 14px; }
-  h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
-  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
-  .label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-  input[type=text], input[type=url] { width: 100%; background: var(--secondary); color: var(--fg);
-    border: 1px solid transparent; border-radius: 10px; padding: 9px 10px; font: inherit; }
-  input:focus { outline: none; border-color: var(--primary); }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .row input { flex: 1; }
-  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer;
-    background: var(--secondary); color: var(--fg); }
-  button.primary { background: var(--primary); color: var(--ink); width: 100%; padding: 11px; }
-  button:hover { filter: brightness(1.1); }
-  .paths { display: grid; gap: 6px; }
-  .path { display: flex; align-items: center; gap: 8px; }
-  .path .name { flex: 1; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
-  .dot.up { background: var(--ok); }
-  .hint { font-size: 12px; color: var(--muted); }
-  .warn { font-size: 12px; color: var(--primary); }
-  #qr { background: #fff; border-radius: 12px; padding: 10px; justify-self: center; line-height: 0; }
-  #qr:empty { display: none; }
+  body { margin: 0; width: 380px; background: var(--bg); color: var(--fg);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { padding: 14px; }
+  h1 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+  h2 { margin: 0 0 2px; font-size: 16px; }
+  p { margin: 0; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+  .stack.tight { gap: 2px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; min-width: 0; }
+  .clip { overflow: hidden; }
+  .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  .error { color: var(--bad); }
+  .warn { color: var(--warn); }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 13px; }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  .header { display: flex; align-items: center; gap: 10px; padding: 2px 2px 4px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+
+  .status { display: flex; align-items: center; gap: 12px; }
+  .status.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+  .status.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); }
+  .status-title { font-size: 15px; }
+  .pulse { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--warn); }
+  .pulse.ok { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: ring 2s infinite; }
+  .pulse.bad { background: var(--bad); }
+  .pulse.wait { animation: blink 1.4s ease-in-out infinite; }
+  @keyframes ring { 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+  @keyframes blink { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
+
+  .favicon { border-radius: 4px; flex: none; }
+  .favicon.placeholder { width: 20px; height: 20px; background: var(--secondary); display: inline-block; }
+  .badge { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; font-weight: 700; font-size: 12px; }
+  .badge.ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+  .badge.bad { background: color-mix(in srgb, var(--bad) 20%, transparent); color: var(--bad); }
+  .banner { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+
+  input[type=url], input:not([type]), input[type=text] { width: 100%; background: var(--secondary); color: var(--fg);
+    border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; font: inherit; }
+  input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 8px 12px; cursor: pointer;
+    background: var(--secondary); color: var(--fg); white-space: nowrap; }
+  button:hover:not(:disabled) { filter: brightness(1.12); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--primary); color: var(--ink); padding: 10px 12px; }
+  button.ghost { background: var(--accent); padding: 7px 10px; font-size: 13px; }
+
+  .step { display: flex; gap: 10px; align-items: flex-start; }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: var(--ink);
+    display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; margin-top: 2px; }
+
+  .collapsible { padding: 0; }
+  .collapsible > summary { list-style: none; cursor: pointer; padding: 12px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; }
+  .collapsible > summary::-webkit-details-marker { display: none; }
+  .collapsible > summary::after { content: "▸"; color: var(--muted); transition: transform .15s; }
+  .collapsible[open] > summary::after { transform: rotate(90deg); }
+  .collapsible > div { padding: 0 12px 12px; }
+
+  .qr { background: #fff; border-radius: 12px; padding: 12px; align-self: center; line-height: 0; }
+  code.mono { background: var(--secondary); border-radius: 8px; padding: 7px 9px; overflow: hidden; text-overflow: ellipsis; }
+
+  .paths { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .path { display: flex; align-items: center; gap: 10px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+  .dot.ok { background: var(--ok); } .dot.ready { background: var(--primary); } .dot.wait { background: var(--warn); } .dot.off { background: var(--border); }
+  .switch { appearance: none; width: 34px; height: 20px; border-radius: 999px; background: var(--secondary);
+    position: relative; cursor: pointer; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--fg); transition: transform .15s; }
+  .switch:checked { background: var(--primary); }
+  .switch:checked::after { transform: translateX(14px); }
+
+  .footer { display: flex; justify-content: space-between; padding: 2px 4px 0; }
 </style>
 </head>
 <body>
-<main>
-  <div>
-    <h1>Relay</h1>
-    <div class="sub">Questo browser viene comandato dal telefono</div>
-  </div>
-
-  <section class="card">
-    <div class="label">Accoppiamento</div>
-    <label>Codice
-      <div class="row"><input id="pairCode" type="text" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx" /><button id="generate" title="Genera un codice nuovo">Nuovo</button></div>
-    </label>
-    <label>Server relay<input id="relayUrl" type="url" spellcheck="false" placeholder="wss://relay.esempio.it" /></label>
-    <label>Broker MQTT<input id="mqttUrl" type="url" spellcheck="false" /></label>
-    <div id="weak" class="warn" hidden>Codice corto: chi gestisce il relay o un broker pubblico potrebbe indovinarlo.</div>
-    <button id="save" class="primary">Salva</button>
-    <div id="qr"></div>
-    <div id="qrHint" class="hint" hidden>Inquadra con la fotocamera del telefono per aggiungere questo browser al controller.</div>
-  </section>
-
-  <section class="card">
-    <div class="label">Percorsi</div>
-    <div id="paths" class="paths"></div>
-  </section>
-
-  <section class="card">
-    <div class="label">Schermo intero</div>
-    <div id="dbgState" class="hint"></div>
-    <button id="grantDebugger">Consenti</button>
-  </section>
-</main>
+<div id="app"></div>
 <script type="module" src="popup.js"></script>
 </body>
 </html>

@@ -1,0 +1,209 @@
+{
+  "extName": {
+    "message": "Relay"
+  },
+  "extDescription": {
+    "message": "Comanda dal telefono il video in qualunque scheda: salti, play/pausa, schermo intero."
+  },
+  "subtitle": {
+    "message": "Telecomando per questo browser"
+  },
+  "setupTitle": {
+    "message": "Configura Relay"
+  },
+  "setupIntro": {
+    "message": "Associa questo browser all'app Relay sul telefono. Ci vuole un minuto."
+  },
+  "stepRelay": {
+    "message": "Server relay"
+  },
+  "stepRelayHint": {
+    "message": "L'indirizzo del tuo relay, es. wss://relay.esempio.it. Il browser si raggiunge solo via internet."
+  },
+  "stepCode": {
+    "message": "Codice di accoppiamento"
+  },
+  "stepCodeHint": {
+    "message": "Generato per te. Il telefono deve avere lo stesso codice: il QR lo contiene."
+  },
+  "stepFinish": {
+    "message": "Salva e mostra il QR"
+  },
+  "invalidRelay": {
+    "message": "Deve iniziare con ws:// o wss://"
+  },
+  "connectedTitle": {
+    "message": "Telefono collegato"
+  },
+  "connectedSub": {
+    "message": "via {path} · {ago}"
+  },
+  "waitingTitle": {
+    "message": "In attesa del telefono"
+  },
+  "waitingSub": {
+    "message": "Apri Relay sul telefono e scegli questo browser."
+  },
+  "offlineTitle": {
+    "message": "Nessun percorso raggiungibile"
+  },
+  "offlineSub": {
+    "message": "Controlla l'indirizzo del relay nelle Impostazioni."
+  },
+  "connectingTitle": {
+    "message": "Connessione…"
+  },
+  "nowControlling": {
+    "message": "Stai comandando"
+  },
+  "noTarget": {
+    "message": "Nessuna scheda con un video"
+  },
+  "noTargetHint": {
+    "message": "I comandi vanno alla scheda che riproduce un video, o a quella attiva."
+  },
+  "playing": {
+    "message": "In riproduzione"
+  },
+  "paused": {
+    "message": "In pausa"
+  },
+  "noVideo": {
+    "message": "Nessun video in questa scheda"
+  },
+  "fullscreenOn": {
+    "message": "schermo intero"
+  },
+  "lastCommand": {
+    "message": "Ultimo comando"
+  },
+  "cmdSeek": {
+    "message": "Salto {amount}"
+  },
+  "cmdSeekTo": {
+    "message": "Vai a {time}"
+  },
+  "cmdPlay": {
+    "message": "Riproduci"
+  },
+  "cmdPause": {
+    "message": "Pausa"
+  },
+  "cmdPlayPause": {
+    "message": "Play / pausa"
+  },
+  "cmdFullscreen": {
+    "message": "Schermo intero"
+  },
+  "cmdExitFullscreen": {
+    "message": "Esci da schermo intero"
+  },
+  "justNow": {
+    "message": "adesso"
+  },
+  "secondsAgo": {
+    "message": "{n} s fa"
+  },
+  "minutesAgo": {
+    "message": "{n} min fa"
+  },
+  "hoursAgo": {
+    "message": "{n} h fa"
+  },
+  "fsBannerTitle": {
+    "message": "Consenti lo schermo intero"
+  },
+  "fsBannerBody": {
+    "message": "Una pagina va a schermo intero solo se lo chiede una persona. Relay usa il permesso debugger di Chrome per chiederlo al posto tuo; intanto Chrome mostra per un attimo la barra di debug."
+  },
+  "fsBannerButton": {
+    "message": "Consenti"
+  },
+  "pairSection": {
+    "message": "Associa un telefono"
+  },
+  "pairHint": {
+    "message": "Inquadra con la fotocamera del telefono per aggiungere questo browser a Relay."
+  },
+  "code": {
+    "message": "Codice"
+  },
+  "copy": {
+    "message": "Copia"
+  },
+  "copied": {
+    "message": "Copiato"
+  },
+  "newCode": {
+    "message": "Nuovo codice"
+  },
+  "newCodeConfirm": {
+    "message": "Un nuovo codice scollega i telefoni associati con quello vecchio. Continuare?"
+  },
+  "pathsSection": {
+    "message": "Percorsi"
+  },
+  "path_webrtc": {
+    "message": "WebRTC P2P"
+  },
+  "path_relay": {
+    "message": "Relay WebSocket"
+  },
+  "path_http": {
+    "message": "Relay HTTP"
+  },
+  "path_mqtt": {
+    "message": "MQTT"
+  },
+  "pathInUse": {
+    "message": "in uso dal telefono"
+  },
+  "pathReady": {
+    "message": "pronto"
+  },
+  "pathConnecting": {
+    "message": "connessione…"
+  },
+  "pathOff": {
+    "message": "spento"
+  },
+  "pathNeedsRelay": {
+    "message": "serve l'indirizzo del relay"
+  },
+  "settingsSection": {
+    "message": "Impostazioni"
+  },
+  "relayServer": {
+    "message": "Server relay"
+  },
+  "mqttBroker": {
+    "message": "Broker MQTT"
+  },
+  "save": {
+    "message": "Salva"
+  },
+  "saved": {
+    "message": "Salvato"
+  },
+  "weakCode": {
+    "message": "Codice corto: chi gestisce il relay o un broker pubblico potrebbe indovinarlo."
+  },
+  "version": {
+    "message": "Versione {version}"
+  },
+  "project": {
+    "message": "Progetto su GitHub"
+  },
+  "notNow": {
+    "message": "Non ora"
+  },
+  "fsSetting": {
+    "message": "Controllo schermo intero"
+  },
+  "fsSettingOn": {
+    "message": "Consentito"
+  },
+  "fsSettingOff": {
+    "message": "Non consentito: i comandi di schermo intero falliranno"
+  }
+}

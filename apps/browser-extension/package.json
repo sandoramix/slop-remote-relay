@@ -13,11 +13,12 @@
   "dependencies": {
     "@relay/protocol": "*",
     "@relay/transports": "*",
+    "preact": "^10.29.8",
     "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2",
     "@types/chrome": "^0.3.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.6.3"
   }
 }

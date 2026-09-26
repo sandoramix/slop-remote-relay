@@ -1,0 +1,209 @@
+{
+  "extName": {
+    "message": "Relay"
+  },
+  "extDescription": {
+    "message": "Control the video in any tab from your phone: jump, play/pause, fullscreen."
+  },
+  "subtitle": {
+    "message": "Remote control for this browser"
+  },
+  "setupTitle": {
+    "message": "Set up Relay"
+  },
+  "setupIntro": {
+    "message": "Pair this browser with the Relay app on your phone. It takes a minute."
+  },
+  "stepRelay": {
+    "message": "Relay server"
+  },
+  "stepRelayHint": {
+    "message": "The address of your relay, e.g. wss://relay.example.com. A browser can only be reached over the internet."
+  },
+  "stepCode": {
+    "message": "Pairing code"
+  },
+  "stepCodeHint": {
+    "message": "Generated for you. The phone needs the same code — the QR code carries it."
+  },
+  "stepFinish": {
+    "message": "Save and show QR code"
+  },
+  "invalidRelay": {
+    "message": "Must start with ws:// or wss://"
+  },
+  "connectedTitle": {
+    "message": "Phone connected"
+  },
+  "connectedSub": {
+    "message": "via {path} · {ago}"
+  },
+  "waitingTitle": {
+    "message": "Waiting for your phone"
+  },
+  "waitingSub": {
+    "message": "Open Relay on your phone and pick this browser."
+  },
+  "offlineTitle": {
+    "message": "Can't reach any path"
+  },
+  "offlineSub": {
+    "message": "Check the relay address under Settings."
+  },
+  "connectingTitle": {
+    "message": "Connecting…"
+  },
+  "nowControlling": {
+    "message": "Now controlling"
+  },
+  "noTarget": {
+    "message": "No tab with a video"
+  },
+  "noTargetHint": {
+    "message": "Commands go to the tab playing a video, or the active tab."
+  },
+  "playing": {
+    "message": "Playing"
+  },
+  "paused": {
+    "message": "Paused"
+  },
+  "noVideo": {
+    "message": "No video on this tab"
+  },
+  "fullscreenOn": {
+    "message": "fullscreen"
+  },
+  "lastCommand": {
+    "message": "Last command"
+  },
+  "cmdSeek": {
+    "message": "Jump {amount}"
+  },
+  "cmdSeekTo": {
+    "message": "Go to {time}"
+  },
+  "cmdPlay": {
+    "message": "Play"
+  },
+  "cmdPause": {
+    "message": "Pause"
+  },
+  "cmdPlayPause": {
+    "message": "Play / pause"
+  },
+  "cmdFullscreen": {
+    "message": "Fullscreen"
+  },
+  "cmdExitFullscreen": {
+    "message": "Exit fullscreen"
+  },
+  "justNow": {
+    "message": "just now"
+  },
+  "secondsAgo": {
+    "message": "{n} s ago"
+  },
+  "minutesAgo": {
+    "message": "{n} min ago"
+  },
+  "hoursAgo": {
+    "message": "{n} h ago"
+  },
+  "fsBannerTitle": {
+    "message": "Allow fullscreen control"
+  },
+  "fsBannerBody": {
+    "message": "A page only goes fullscreen when a person asks. Relay needs Chrome's debugger permission to ask on your behalf; Chrome briefly shows a “debugging” bar while it does."
+  },
+  "fsBannerButton": {
+    "message": "Allow"
+  },
+  "pairSection": {
+    "message": "Pair a phone"
+  },
+  "pairHint": {
+    "message": "Scan with your phone's camera to add this browser to Relay."
+  },
+  "code": {
+    "message": "Code"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "newCode": {
+    "message": "New code"
+  },
+  "newCodeConfirm": {
+    "message": "A new code disconnects phones paired with the old one. Continue?"
+  },
+  "pathsSection": {
+    "message": "Paths"
+  },
+  "path_webrtc": {
+    "message": "WebRTC P2P"
+  },
+  "path_relay": {
+    "message": "Relay WebSocket"
+  },
+  "path_http": {
+    "message": "Relay HTTP"
+  },
+  "path_mqtt": {
+    "message": "MQTT"
+  },
+  "pathInUse": {
+    "message": "in use by your phone"
+  },
+  "pathReady": {
+    "message": "ready"
+  },
+  "pathConnecting": {
+    "message": "connecting…"
+  },
+  "pathOff": {
+    "message": "off"
+  },
+  "pathNeedsRelay": {
+    "message": "needs a relay address"
+  },
+  "settingsSection": {
+    "message": "Settings"
+  },
+  "relayServer": {
+    "message": "Relay server"
+  },
+  "mqttBroker": {
+    "message": "MQTT broker"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "saved": {
+    "message": "Saved"
+  },
+  "weakCode": {
+    "message": "Short code: whoever runs the relay or a public broker could guess it."
+  },
+  "version": {
+    "message": "Version {version}"
+  },
+  "project": {
+    "message": "Project on GitHub"
+  },
+  "notNow": {
+    "message": "Not now"
+  },
+  "fsSetting": {
+    "message": "Fullscreen control"
+  },
+  "fsSettingOn": {
+    "message": "Allowed"
+  },
+  "fsSettingOff": {
+    "message": "Not allowed: fullscreen commands will fail"
+  }
+}

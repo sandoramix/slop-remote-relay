@@ -52,13 +52,13 @@ function seekTo(v: HTMLVideoElement, ms: number): string {
 async function perform(action: FrameAction): Promise<ActionResult | MediaReport> {
   if (action.kind === 'report') return report();
   if (action.kind === 'exitFullscreen') {
-    if (!document.fullscreenElement) return { ok: true, detail: 'già fuori dallo schermo intero' };
+    if (!document.fullscreenElement) return { ok: true, detail: 'already out of fullscreen' };
     await document.exitFullscreen();
     return { ok: true, detail: 'exitFullscreen' };
   }
 
   const v = mainVideo();
-  if (!v) return { ok: false, detail: 'nessun video in questa pagina' };
+  if (!v) return { ok: false, detail: 'no video on this page' };
 
   switch (action.kind) {
     case 'seek':
