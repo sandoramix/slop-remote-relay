@@ -9,6 +9,9 @@ name: Release
 #   relay-server-<v>.tgz       relay server, built JS
 #   ghcr.io/<owner>/slop-remote-relay-server:<v> and :latest   relay server image
 #
+# Publishing order: the release appears with its notes first, then the
+# extension and relay server, then the APKs, then the iOS build, then checksums.
+#
 # Signing (optional but recommended — see docs/RELEASE.md):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
 #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
@@ -290,47 +293,103 @@ jobs:
             ${{ steps.image.outputs.name }}:${{ env.RELAY_VERSION }}
             ${{ steps.image.outputs.name }}:latest
 
-  release:
-    name: GitHub Release
-    needs: [keystore, receiver, controller-android, controller-ios, extension, relay]
-    # Runs when the iOS job failed too (it is continue-on-error), not when
-    # anything else did.
-    if: ${{ !cancelled() && needs.receiver.result == 'success' && needs.controller-android.result == 'success' && needs.extension.result == 'success' && needs.relay.result == 'success' }}
+  # ------------------------------------------------------------- publishing
+  #
+  # The release appears as soon as the checks pass, with its notes, and fills
+  # up as builds finish, always in this order: extension (and relay server),
+  # then the Android apps, then iOS, then checksums. Builds still run in
+  # parallel; only the uploads are chained.
+
+  notes:
+    name: Publish — release notes
+    needs: [checks, keystore]
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # Full history and tags: the notes list the commits since the previous tag.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          pattern: '{receiver,controller-android,controller-ios,extension,relay}'
-          merge-multiple: true
-      - name: Checksums
-        working-directory: artifacts
-        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Release notes
         # Commits since the previous tag, grouped by Conventional Commit type,
         # with .github/release-notes/<tag>.md on top when it exists.
         run: |
           node tools/release-notes.mjs "$RELAY_VERSION" ${{ needs.keystore.outputs.throwaway == 'true' && '--throwaway-key' || '' }} > notes.md
           cat notes.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: softprops/action-gh-release@v2
+      - name: Create or update the release
+        run: |
+          if gh release view "$RELAY_VERSION" >/dev/null 2>&1; then
+            gh release edit "$RELAY_VERSION" --title "Relay $RELAY_VERSION" --notes-file notes.md
+          else
+            gh release create "$RELAY_VERSION" --verify-tag --title "Relay $RELAY_VERSION" --notes-file notes.md
+          fi
+
+  publish-extension:
+    name: Publish — extension and relay server
+    needs: [notes, extension, relay]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          tag_name: ${{ env.RELAY_VERSION }}
-          name: Relay ${{ env.RELAY_VERSION }}
-          body_path: notes.md
-          files: artifacts/*
-          fail_on_unmatched_files: true
+          path: files
+          pattern: '{extension,relay}'
+          merge-multiple: true
+      - run: gh release upload "$RELAY_VERSION" files/* --clobber --repo "$GITHUB_REPOSITORY"
+
+  publish-android:
+    name: Publish — Android apps
+    needs: [publish-extension, receiver, controller-android]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          pattern: '{receiver,controller-android}'
+          merge-multiple: true
+      - run: gh release upload "$RELAY_VERSION" files/* --clobber --repo "$GITHUB_REPOSITORY"
+
+  publish-ios:
+    name: Publish — iOS
+    needs: [publish-android, controller-ios]
+    # The iOS build is allowed to fail; the release is complete without it.
+    if: ${{ !cancelled() && needs.publish-android.result == 'success' && needs.controller-ios.outputs.built == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: controller-ios
+          path: files
+      - run: gh release upload "$RELAY_VERSION" files/* --clobber --repo "$GITHUB_REPOSITORY"
+
+  checksums:
+    name: Publish — checksums
+    needs: [publish-android, publish-ios]
+    if: ${{ !cancelled() && needs.publish-android.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: SHA256SUMS of everything published
+        run: |
+          mkdir files && cd files
+          gh release download "$RELAY_VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'relay-*'
+          sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+          gh release upload "$RELAY_VERSION" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 
   altstore:
     # Publishes the AltStore / SideStore source to GitHub Pages, listing every
     # release that has an iOS build. Add it once in AltStore:
     #   https://<owner>.github.io/<repo>/altstore.json
     name: AltStore source
-    needs: [release, controller-ios]
-    if: ${{ !cancelled() && needs.release.result == 'success' && needs.controller-ios.outputs.built == 'true' }}
+    needs: [publish-ios]
+    if: ${{ !cancelled() && needs.publish-ios.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
