@@ -33,6 +33,23 @@ The iOS job is `continue-on-error`: without an Apple developer account it can
 only produce an unsigned `.ipa` (re-sign it with AltStore, Sideloadly or your
 own Xcode), and a failure there must not hold back the rest.
 
+## Build caches
+
+Every release rebuilds every app, so versions and the download set stay
+consistent. The controller is the slow part (Gradle ~17 min, `xcodebuild`
+~11 min), almost all of it compiling native code that doesn't change between
+releases. `expo prebuild` itself takes seconds, so `android/` and `ios/` are
+still generated fresh each run.
+
+The controller jobs use the Gradle cache (`setup-gradle`, `--build-cache`) and
+ccache (`.github/actions/ccache`; on iOS through `expo-build-properties`
+`ccacheEnabled`, switched on by `RELAY_CCACHE=1` so local builds are
+unaffected). GitHub lets a tag run read only caches written on its own ref or on
+`master`, so the release never writes them: `.github/workflows/controller.yml`
+builds the controller on every `master` push that touches it and fills them.
+That workflow is also the only check that the native builds still work before
+a tag. Each build ends with `ccache --show-stats` to show the hit rate.
+
 ## AltStore source (iOS)
 
 After each release with a working iOS build, the `altstore` job builds an

@@ -1,0 +1,49 @@
+name: Compiler cache
+description: >
+  Installs ccache and restores its cache for one native build. The controller's
+  C++ and Objective-C (React Native, Expo modules) dominate its build time, and
+  none of it changes between releases unless dependencies do.
+
+  GitHub only lets a run read caches written on its own ref or on the default
+  branch, so a release tag can never reuse another tag's cache: the
+  `Controller builds` workflow on master writes them, releases only read them.
+  Saving is left to the caller (actions/cache/save with `key`), since a
+  composite action has no post step.
+
+inputs:
+  name:
+    description: Which build this cache belongs to (android, ios).
+    required: true
+
+outputs:
+  key:
+    description: The key to save the cache under once the build is done.
+    value: ${{ steps.key.outputs.key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install ccache
+      shell: bash
+      run: |
+        if command -v ccache >/dev/null; then exit 0; fi
+        if [ "$RUNNER_OS" = macOS ]; then brew install ccache; else sudo apt-get install -y -qq ccache; fi
+    - name: Configure ccache
+      id: key
+      shell: bash
+      run: |
+        {
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache"
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
+          echo "CCACHE_COMPILERCHECK=content"
+          echo "CCACHE_MAXSIZE=1500M"
+        } >> "$GITHUB_ENV"
+        echo "key=ccache-${{ inputs.name }}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/ccache
+        key: ccache-${{ inputs.name }}-${{ github.run_id }}
+        restore-keys: ccache-${{ inputs.name }}-
+    - name: Reset statistics
+      shell: bash
+      run: ccache --zero-stats

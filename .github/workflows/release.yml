@@ -137,6 +137,10 @@ jobs:
         run: npx expo prebuild --platform android --clean --no-install
         env:
           CI: '1'
+      # Read-only here: the Controller builds workflow on master fills it.
+      - uses: ./.github/actions/ccache
+        with:
+          name: android
       - uses: actions/download-artifact@v4
         with:
           name: keystore
@@ -147,9 +151,11 @@ jobs:
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'throwaway' }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'relay' }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'throwaway' }}
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         # Phones only: leaving out the x86 ABIs roughly halves the APK.
         run: |
-          ./gradlew --no-daemon assembleRelease \
+          ./gradlew --no-daemon --build-cache assembleRelease \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
             -Pandroid.injected.signing.store.file="${{ runner.temp }}/release.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
@@ -157,6 +163,7 @@ jobs:
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp app/build/outputs/apk/release/*.apk "$GITHUB_WORKSPACE/out/relay-controller-${RELAY_VERSION}.apk"
+          ccache --show-stats
       - uses: actions/upload-artifact@v4
         with:
           name: controller-android
@@ -185,11 +192,16 @@ jobs:
       - run: npm ci
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
+      # Before prebuild: pod install wires ccache in only if it finds it.
+      - uses: ./.github/actions/ccache
+        with:
+          name: ios
       - name: Generate native project (CNG)
         working-directory: apps/controller
         run: npx expo prebuild --platform ios --clean
         env:
           CI: '1'
+          RELAY_CCACHE: '1'
       - name: Build unsigned archive
         id: archive
         working-directory: apps/controller/ios
@@ -201,6 +213,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/Payload" "$GITHUB_WORKSPACE/out"
           cp -R "$RUNNER_TEMP/Relay.xcarchive/Products/Applications/Relay.app" "$RUNNER_TEMP/Payload/"
           (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/out/relay-controller-${RELAY_VERSION}-unsigned.ipa" Payload)
+          ccache --show-stats
       - name: App info for the AltStore source
         # AltStore requires a source to list every privacy string and
         # entitlement; read them from the built app so they cannot drift.

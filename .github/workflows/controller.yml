@@ -1,0 +1,107 @@
+name: Controller builds
+
+# Builds the Expo controller for Android and iOS whenever it (or what it
+# depends on) changes on master. Two reasons:
+#   - nothing else checks that the native builds still work before a tag;
+#   - GitHub only lets a release tag read caches written on master, so this is
+#     what fills the Gradle and compiler caches the Release workflow reads.
+# The artifacts are thrown away; releases build their own, signed and versioned.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - apps/controller/**
+      - packages/**
+      - package-lock.json
+      - .github/actions/ccache/**
+      - .github/workflows/controller.yml
+  workflow_dispatch:
+
+concurrency:
+  group: controller-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Controller — Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # Writes its cache on master (the default branch), reads elsewhere.
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - name: Generate native project (CNG)
+        working-directory: apps/controller
+        run: npx expo prebuild --platform android --clean --no-install
+        env:
+          CI: '1'
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          name: android
+      - name: Build release APK
+        working-directory: apps/controller/android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        # Same flags as the release, so the cached outputs match.
+        run: |
+          ./gradlew --no-daemon --build-cache assembleRelease \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          ccache --show-stats
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ${{ steps.ccache.outputs.key }}
+
+  ios:
+    name: Controller — iOS
+    runs-on: macos-26
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      # Before prebuild: pod install wires ccache in only if it finds it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          name: ios
+      - name: Generate native project (CNG)
+        working-directory: apps/controller
+        run: npx expo prebuild --platform ios --clean
+        env:
+          CI: '1'
+          RELAY_CCACHE: '1'
+      - name: Build unsigned archive
+        working-directory: apps/controller/ios
+        run: |
+          xcodebuild -workspace Relay.xcworkspace -scheme Relay -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Relay.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+          ccache --show-stats
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ${{ steps.ccache.outputs.key }}

@@ -70,6 +70,8 @@ const config: ExpoConfig = {
           usesCleartextTraffic: true,
           minSdkVersion: 26,
         },
+        // CI keeps a compiler cache between runs; local builds stay as they were.
+        ios: { ccacheEnabled: process.env.RELAY_CCACHE === '1' },
       },
     ],
     [
