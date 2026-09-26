@@ -34,8 +34,14 @@ rm -f "$TMP"
 adb shell "run-as $PKG mkdir -p shared_prefs"
 adb shell "run-as $PKG cp /data/local/tmp/relay.config.xml shared_prefs/relay.config.xml"
 
-# The system clears the grant asynchronously after a package replace, so a
-# single write right after install can be undone a moment later. Retry until
+
+adb shell am force-stop "$PKG"
+# Explicit component + NEW_TASK|CLEAR_TASK: a launcher intent only brings the
+# task forward, and if a Settings screen sits on top MainActivity never
+# resumes — so the foreground service it starts never starts.
+adb shell am start -W -f 0x10008000 -n "$PKG/.ui.MainActivity" >/dev/null
+# Granted after the relaunch: both a package replace and a force-stop unbind
+# the service, the former asynchronously, so a single early write is undone. Retry until
 # the service is actually bound.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   adb shell settings put secure enabled_accessibility_services \
@@ -44,8 +50,5 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 2
   adb shell dumpsys accessibility | grep -q "Bound services:{Service" && break
 done
-
-adb shell am force-stop "$PKG"
-adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
 adb forward tcp:47821 tcp:47821 >/dev/null
 echo "bench ready: pair=$PAIR relay=$RELAY"

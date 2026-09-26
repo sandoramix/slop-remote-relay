@@ -24,9 +24,10 @@
     -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
-    <!-- Needed to resolve the foreground package into a readable app name. -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
+    <!-- Only needed to check whether the Shizuku app is installed. -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
 
     <!--
       No android:name. The Application subclass existed only to start the
@@ -92,6 +93,18 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!--
+          Shizuku hands its binder to the app through this provider. Optional:
+          without Shizuku running it does nothing.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <receiver
             android:name=".service.BootReceiver"

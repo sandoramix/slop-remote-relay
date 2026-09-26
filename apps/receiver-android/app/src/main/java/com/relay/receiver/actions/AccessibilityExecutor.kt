@@ -78,7 +78,9 @@ class AccessibilityExecutor(
         if (markers.absentViewIds.isNotEmpty()) {
             val barPresent = findNode(root) { node ->
                 val viewId = node.viewIdResourceName
-                viewId != null && markers.absentViewIds.any { viewId.endsWith(it) }
+                // Chromium keeps the toolbar in the tree while hiding it, so
+                // only a visible bar means "not fullscreen".
+                viewId != null && node.isVisibleToUser && markers.absentViewIds.any { viewId.endsWith(it) }
             } != null
             return !barPresent
         }
@@ -91,8 +93,15 @@ class AccessibilityExecutor(
         val steps = recipes.forPackage(pkg)?.fullscreen?.takeIf { it.isNotEmpty() }
             ?: recipes.fallbackFullscreen()
 
+        // A click can be accepted and still not produce fullscreen: Chromium
+        // does not always treat an accessibility click as a user activation.
+        // So a Node step is judged by the markers, not by its return value.
+        val verify: suspend () -> Boolean = {
+            delay(VERIFY_MS)
+            isFullscreen() != false
+        }
         for ((index, step) in steps.withIndex()) {
-            val done = runStep(svc, step)
+            val done = if (step is Step.Node) clickMatchingNode(svc, step, verify) else runStep(svc, step)
             Log.d(TAG, "step $index ${step::class.simpleName} -> $done")
             if (done) return ExecResult.ok(id, "${step::class.simpleName} on ${pkg ?: "?"}")
         }
@@ -153,32 +162,43 @@ class AccessibilityExecutor(
      * gesture at its centre. A web page only enters fullscreen inside a user
      * activation, and a dispatched touch is one beyond any doubt.
      */
-    private suspend fun clickMatchingNode(svc: RelayAccessibilityService, step: Step.Node): Boolean {
+    private suspend fun clickMatchingNode(
+        svc: RelayAccessibilityService,
+        step: Step.Node,
+        verify: (suspend () -> Boolean)? = null,
+    ): Boolean {
         val root = svc.rootInActiveWindow ?: return false
         val wanted = step.descriptions.map { it.lowercase() }
 
-        val match = findNode(root) { node ->
+        val matches: (AccessibilityNodeInfo) -> Boolean = { node ->
             val viewId = node.viewIdResourceName
             labelMatches(node, wanted) ||
                 (viewId != null && step.viewIds.any { viewId.endsWith(it) })
-        } ?: return false
-
-        // Web players keep faded-out controls in the tree, and most ignore a
-        // click on one. Report failure so the recipe's reveal step runs.
-        if (!match.isVisibleToUser) return false
+        }
+        // A visible match first. Web players fade their controls out while
+        // keeping them in the tree, and a reveal tap can fade them out as easily
+        // as in, so a faded match is still worth an ACTION_CLICK: Chromium runs
+        // the element's default action whatever its opacity.
+        val visible = findNode(root) { matches(it) && it.isVisibleToUser }
+        val match = visible ?: findNode(root, matches) ?: return false
 
         var candidate: AccessibilityNodeInfo? = match
         for (level in 0..step.climb) {
             val node = candidate ?: break
             if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                return true
+                if (verify == null || verify()) return true
+                break // accepted but ineffective: fall through to a real tap
             }
             candidate = node.parent
         }
 
+        // A gesture only where the control can actually be seen: a blind tap
+        // on a faded control just toggles the overlay.
+        if (visible == null) return false
         val bounds = Rect().also { match.getBoundsInScreen(it) }
         if (bounds.isEmpty) return false
-        return tapAt(svc, bounds.exactCenterX(), bounds.exactCenterY(), double = false)
+        if (!tapAt(svc, bounds.exactCenterX(), bounds.exactCenterY(), double = false)) return false
+        return verify?.invoke() ?: true
     }
 
     private fun labelMatches(node: AccessibilityNodeInfo, wanted: List<String>): Boolean {
@@ -344,5 +364,8 @@ class AccessibilityExecutor(
 
         /** Long enough for the player to register the previous tap as a separate one. */
         const val TAP_SETTLE_MS = 320L
+
+        /** How long a player gets to enter fullscreen before a step is judged. */
+        const val VERIFY_MS = 700L
     }
 }

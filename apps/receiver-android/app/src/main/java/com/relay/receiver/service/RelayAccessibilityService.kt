@@ -14,10 +14,24 @@ import android.view.accessibility.AccessibilityEvent
  */
 class RelayAccessibilityService : AccessibilityService() {
 
-    /** Updated on every window change, read by the executors and by device.status. */
     @Volatile
-    var foregroundPackage: String? = null
-        private set
+    private var lastEventPackage: String? = null
+
+    /**
+     * The app in front, read by the executors and by device.status.
+     *
+     * The active window is asked first, because window-state events are not
+     * guaranteed: an app brought back into an existing task by an intent can
+     * come to the front without one, and a stale package here means the wrong
+     * recipe runs. The last event is the fallback when our own window, the
+     * system UI or the framework is the active one.
+     */
+    val foregroundPackage: String?
+        get() {
+            val active = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+            return if (active != null && active != packageName && active !in IGNORED) active
+            else lastEventPackage
+        }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -29,8 +43,10 @@ class RelayAccessibilityService : AccessibilityService() {
             // Ignore our own windows and the system UI, or the "current target"
             // in the controller flickers every time a notification appears.
             val pkg = event.packageName?.toString()
-            if (pkg != null && pkg != packageName && pkg != "com.android.systemui") {
-                foregroundPackage = pkg
+            // "android" is the framework itself: the immersive-mode hint that
+            // appears over a video the first time it goes fullscreen.
+            if (pkg != null && pkg != packageName && pkg !in IGNORED) {
+                lastEventPackage = pkg
             }
         }
     }
@@ -43,6 +59,8 @@ class RelayAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        private val IGNORED = setOf("com.android.systemui", "android")
+
         /**
          * The system owns this service's lifecycle, so a static handle is the
          * conventional way for the rest of the app to reach it. Null means the

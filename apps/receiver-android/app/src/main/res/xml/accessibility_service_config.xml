@@ -7,6 +7,10 @@
   cannot be. flagRetrieveInteractiveWindows is deliberately absent — we only ever
   need the active window.
 
+  flagReportViewIds is what makes viewIdResourceName non-null. Without it every
+  viewIds entry in recipes.json silently never matches — uiautomator sets the
+  flag for itself, so a dump shows ids this service would not see.
+
   isAccessibilityTool is NOT declared. This is not an assistive tool and claiming
   otherwise would be a false declaration under Play policy. The practical
   consequence is documented in docs/DISTRIBUZIONE.md.
@@ -14,7 +18,7 @@
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews"
+    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagReportViewIds"
     android:canPerformGestures="true"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_description"

@@ -87,6 +87,12 @@ export interface ManagerEvents {
   onMessage: (raw: string) => void;
   /** Fires whenever the active transport or any health value changes. */
   onTopologyChange: (snapshot: TopologySnapshot) => void;
+  /**
+   * Signs a heartbeat. The receiver drops every unsigned frame, pings
+   * included, so without this each path would miss its heartbeats, be marked
+   * degraded and redial every few seconds while looking connected.
+   */
+  signPing?: (ping: PingEnvelope) => Promise<PingEnvelope>;
 }
 
 export interface TopologySnapshot {
@@ -337,6 +343,7 @@ export class TransportManager {
       nonce,
     };
 
+    const frame = JSON.stringify(this.events.signPing ? await this.events.signPing(ping) : ping);
     const rtt = await new Promise<number | null>((resolve) => {
       const timer = setTimeout(() => {
         this.pending.delete(nonce);
@@ -347,7 +354,7 @@ export class TransportManager {
         this.pending.delete(nonce);
         resolve(value);
       });
-      t.send(JSON.stringify(ping)).catch(() => {
+      t.send(frame).catch(() => {
         clearTimeout(timer);
         this.pending.delete(nonce);
         resolve(null);

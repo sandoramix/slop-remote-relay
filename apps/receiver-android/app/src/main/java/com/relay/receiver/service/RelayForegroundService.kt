@@ -15,12 +15,16 @@ import com.relay.receiver.R
 import com.relay.receiver.actions.AccessibilityExecutor
 import com.relay.receiver.actions.ExecutorChain
 import com.relay.receiver.actions.MediaSessionExecutor
+import com.relay.receiver.actions.ShizukuExecutor
 import com.relay.receiver.core.Codec
 import com.relay.receiver.core.CommandRouter
 import com.relay.receiver.recipes.RecipeEngine
 import com.relay.receiver.transport.BleGattTransport
 import com.relay.receiver.transport.LanServerTransport
+import com.relay.receiver.transport.MqttTransport
 import com.relay.receiver.transport.RelayClientTransport
+import com.relay.receiver.transport.RelayHttpTransport
+import com.relay.receiver.transport.WebRtcTransport
 import com.relay.receiver.transport.Transport
 import com.relay.receiver.transport.TransportSet
 import com.relay.receiver.ui.MainActivity
@@ -74,13 +78,15 @@ class RelayForegroundService : Service() {
         val recipes = RecipeEngine(this)
         val mediaSession = MediaSessionExecutor(this)
 
-        // Preference order. A ShizukuExecutor would slot in after accessibility
-        // and needs no other change anywhere in the codebase.
+        // Preference order: exact and invisible first, most demanding last.
+        // Shizuku reports itself unavailable until it is running and granted,
+        // so it costs nothing on a device that never sets it up.
         val accessibility = AccessibilityExecutor(this, recipes)
         val chain = ExecutorChain(
             listOf(
                 mediaSession,
                 accessibility,
+                ShizukuExecutor(this, recipes),
             ),
         )
 
@@ -89,13 +95,22 @@ class RelayForegroundService : Service() {
         }
         router = commandRouter
 
-        val list = mutableListOf<Transport>(
+        // Every path at once: the receiver is reachable on all of them and the
+        // controller picks. The user can switch any of them off here, e.g. MQTT
+        // for privacy on a public broker.
+        val disabled = prefs.getString(KEY_DISABLED, "").orEmpty().split(",").toSet()
+        val relayUrl = prefs.getString(KEY_RELAY_URL, null)?.takeIf { it.isNotBlank() }
+        val mqttUrl = prefs.getString(KEY_MQTT_URL, null)?.takeIf { it.isNotBlank() }
+            ?: MqttTransport.DEFAULT_URL
+        val candidates = listOfNotNull(
             LanServerTransport(this, scope),
+            relayUrl?.let { WebRtcTransport(this, it, room, secret, scope) },
+            relayUrl?.let { RelayClientTransport(it, room, scope) },
+            relayUrl?.let { RelayHttpTransport(it, room, scope) },
+            MqttTransport(mqttUrl, room, scope),
             BleGattTransport(this, scope),
         )
-        prefs.getString(KEY_RELAY_URL, null)?.takeIf { it.isNotBlank() }?.let { url ->
-            list.add(RelayClientTransport(url, room, scope))
-        }
+        val list = candidates.filter { it.id !in disabled }
 
         val set = TransportSet(list)
         set.start { raw, transportId -> commandRouter.handle(raw, transportId) }
@@ -207,6 +222,9 @@ class RelayForegroundService : Service() {
         const val PREFS = "relay.config"
         const val KEY_PAIR_CODE = "pairCode"
         const val KEY_RELAY_URL = "relayUrl"
+        const val KEY_MQTT_URL = "mqttUrl"
+        /** Comma-separated transport ids the user switched off. */
+        const val KEY_DISABLED = "disabledTransports"
         private const val CHANNEL_ID = "relay.status"
         private const val NOTIFICATION_ID = 4711
         private const val TAG = "RelayForegroundService"

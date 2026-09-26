@@ -49,7 +49,7 @@ class RelayClientTransport(
     private fun dial() {
         if (stopped) return
         val request = Request.Builder()
-            .url("${url.trimEnd('/')}/room/$room?role=receiver")
+            .url("${url.trimEnd('/')}/room/$room?role=receiver&ch=ws")
             .build()
 
         socket = http.newWebSocket(request, object : WebSocketListener() {

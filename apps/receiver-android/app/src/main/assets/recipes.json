@@ -3,47 +3,181 @@
     "fullscreen": [
       {
         "kind": "node",
-        "descriptions": ["schermo intero", "full screen", "fullscreen"],
-        "viewIds": [":id/fullscreen_button"],
+        "descriptions": [
+          "schermo intero",
+          "full screen",
+          "fullscreen"
+        ],
+        "viewIds": [
+          ":id/fullscreen_button"
+        ],
         "climb": 2
       },
-      { "kind": "reveal", "x": 0.5, "y": 0.28, "settleMs": 450 },
+      {
+        "kind": "reveal",
+        "x": 0.5,
+        "y": 0.28,
+        "settleMs": 450
+      },
       {
         "kind": "node",
-        "descriptions": ["schermo intero", "full screen", "fullscreen"],
-        "viewIds": [":id/fullscreen_button"],
+        "descriptions": [
+          "schermo intero",
+          "full screen",
+          "fullscreen"
+        ],
+        "viewIds": [
+          ":id/fullscreen_button"
+        ],
         "climb": 2
       },
-      { "kind": "rotate", "landscape": true }
+      {
+        "kind": "rotate",
+        "landscape": true
+      }
     ],
-    "seek": [{ "kind": "mediasession" }, { "kind": "tap", "x": 0.85, "y": 0.5, "double": true }]
+    "exitFullscreen": [
+      {
+        "kind": "back"
+      }
+    ],
+    "fullscreenMarkers": {
+      "present": [
+        "esci da schermo intero",
+        "exit full screen"
+      ]
+    },
+    "seek": [
+      {
+        "kind": "mediasession"
+      },
+      {
+        "kind": "tap",
+        "x": 0.85,
+        "y": 0.5,
+        "double": true
+      }
+    ]
   },
-
   "com.brave.browser": {
     "fullscreen": [
       {
         "kind": "node",
-        "descriptions": ["schermo intero", "full screen", "enter full screen"],
+        "descriptions": [
+          "schermo intero",
+          "enter full screen",
+          "full screen"
+        ],
         "climb": 3
       },
-      { "kind": "reveal", "x": 0.5, "y": 0.35, "settleMs": 500 },
+      {
+        "kind": "reveal",
+        "x": 0.5,
+        "y": 0.35,
+        "settleMs": 500
+      },
       {
         "kind": "node",
-        "descriptions": ["schermo intero", "full screen", "enter full screen"],
+        "descriptions": [
+          "schermo intero",
+          "enter full screen",
+          "full screen"
+        ],
         "climb": 3
       },
-      { "kind": "rotate", "landscape": true }
+      {
+        "kind": "key",
+        "code": "KEYCODE_F"
+      },
+      {
+        "kind": "rotate",
+        "landscape": true
+      }
     ],
-    "seek": [{ "kind": "mediasession" }, { "kind": "tap", "x": 0.85, "y": 0.5, "double": true }]
+    "exitFullscreen": [
+      {
+        "kind": "key",
+        "code": "KEYCODE_ESCAPE"
+      },
+      {
+        "kind": "back"
+      }
+    ],
+    "fullscreenMarkers": {
+      "present": [
+        "esci da schermo intero",
+        "exit full screen"
+      ]
+    },
+    "seek": [
+      {
+        "kind": "mediasession"
+      },
+      {
+        "kind": "tap",
+        "x": 0.85,
+        "y": 0.5,
+        "double": true
+      }
+    ]
   },
-
   "com.android.chrome": {
     "fullscreen": [
-      { "kind": "node", "descriptions": ["schermo intero", "full screen"], "climb": 3 },
-      { "kind": "reveal", "x": 0.5, "y": 0.35, "settleMs": 500 },
-      { "kind": "node", "descriptions": ["schermo intero", "full screen"], "climb": 3 },
-      { "kind": "rotate", "landscape": true }
+      {
+        "kind": "node",
+        "descriptions": [
+          "schermo intero",
+          "enter full screen",
+          "full screen"
+        ],
+        "climb": 3
+      },
+      {
+        "kind": "reveal",
+        "x": 0.5,
+        "y": 0.35,
+        "settleMs": 500
+      },
+      {
+        "kind": "node",
+        "descriptions": [
+          "schermo intero",
+          "enter full screen",
+          "full screen"
+        ],
+        "climb": 3
+      },
+      {
+        "kind": "key",
+        "code": "KEYCODE_F"
+      },
+      {
+        "kind": "rotate",
+        "landscape": true
+      }
     ],
-    "seek": [{ "kind": "mediasession" }]
+    "exitFullscreen": [
+      {
+        "kind": "key",
+        "code": "KEYCODE_ESCAPE"
+      },
+      {
+        "kind": "back"
+      }
+    ],
+    "fullscreenMarkers": {
+      "present": [
+        "esci da schermo intero",
+        "exit full screen"
+      ],
+      "absentViewIds": [
+        ":id/url_bar"
+      ]
+    },
+    "seek": [
+      {
+        "kind": "mediasession"
+      }
+    ]
   }
 }
