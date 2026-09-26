@@ -1,0 +1,58 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+/*
+ * One palette, dark only. The use context is a dark room, one hand, glancing
+ * away from a screen you are actually watching: the canvas is a cool slate
+ * rather than black (less halation at low brightness), and exactly one accent
+ * — amber, like a backlit remote key — carries the primary actions.
+ *
+ * Values are RGB triplets so Tailwind's opacity modifiers (bg-primary/20) work.
+ */
+@layer theme {
+  :root {
+    --background: 20 24 30;
+    --card: 29 35 43;
+    --popover: 29 35 43;
+    --popover-foreground: 237 233 227;
+    --secondary: 37 44 54;
+    --secondary-foreground: 237 233 227;
+    --muted: 37 44 54;
+    --muted-foreground: 139 149 163;
+    --foreground: 237 233 227;
+    --primary: 232 176 75;
+    --primary-foreground: 27 32 39;
+    --accent: 44 53 64;
+    --accent-foreground: 237 233 227;
+    --border: 49 58 70;
+    --input: 49 58 70;
+    --ring: 232 176 75;
+    --destructive: 232 104 104;
+    --success: 127 168 140;
+    --warning: 224 160 90;
+  }
+}
+
+@theme inline {
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-card: rgb(var(--card));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-background: rgb(var(--background));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-foreground: rgb(var(--foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-success: rgb(var(--success));
+  --color-warning: rgb(var(--warning));
+}
