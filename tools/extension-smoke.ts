@@ -106,9 +106,13 @@ async function main(): Promise<void> {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--autoplay-policy=no-user-gesture-required'],
+    enableExtensions: true,
+    args: ['--autoplay-policy=no-user-gesture-required'],
   });
-  const worker = await (await browser.waitForTarget((t) => t.type() === 'service_worker')).worker();
+  // Loaded over CDP rather than --load-extension, so step 3 can uninstall it.
+  await browser.installExtension(ext);
+  const workerTarget = await browser.waitForTarget((t) => t.type() === 'service_worker');
+  const worker = await workerTarget.worker();
   const granted = (await worker!.evaluate(() => chrome.permissions.getAll())) as { permissions?: string[] };
   check('shipped manifest grants debugger (needed for fullscreen)', !!granted.permissions?.includes('debugger'));
   await worker!.evaluate(
@@ -174,6 +178,32 @@ async function main(): Promise<void> {
 
     await transport.close();
   }
+
+  // 3 -- a tab that was already open when the extension was installed: the
+  // manifest never injects into it, and what is left of the previous copy's
+  // content script is orphaned. Same key, so the reinstall keeps the same id.
+  console.log('\n[tab open before install]');
+  const extId = new URL(workerTarget.url()).hostname;
+  await browser.uninstallExtension(extId);
+  await sleep(500);
+  await browser.installExtension(ext);
+  const w2 = await (
+    await browser.waitForTarget((t) => t.type() === 'service_worker' && t !== workerTarget, { timeout: 15_000 })
+  ).worker();
+  await w2!.evaluate(
+    (settings) => chrome.storage.local.set({ settings }),
+    { pairCode, relayUrl: `ws://127.0.0.1:${RELAY_PORT}`, mqttUrl: '', disabled: [] },
+  );
+  await sleep(3000);
+  const c = new Controller(new RelayWsTransport({ url: `ws://127.0.0.1:${RELAY_PORT}`, room, role: 'controller' }));
+  await c.connect();
+  const status = await c.status();
+  check('status still names the open page', String(status?.foregroundPackage ?? '').includes(String(PAGE_PORT)),
+    `${status?.foregroundPackage}`);
+  const pause = await c.cmd({ op: 'playback.playPause', play: false });
+  const paused = await tab.evaluate(() => document.querySelector('video')!.paused);
+  check('pause reaches the open page', !!pause?.ok && paused, `${pause?.detail}`);
+  await c.transport.close();
 
   await browser.close();
   relay.kill();

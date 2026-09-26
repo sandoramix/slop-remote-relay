@@ -76,13 +76,38 @@ interface Target {
   report: MediaReport;
 }
 
+const scriptable = (tab: chrome.tabs.Tab) => !!tab.id && !!tab.url && /^https?:|^file:/.test(tab.url);
+
+/**
+ * The manifest's content script only reaches pages loaded after the extension
+ * was installed or reloaded; a tab already open has none, or an orphaned one
+ * from the previous version that no longer hears messages. Inject it again —
+ * it stands down in frames where a live copy is already running.
+ */
+async function injectContent(tabId: number): Promise<void> {
+  await chrome.scripting
+    .executeScript({ target: { tabId, allFrames: true }, files: ['content.js'] })
+    .catch(() => undefined);
+}
+
+async function readFrames(tabId: number) {
+  return chrome.scripting.executeScript({
+    target: { tabId, allFrames: true },
+    func: () => {
+      const relay = (globalThis as unknown as { __relay?: { report: () => unknown; alive?: () => boolean } }).__relay;
+      return relay?.alive?.() ? relay.report() : null;
+    },
+  });
+}
+
 async function frameReports(tab: chrome.tabs.Tab): Promise<Target[]> {
-  if (!tab.id || !tab.url || !/^https?:|^file:/.test(tab.url)) return [];
+  if (!scriptable(tab)) return [];
   try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: true },
-      func: () => (globalThis as unknown as { __relay?: { report: () => unknown } }).__relay?.report() ?? null,
-    });
+    let results = await readFrames(tab.id!);
+    if (results.some((r) => !r.result)) {
+      await injectContent(tab.id!);
+      results = await readFrames(tab.id!);
+    }
     return results
       .filter((r) => r.result)
       .map((r) => ({ tabId: tab.id!, frameId: r.frameId, windowId: tab.windowId, report: r.result as MediaReport }));
@@ -90,6 +115,11 @@ async function frameReports(tab: chrome.tabs.Tab): Promise<Target[]> {
     return [];
   }
 }
+
+chrome.runtime.onInstalled.addListener(async () => {
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(tabs.filter(scriptable).map((t) => injectContent(t.id!)));
+});
 
 /**
  * The video the user means: audible tabs first, then each window's active tab;

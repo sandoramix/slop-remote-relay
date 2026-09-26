@@ -20,29 +20,31 @@ const manifest = JSON.parse(readFileSync(path.join(out, 'manifest.json'), 'utf8'
 manifest.version = version.replace(/-.*$/, '');
 writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
-const options = {
-  entryPoints: {
-    background: 'src/background.ts',
-    offscreen: 'src/offscreen.ts',
-    content: 'src/content.ts',
-    popup: 'src/popup.tsx',
-  },
+const common = {
   bundle: true,
   jsx: 'automatic',
   jsxImportSource: 'preact',
-  format: 'esm',
   target: 'chrome116',
   outdir: out,
   sourcemap: watch ? 'inline' : false,
   minify: !watch,
   logLevel: 'info',
 };
+const builds = [
+  {
+    ...common,
+    entryPoints: { background: 'src/background.ts', offscreen: 'src/offscreen.ts', popup: 'src/popup.tsx' },
+    format: 'esm',
+  },
+  // The worker re-injects the content script into tabs that were already open;
+  // as a classic script it must not leave top-level bindings behind to collide.
+  { ...common, entryPoints: { content: 'src/content.ts' }, format: 'iife' },
+];
 
 if (watch) {
-  const ctx = await context(options);
-  await ctx.watch();
+  for (const b of builds) await (await context(b)).watch();
 } else {
-  await build(options);
+  await Promise.all(builds.map((b) => build(b)));
   if (zip) {
     const name = `relay-extension-${version}.zip`;
     rmSync(name, { force: true });

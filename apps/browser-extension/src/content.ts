@@ -74,28 +74,44 @@ async function perform(action: FrameAction): Promise<ActionResult | MediaReport>
   }
 }
 
-// The worker reads every frame at once through scripting.executeScript, which
-// runs in this same isolated world and can call these.
-(globalThis as unknown as { __relay: unknown }).__relay = { report };
+type Relay = { report: () => MediaReport; alive: () => boolean };
+const scope = globalThis as unknown as { __relay?: Relay };
 
-chrome.runtime.onMessage.addListener((msg: { relay?: FrameAction }, _sender, respond) => {
-  if (!msg.relay) return false;
-  perform(msg.relay)
-    .then(respond)
-    .catch((e: Error) => respond({ ok: false, detail: e.message }));
-  return true;
-});
+/**
+ * The worker also injects this file into tabs that were open before the
+ * extension was installed or reloaded, which the manifest never reaches. A copy
+ * left over from a previous version of the extension is orphaned (its runtime
+ * is gone, so its listener never hears anything); a live copy means this frame
+ * is already covered and registering twice would answer every message twice.
+ */
+function boot(): void {
+  if (scope.__relay?.alive()) return;
 
-// Tell the worker when something changes, so the remote updates without polling hard.
-let last = '';
-const notify = () => {
-  const r = report();
-  const summary = `${r.hasMedia}|${r.playing}|${r.fullscreen}|${r.title}`;
-  if (summary === last) return;
-  last = summary;
-  void chrome.runtime.sendMessage({ mediaChanged: true }).catch(() => undefined);
-};
-for (const ev of ['play', 'pause', 'ended', 'loadedmetadata', 'seeked']) {
-  document.addEventListener(ev, notify, true);
+  // The worker reads every frame at once through scripting.executeScript, which
+  // runs in this same isolated world and can call these.
+  scope.__relay = { report, alive: () => !!chrome.runtime?.id };
+
+  chrome.runtime.onMessage.addListener((msg: { relay?: FrameAction }, _sender, respond) => {
+    if (!msg.relay) return false;
+    perform(msg.relay)
+      .then(respond)
+      .catch((e: Error) => respond({ ok: false, detail: e.message }));
+    return true;
+  });
+
+  // Tell the worker when something changes, so the remote updates without polling hard.
+  let last = '';
+  const notify = () => {
+    const r = report();
+    const summary = `${r.hasMedia}|${r.playing}|${r.fullscreen}|${r.title}`;
+    if (summary === last) return;
+    last = summary;
+    void chrome.runtime.sendMessage({ mediaChanged: true }).catch(() => undefined);
+  };
+  for (const ev of ['play', 'pause', 'ended', 'loadedmetadata', 'seeked']) {
+    document.addEventListener(ev, notify, true);
+  }
+  document.addEventListener('fullscreenchange', notify);
 }
-document.addEventListener('fullscreenchange', notify);
+
+boot();

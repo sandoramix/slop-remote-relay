@@ -17,7 +17,7 @@ verified, how to reproduce it, and what is still open.
 | Controller app | yes, emulator | release APK: pairing via deep link, "Wi-Fi locale" + standbys, `+30s` acked "via Accessibilità", path order persisted across restart |
 | Fullscreen in Chrome (Android) | yes, emulator | HTML5 `<video>`: six toggles in a row, enter via the page's button, state detected, exit via Back |
 | Shizuku executor | yes, emulator | Shizuku 13.6 started over adb, accessibility off: exit fullscreen via `KEYCODE_ESCAPE` |
-| Browser extension | yes, Chrome for Testing | `smoke:extension` over relay WS, HTTP, WebRTC — status, seekTo, pause, fullscreen in (CDP) and out — 15/15 |
+| Browser extension | yes, Chrome for Testing | `smoke:extension` over relay WS, HTTP, WebRTC — status, seekTo, pause, fullscreen in (CDP) and out; a tab already open when the extension is (re)installed is still found and driven — 18/18 |
 | Release pipeline pieces | partly | receiver signed via injected properties with tag version (verified locally); extension zip; relay build as in the Dockerfile. The workflow itself has not run on GitHub yet |
 
 ## Bugs found and fixed along the way
