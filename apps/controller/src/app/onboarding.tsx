@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardSafe } from '../components/KeyboardSafe';
+import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from '../components/SafeArea';
 import { DeviceForm, emptyTarget } from '../components/DeviceForm';
 import { Field, PrimaryButton, Section } from '../components/form';
 import { TargetSchema, useSettings } from '../state/settings';
@@ -22,7 +23,7 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardSafe>
         <ScrollView contentContainerClassName="gap-8 px-4 pb-10 pt-8" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
             <Text className="text-4xl font-bold tracking-tight text-foreground">Relay</Text>
@@ -61,7 +62,7 @@ export default function Onboarding() {
             }}
           />
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardSafe>
     </SafeAreaView>
   );
 }

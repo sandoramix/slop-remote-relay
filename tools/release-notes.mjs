@@ -79,7 +79,7 @@ out.push(
   '| `relay-server-*.tgz` | Relay server (Node 22): `npm install --omit=dev && node dist/server.js` |',
   '| `SHA256SUMS.txt` | Checksums of every file above |',
   '',
-  `Relay server container: \`docker run -p 8080:8080 ghcr.io/${owner}/relay-server:${tag}\``,
+  `Relay server container: \`docker run -p 8080:8080 ghcr.io/${owner}/slop-remote-relay-server:${tag}\``,
   '',
 );
 if (throwaway) {

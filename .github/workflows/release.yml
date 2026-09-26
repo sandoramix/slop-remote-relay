@@ -7,7 +7,7 @@ name: Release
 #   relay-controller-<v>-unsigned.ipa   iOS controller, unsigned (re-sign to install)
 #   relay-extension-<v>.zip    Chrome/Brave extension (load unpacked, or upload to a store)
 #   relay-server-<v>.tgz       relay server, built JS
-#   ghcr.io/<owner>/relay-server:<v>   relay server container image
+#   ghcr.io/<owner>/slop-remote-relay-server:<v> and :latest   relay server image
 #
 # Signing (optional but recommended — see docs/RELEASE.md):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
@@ -280,7 +280,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/relay-server" >> "$GITHUB_OUTPUT"
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/slop-remote-relay-server" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: services/relay

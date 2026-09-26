@@ -15,7 +15,7 @@ git push origin v0.3.0
 | `relay-controller-<v>-unsigned.ipa` | `expo prebuild` + `xcodebuild` on macOS, unsigned |
 | `relay-extension-<v>.zip` | esbuild, `apps/browser-extension` |
 | `relay-server-<v>.tgz` | `tsc`, `services/relay` |
-| `ghcr.io/<owner>/relay-server:<v>` and `:latest` | Docker, linux/amd64 + linux/arm64 |
+| `ghcr.io/<owner>/slop-remote-relay-server:<v>` and `:latest` | Docker, linux/amd64 + linux/arm64 |
 | `SHA256SUMS.txt` | checksums of all of the above |
 
 Release notes are written for you: `tools/release-notes.mjs` lists the commits

@@ -148,7 +148,7 @@ to control a browser, run the small relay server somewhere both devices can
 reach:
 
 ```bash
-docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/relay-server:latest
+docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/slop-remote-relay-server:latest
 ```
 
 Put it behind HTTPS (the receiver only accepts `wss://` in release builds). The

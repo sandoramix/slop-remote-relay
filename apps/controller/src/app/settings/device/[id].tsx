@@ -1,7 +1,8 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { KeyboardSafe } from '../../../components/KeyboardSafe';
+import { Alert, ScrollView } from 'react-native';
 import { DeviceForm, emptyTarget } from '../../../components/DeviceForm';
 import { PrimaryButton, SmallButton } from '../../../components/form';
 import { palette } from '../../../lib/palette';
@@ -18,7 +19,7 @@ export default function DeviceEditor() {
   const valid = TargetSchema.safeParse(draft).success;
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe>
       <Stack.Screen options={{ title: existing ? existing.name : 'Nuovo dispositivo' }} />
       <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-4" keyboardShouldPersistTaps="handled">
         <DeviceForm value={draft} onChange={setDraft} />
@@ -52,6 +53,6 @@ export default function DeviceEditor() {
           />
         ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }

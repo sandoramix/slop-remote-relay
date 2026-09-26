@@ -1,6 +1,7 @@
 import { DEFAULT_MQTT_URL, DEFAULT_STUN_URLS } from '@relay/protocol';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { KeyboardSafe } from '../../components/KeyboardSafe';
+import { ScrollView } from 'react-native';
 import { Divider, Field, PrimaryButton, Section } from '../../components/form';
 import { useSettings } from '../../state/settings';
 
@@ -23,7 +24,7 @@ export default function ServersScreen() {
   const mqttError = mqtt && !isWsUrl(mqtt) ? 'Serve un endpoint WebSocket (wss://…/mqtt)' : null;
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardSafe>
       <ScrollView contentContainerClassName="gap-6 px-4 pb-12 pt-2" keyboardShouldPersistTaps="handled">
         <Section
           title="Relay"
@@ -88,6 +89,6 @@ export default function ServersScreen() {
           }
         />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardSafe>
   );
 }
