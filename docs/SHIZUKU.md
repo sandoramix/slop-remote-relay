@@ -29,9 +29,10 @@ executor**, after MediaSession and Accessibility.
 ## Setting it up
 
 1. Install Shizuku from its website or Google Play.
-2. Start it: Shizuku app → *Start via Wireless debugging*, or from a computer
-   run the starter bundled in the Shizuku APK (use `x86_64` on an emulator,
-   `arm64` on a phone):
+2. Open Shizuku once, then start it: Shizuku app → *Start via Wireless
+   debugging* (Android 11+), or from a computer — the only way on Android 10
+   and older — run the starter bundled in the Shizuku APK (use `x86_64` on an
+   emulator, `arm64` on most phones and tablets, `arm` on 32-bit ones):
 
    ```bash
    DIR=$(adb shell pm path moe.shizuku.privileged.api | sed 's/package://; s/base.apk//' | tr -d '\r')
