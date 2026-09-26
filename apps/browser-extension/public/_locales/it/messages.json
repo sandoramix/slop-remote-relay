@@ -110,15 +110,6 @@
   "hoursAgo": {
     "message": "{n} h fa"
   },
-  "fsBannerTitle": {
-    "message": "Consenti lo schermo intero"
-  },
-  "fsBannerBody": {
-    "message": "Una pagina va a schermo intero solo se lo chiede una persona. Relay usa il permesso debugger di Chrome per chiederlo al posto tuo; intanto Chrome mostra per un attimo la barra di debug."
-  },
-  "fsBannerButton": {
-    "message": "Consenti"
-  },
   "pairSection": {
     "message": "Associa un telefono"
   },
@@ -193,18 +184,6 @@
   },
   "project": {
     "message": "Progetto su GitHub"
-  },
-  "notNow": {
-    "message": "Non ora"
-  },
-  "fsSetting": {
-    "message": "Controllo schermo intero"
-  },
-  "fsSettingOn": {
-    "message": "Consentito"
-  },
-  "fsSettingOff": {
-    "message": "Non consentito: i comandi di schermo intero falliranno"
   },
   "updateAvailable": {
     "message": "Relay {version} è disponibile"

@@ -182,9 +182,6 @@ const GENERIC_FULLSCREEN = `(() => {
 })()`;
 
 async function enterFullscreen(t: Target): Promise<ActionResult & { executedBy?: ExecutorId }> {
-  if (!(await hasDebugger())) {
-    return { ok: false, detail: 'Fullscreen needs the debugger permission: open the Relay popup in the browser and allow it' };
-  }
   const recipe = siteFor(t.report.url);
   await chrome.tabs.update(t.tabId, { active: true });
   await chrome.windows.update(t.windowId, { focused: true });

@@ -134,10 +134,10 @@ That's it. The remote shows which path it is using (for example *Wi-Fi locale
    click **Load unpacked** and pick that folder.
 3. Click the Relay icon and follow the three setup steps: relay address,
    pairing code, then scan the QR code with your phone.
-4. Click **Allow** on the fullscreen banner. Fullscreen needs Chrome's debugger
-   permission: a web page only goes fullscreen when a person asks, and this is
-   the only way an extension can ask on your behalf. While the command runs,
-   Chrome briefly shows a "Relay is debugging this browser" bar.
+4. That's it. Fullscreen works out of the box: it uses Chrome's debugger
+   permission, because a web page only goes fullscreen when a person asks and
+   this is the only way an extension can ask on your behalf. While a fullscreen
+   command runs, Chrome briefly shows a "Relay is debugging this browser" bar.
 
 The popup shows whether your phone is connected and over which path, which tab
 commands go to, and the last command. A green dot on the toolbar icon means a

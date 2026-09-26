@@ -110,15 +110,6 @@
   "hoursAgo": {
     "message": "{n} h ago"
   },
-  "fsBannerTitle": {
-    "message": "Allow fullscreen control"
-  },
-  "fsBannerBody": {
-    "message": "A page only goes fullscreen when a person asks. Relay needs Chrome's debugger permission to ask on your behalf; Chrome briefly shows a “debugging” bar while it does."
-  },
-  "fsBannerButton": {
-    "message": "Allow"
-  },
   "pairSection": {
     "message": "Pair a phone"
   },
@@ -193,18 +184,6 @@
   },
   "project": {
     "message": "Project on GitHub"
-  },
-  "notNow": {
-    "message": "Not now"
-  },
-  "fsSetting": {
-    "message": "Fullscreen control"
-  },
-  "fsSettingOn": {
-    "message": "Allowed"
-  },
-  "fsSettingOff": {
-    "message": "Not allowed: fullscreen commands will fail"
   },
   "updateAvailable": {
     "message": "Relay {version} is available"

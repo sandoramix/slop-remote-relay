@@ -123,7 +123,8 @@ A Manifest V3 extension has three contexts, and each does what only it can:
   reports media state
 
 Entering fullscreen needs a user gesture that no extension API grants. The
-worker briefly attaches the debugger (optional permission) and sends either a
+worker briefly attaches the debugger (a required permission: Chrome does not
+allow `debugger` as an optional one) and sends either a
 real key press (the site's own shortcut, from `sites.json`) or a
 gesture-flagged `requestFullscreen`, then detaches.
 

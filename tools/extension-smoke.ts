@@ -8,13 +8,15 @@
  *   npm run build -w @relay/browser-extension
  *   npm run smoke:extension
  *
- * The debugger permission is optional in the real manifest (the user grants it
- * from the popup); this test copies the build and makes it required, because a
- * permission prompt cannot be clicked from automation.
+ * The build is loaded exactly as shipped. An earlier version of this test
+ * patched the manifest to make `debugger` required, which hid the fact that
+ * Chrome silently drops `debugger` from optional_permissions — the real
+ * extension could never enter fullscreen. The test also asserts the shipped
+ * manifest actually grants it.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -98,20 +100,17 @@ async function main(): Promise<void> {
   }).listen(PAGE_PORT);
   await sleep(2000);
 
-  // 2 -- the extension, with debugger made mandatory for automation
+  // 2 -- the extension, untouched
   const ext = mkdtempSync(path.join(tmpdir(), 'relay-ext-'));
   cpSync(path.join(root, 'apps/browser-extension/dist'), ext, { recursive: true });
-  const manifestPath = path.join(ext, 'manifest.json');
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  manifest.permissions.push('debugger');
-  delete manifest.optional_permissions;
-  writeFileSync(manifestPath, JSON.stringify(manifest));
 
   const browser = await puppeteer.launch({
     headless: true,
     args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, '--autoplay-policy=no-user-gesture-required'],
   });
   const worker = await (await browser.waitForTarget((t) => t.type() === 'service_worker')).worker();
+  const granted = (await worker!.evaluate(() => chrome.permissions.getAll())) as { permissions?: string[] };
+  check('shipped manifest grants debugger (needed for fullscreen)', !!granted.permissions?.includes('debugger'));
   await worker!.evaluate(
     (settings) => chrome.storage.local.set({ settings }),
     { pairCode, relayUrl: `ws://127.0.0.1:${RELAY_PORT}`, mqttUrl: '', disabled: [] },

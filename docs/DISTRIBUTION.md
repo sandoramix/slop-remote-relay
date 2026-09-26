@@ -63,5 +63,7 @@ on all of them.
 
 The extension is loaded unpacked (Developer mode) or can be published to the
 Chrome Web Store. It asks for `<all_urls>` to find videos on any page, and for
-`debugger` only when the user enables fullscreen: store reviewers treat that
-permission strictly, so a store listing would need to explain it clearly.
+`debugger` for fullscreen. `debugger` cannot be an optional permission —
+Chrome silently drops it from optional_permissions — so it is requested at
+install. Store reviewers treat it strictly, so a listing would need to explain
+it clearly.

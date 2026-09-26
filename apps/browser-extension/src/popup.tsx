@@ -280,45 +280,6 @@ function LastCommandRow({ cmd, now }: { cmd: LastCommand | null; now: number }) 
   );
 }
 
-function useDebuggerPermission() {
-  const [granted, setGranted] = useState<boolean | null>(null);
-  useEffect(() => {
-    void chrome.permissions.contains({ permissions: ['debugger'] }).then(setGranted);
-  }, []);
-  const request = async () => setGranted(await chrome.permissions.request({ permissions: ['debugger'] }));
-  return [granted, request] as const;
-}
-
-function FullscreenBanner() {
-  const [granted, request] = useDebuggerPermission();
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
-  useEffect(() => {
-    void chrome.storage.local.get('fsBannerDismissed').then((r) => setDismissed(!!r.fsBannerDismissed));
-  }, []);
-  if (granted !== false || dismissed !== false) return null;
-  return (
-    <section class="card banner stack">
-      <strong>{t('fsBannerTitle')}</strong>
-      <span class="muted small">{t('fsBannerBody')}</span>
-      <div class="row">
-        <button type="button" class="primary grow" onClick={request}>
-          {t('fsBannerButton')}
-        </button>
-        <button
-          type="button"
-          class="ghost"
-          onClick={() => {
-            setDismissed(true);
-            void chrome.storage.local.set({ fsBannerDismissed: true });
-          }}
-        >
-          {t('notNow')}
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function Collapsible({ title, children, open }: { title: string; children: preact.ComponentChildren; open?: boolean }) {
   return (
     <details class="card collapsible" open={open}>
@@ -445,7 +406,6 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         <input type="url" value={mqtt} spellcheck={false} onInput={(e) => setMqtt((e.target as HTMLInputElement).value)} />
         {!mqttOk ? <span class="error small">{t('invalidRelay')}</span> : null}
       </label>
-      <FullscreenSetting />
       <UpdateSetting />
       <button
         type="button"
@@ -586,25 +546,6 @@ function UpdateSetting() {
   );
 }
 
-/** The fullscreen permission, always reachable here even after "Not now". */
-function FullscreenSetting() {
-  const [granted, request] = useDebuggerPermission();
-  if (granted === null) return null;
-  return (
-    <div class="row">
-      <span class="grow stack tight">
-        <span class="label">{t('fsSetting')}</span>
-        <span class="muted small">{granted ? t('fsSettingOn') : t('fsSettingOff')}</span>
-      </span>
-      {granted ? null : (
-        <button type="button" class="ghost" onClick={request}>
-          {t('fsBannerButton')}
-        </button>
-      )}
-    </div>
-  );
-}
-
 function App() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
   const [justPaired, setJustPaired] = useState(false);
@@ -636,7 +577,6 @@ function App() {
           <StatusCard state={state} now={now} />
           <TargetCard target={target} />
           <LastCommandRow cmd={state?.lastCommand ?? null} now={now} />
-          <FullscreenBanner />
           {/* Open while no phone has ever connected: pairing is the next step. */}
           <Collapsible title={t('pairSection')} open={justPaired || !state?.lastFrameAt}>
             <PairSection settings={settings} onChange={setSettings} />

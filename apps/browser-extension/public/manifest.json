@@ -23,9 +23,7 @@
     "offscreen",
     "scripting",
     "tabs",
-    "alarms"
-  ],
-  "optional_permissions": [
+    "alarms",
     "debugger"
   ],
   "host_permissions": [
