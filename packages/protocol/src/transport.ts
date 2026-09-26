@@ -27,7 +27,7 @@ export interface Transport {
   readonly label: string;
   /**
    * Lower is better. The manager always prefers the lowest available number.
-   * 0 = LAN, 10 = relay, 20 = BLE.
+   * The controller derives it from the user's order: rank × 10.
    */
   readonly priority: number;
   /** False for transports that only work on the same network. */
@@ -52,6 +52,13 @@ export interface ManagerConfig {
    * Without this the app flaps between Wi-Fi and relay at the edge of coverage.
    */
   promoteStableMs: number;
+  /**
+   * Right after start every path is still dialling, and whichever answers
+   * first would otherwise hold the lead for promoteStableMs. Inside this window
+   * the best-ranked healthy path wins at once — there is nothing to flap yet —
+   * so the user's chosen default is the one in use from the first second.
+   */
+  initialSettleMs: number;
   /** Ceiling for the exponential reconnect backoff. */
   maxBackoffMs: number;
   timeoutMs: number;
@@ -62,6 +69,7 @@ export const DEFAULT_MANAGER_CONFIG: ManagerConfig = {
   standbyProbeMs: 20_000,
   missTolerance: 2,
   promoteStableMs: 15_000,
+  initialSettleMs: 4_000,
   maxBackoffMs: 30_000,
   timeoutMs: 3_000,
 };
@@ -111,6 +119,7 @@ export class TransportManager {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private standbyTimer: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
+  private startedAt = 0;
 
   constructor(
     private readonly transports: Transport[],
@@ -131,6 +140,7 @@ export class TransportManager {
 
   async start(): Promise<void> {
     this.stopped = false;
+    this.startedAt = Date.now();
     await Promise.allSettled(this.transports.map((t) => this.dial(t)));
     this.heartbeatTimer = setInterval(() => this.beatActive(), this.config.heartbeatMs);
     this.standbyTimer = setInterval(() => this.probeStandbys(), this.config.standbyProbeMs);
@@ -273,7 +283,8 @@ export class TransportManager {
 
     if (best && current && best.priority < current.priority) {
       const since = this.health.get(best.id)!.healthySince;
-      if (since !== null && Date.now() - since >= this.config.promoteStableMs) {
+      const settling = Date.now() - this.startedAt < this.config.initialSettleMs;
+      if (settling || (since !== null && Date.now() - since >= this.config.promoteStableMs)) {
         this.activeId = best.id;
         console.info(`[transport] promoted → ${best.id}`);
       }
@@ -299,12 +310,12 @@ export class TransportManager {
   }
 
   private beatActive(): void {
+    // Re-evaluated on every beat, not only on connect and failure: a better
+    // path that came back has to be promoted once it has been healthy long
+    // enough, and nothing else happens at that moment to trigger the check.
+    this.reselect();
     const active = this.activeTransport();
-    if (!active) {
-      this.reselect();
-      return;
-    }
-    void this.pingOne(active, this.config.missTolerance);
+    if (active) void this.pingOne(active, this.config.missTolerance);
   }
 
   private probeStandbys(): void {
