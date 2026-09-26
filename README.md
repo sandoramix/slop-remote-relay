@@ -1,5 +1,12 @@
 # Relay
 
+> **About this repository — it's slop, on purpose.** As the `slop-` prefix
+> says, everything here — code, tests, docs, even this README — was generated
+> by AI. The point of the project is to turn an idea into something real and
+> find out whether it actually works well, not to build a maintained product.
+> Use it, fork it, learn from it, but expect rough edges: the chances of it
+> being maintained long-term are slim.
+
 **A remote control for whatever video is playing on another screen.**
 
 You are on the sofa. The film is running on an Android phone propped up on the
