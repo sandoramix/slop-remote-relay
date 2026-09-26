@@ -72,6 +72,7 @@ export class RelayClient {
         this.topology = snapshot;
         this.events.onTopology(snapshot);
       },
+      signPing: (ping) => sign(ping, this.signer),
     });
     await this.manager.start();
   }
