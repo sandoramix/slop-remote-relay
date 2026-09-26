@@ -18,6 +18,12 @@ git push origin v0.3.0
 | `ghcr.io/<owner>/relay-server:<v>` and `:latest` | Docker, linux/amd64 + linux/arm64 |
 | `SHA256SUMS.txt` | checksums of all of the above |
 
+Release notes are written for you: `tools/release-notes.mjs` lists the commits
+since the previous tag, grouped by Conventional Commit type (`feat`, `fix`,
+`docs`, …), and adds the download table. For a hand-written introduction,
+commit `.github/release-notes/<tag>.md` before tagging; it goes on top as
+*Highlights*. Preview locally with `node tools/release-notes.mjs <tag>`.
+
 The version comes from the tag everywhere: Android `versionName`/`versionCode`
 (`major*10000 + minor*100 + patch`), the iOS build number, the extension
 manifest. You can also run the workflow by hand (*Actions → Release → Run

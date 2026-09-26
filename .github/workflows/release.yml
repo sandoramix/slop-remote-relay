@@ -269,6 +269,10 @@ jobs:
     if: ${{ !cancelled() && needs.receiver.result == 'success' && needs.controller-android.result == 'success' && needs.extension.result == 'success' && needs.relay.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
+      # Full history and tags: the notes list the commits since the previous tag.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -278,24 +282,11 @@ jobs:
         working-directory: artifacts
         run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Release notes
+        # Commits since the previous tag, grouped by Conventional Commit type,
+        # with .github/release-notes/<tag>.md on top when it exists.
         run: |
-          {
-            echo "## Relay ${RELAY_VERSION}"
-            echo
-            echo "| File | What it is |"
-            echo "|---|---|"
-            echo "| \`relay-receiver-*.apk\` | Install on the Android phone that plays the video |"
-            echo "| \`relay-controller-*.apk\` | Install on the phone you hold as the remote |"
-            echo "| \`relay-controller-*-unsigned.ipa\` | iOS remote, unsigned: re-sign with your own Apple ID to install |"
-            echo "| \`relay-extension-*.zip\` | Chrome/Brave: unzip, open chrome://extensions, enable Developer mode, Load unpacked |"
-            echo "| \`relay-server-*.tgz\` | Relay server (Node 22): \`npm install --omit=dev && node dist/server.js\` |"
-            echo
-            echo "Container: \`docker run -p 8080:8080 ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/relay-server:${RELAY_VERSION}\`"
-            if [ "${{ needs.keystore.outputs.throwaway }}" = "true" ]; then
-              echo
-              echo "> **Note:** these APKs are signed with a throwaway key. Uninstall a previous version before installing."
-            fi
-          } > notes.md
+          node tools/release-notes.mjs "$RELAY_VERSION" ${{ needs.keystore.outputs.throwaway == 'true' && '--throwaway-key' || '' }} > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELAY_VERSION }}
