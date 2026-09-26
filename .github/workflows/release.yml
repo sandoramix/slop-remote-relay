@@ -162,6 +162,8 @@ jobs:
   controller-ios:
     name: Controller — iOS (unsigned)
     needs: checks
+    outputs:
+      built: ${{ steps.archive.outcome == 'success' }}
     # Expo SDK 57 builds ExpoModulesJSI with Swift 6.2, i.e. Xcode 26.
     runs-on: macos-26
     # Signing an iOS build needs an Apple developer account; until one is set
@@ -186,6 +188,7 @@ jobs:
         env:
           CI: '1'
       - name: Build unsigned archive
+        id: archive
         working-directory: apps/controller/ios
         run: |
           xcodebuild -workspace Relay.xcworkspace -scheme Relay -configuration Release \
@@ -195,6 +198,28 @@ jobs:
           mkdir -p "$RUNNER_TEMP/Payload" "$GITHUB_WORKSPACE/out"
           cp -R "$RUNNER_TEMP/Relay.xcarchive/Products/Applications/Relay.app" "$RUNNER_TEMP/Payload/"
           (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/out/relay-controller-${RELAY_VERSION}-unsigned.ipa" Payload)
+      - name: App info for the AltStore source
+        # AltStore requires a source to list every privacy string and
+        # entitlement; read them from the built app so they cannot drift.
+        run: |
+          APP="$RUNNER_TEMP/Relay.xcarchive/Products/Applications/Relay.app"
+          plutil -convert json -o "$RUNNER_TEMP/info.json" "$APP/Info.plist"
+          ENT=apps/controller/ios/Relay/Relay.entitlements
+          if [ -f "$ENT" ]; then plutil -convert json -o "$RUNNER_TEMP/ent.json" "$ENT"; else echo "{}" > "$RUNNER_TEMP/ent.json"; fi
+          node -e "
+            const info = require(process.env.RUNNER_TEMP + '/info.json');
+            const ent = require(process.env.RUNNER_TEMP + '/ent.json');
+            const privacy = Object.fromEntries(Object.entries(info).filter(([k]) => /^NS.*UsageDescription$/.test(k)));
+            require('fs').writeFileSync('out/ios-info.json', JSON.stringify({
+              tag: process.env.RELAY_VERSION, minOSVersion: info.MinimumOSVersion,
+              privacy, entitlements: Object.keys(ent) }, null, 2));
+          "
+          cat out/ios-info.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-info
+          path: out/ios-info.json
+      - run: rm out/ios-info.json
       - uses: actions/upload-artifact@v4
         with:
           name: controller-ios
@@ -298,3 +323,37 @@ jobs:
           body_path: notes.md
           files: artifacts/*
           fail_on_unmatched_files: true
+
+  altstore:
+    # Publishes the AltStore / SideStore source to GitHub Pages, listing every
+    # release that has an iOS build. Add it once in AltStore:
+    #   https://<owner>.github.io/<repo>/altstore.json
+    name: AltStore source
+    needs: [release, controller-ios]
+    if: ${{ !cancelled() && needs.release.result == 'success' && needs.controller-ios.outputs.built == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}altstore.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-info
+          path: ${{ runner.temp }}
+      - name: Build source
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/altstore-source.mjs site "${{ runner.temp }}/ios-info.json"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

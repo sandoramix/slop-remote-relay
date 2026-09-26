@@ -33,6 +33,25 @@ The iOS job is `continue-on-error`: without an Apple developer account it can
 only produce an unsigned `.ipa` (re-sign it with AltStore, Sideloadly or your
 own Xcode), and a failure there must not hold back the rest.
 
+## AltStore source (iOS)
+
+After each release with a working iOS build, the `altstore` job builds an
+AltStore / SideStore source from all releases that carry an `.ipa`
+(`tools/altstore-source.mjs`) and deploys it to GitHub Pages:
+
+```
+https://sandoramix.github.io/slop-remote-relay/altstore.json
+```
+
+Privacy strings, entitlements and the minimum iOS version are read from the
+built app, since AltStore requires a source to declare every permission. Pages
+is set to *GitHub Actions* as its source, and the `github-pages` environment
+allows `v*` tags as well as `master`, because releases run on the tag ref.
+
+Only AltStore **Classic** and SideStore: they install unsigned builds and sign
+them with the user's Apple ID. AltStore PAL needs Apple notarization, which
+requires the paid developer program.
+
 ## Android signing
 
 Both APKs are signed with the same key, passed through AGP's injected signing

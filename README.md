@@ -76,6 +76,18 @@ Download the latest files from the
 Android will ask you to allow installing apps from your browser or file
 manager; that's expected for apps not from the Play Store.
 
+**iPhone as the remote:** install [AltStore](https://altstore.io) (or
+[SideStore](https://sidestore.io)), then in AltStore go to *Browse → Sources →
++* and add:
+
+```
+https://sandoramix.github.io/slop-remote-relay/altstore.json
+```
+
+Install **Relay** from there. AltStore signs it with your own (free) Apple ID
+and re-signs it every 7 days; new versions appear there automatically. Turn on
+*Developer Mode* in iOS settings when asked.
+
 ### 2. Set up the receiver (the phone that plays video)
 
 1. Open **Relay** on that phone. It generates a pairing code for you (or tap
