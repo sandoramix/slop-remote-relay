@@ -74,7 +74,7 @@ Serve solo un emulatore x86_64. Niente telefoni.
   -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect &
 
 # 2. Receiver
-cd android-receiver && ./gradlew installDebug
+cd apps/receiver-android && ./gradlew installDebug
 
 # 3. Accoppiamento senza passare dalla UI: si scrive il file di preferenze.
 #    ATTENZIONE su Git Bash: MSYS_NO_PATHCONV=1 o i percorsi /data/... vengono

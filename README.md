@@ -9,8 +9,8 @@ su qualunque app in primo piano, comandati da un altro telefono.
 |---|---|---|
 | `packages/protocol` | Comandi, envelope firmato, `TransportManager` con failover | completo, typecheck pulito |
 | `apps/controller` | App React Native (Android + iOS) | schermate e trasporti scritti, mai compilata |
-| `apps/relay` | Server di rendezvous Node, ~40 righe di logica | completo |
-| `android-receiver` | App Kotlin nativa | seek completo, fullscreen completo, BLE è uno scheletro |
+| `services/relay` | Server di rendezvous Node, ~40 righe di logica | completo |
+| `apps/receiver-android` | App Kotlin nativa | seek completo, fullscreen completo, BLE è uno scheletro |
 
 ## Le due catene
 
@@ -56,7 +56,7 @@ npm run dev -w @relay/server        # ascolta su :8080
 npm run android -w @relay/controller
 
 # 4. Receiver
-cd android-receiver && ./gradlew installDebug
+cd apps/receiver-android && ./gradlew installDebug
 ```
 
 Poi sul receiver: apri l'app, inserisci un codice di accoppiamento, concedi i
@@ -87,7 +87,7 @@ cambi la forma dell'envelope:
 npm run vectors -w @relay/protocol     # stampa i vettori di riferimento
 ```
 
-Incolla l'output in `android-receiver/app/src/test/java/com/relay/receiver/CodecTest.kt`
+Incolla l'output in `apps/receiver-android/app/src/test/java/com/relay/receiver/CodecTest.kt`
 e lancia `./gradlew test`. Senza questo passaggio la deriva si manifesta come un
 generico `signature` nei log, che non dice nulla su cosa sia cambiato.
 

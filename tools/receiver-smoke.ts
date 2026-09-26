@@ -12,7 +12,7 @@
  *   adb forward tcp:47821 tcp:47821
  *   npm run smoke -- <pair-code> [host] [port]
  *
- * Or through the rendezvous relay, which exercises apps/relay and the
+ * Or through the rendezvous relay, which exercises services/relay and the
  * receiver's outbound client at the same time. The room id is derived from the
  * pair code, so there is nothing else to line up:
  *

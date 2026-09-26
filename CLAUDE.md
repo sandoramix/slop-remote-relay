@@ -24,7 +24,7 @@ Leggi `README.md` e `docs/ARCHITETTURA.md` prima di modificare qualsiasi cosa.
   aggiorna `CodecTest.kt`. Una divergenza si manifesta solo come un generico
   `signature` nei log.
 - **Le ricette per il fullscreen sono dati, non codice.** Vanno in
-  `android-receiver/app/src/main/assets/recipes.json`. Non spostare mai una
+  `apps/receiver-android/app/src/main/assets/recipes.json`. Non spostare mai una
   strategia dentro un file Kotlin: si rompono ad ogni aggiornamento delle app
   target e devono essere modificabili senza ricompilare.
 - **Ogni envelope porta un `id` univoco e la `DedupeWindow` lo usa.** È l'unica
