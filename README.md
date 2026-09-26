@@ -1,100 +1,203 @@
 # Relay
 
-Telecomando remoto per un dispositivo Android: schermo intero e salti di playback
-su qualunque app in primo piano, comandati da un altro telefono.
+**A remote control for whatever video is playing on another screen.**
 
-## Cosa c'è dentro
+You are on the sofa. The film is running on an Android phone propped up on the
+TV stand, or in a browser tab on the laptop across the room. You want to skip
+the intro, jump back 30 seconds, pause, or go fullscreen — without getting up.
+Relay turns the phone in your hand into that remote.
 
-| Cartella | Cosa fa | Stato |
+It works with any app that plays video — YouTube, Netflix, Prime Video, Twitch,
+VLC, a video in Chrome or Brave — because it doesn't talk to the apps. It talks
+to the device, and the device acts on whatever is in front.
+
+---
+
+## What you can do
+
+- **Jump by any amount**: 10 s, 30 s, 5 minutes, 1:30, 2 hours — pick a preset or
+  type one. Hold the key to keep jumping.
+- **Scrub** to an exact point on a progress bar.
+- **Play / pause.**
+- **Enter and leave fullscreen**, including on web players in Chrome and Brave.
+- **Drive several devices** — a phone and a browser, say — and switch between
+  them from the top of the remote.
+
+## Why it is built this way
+
+Home networks are unreliable, and a remote that stops working when the Wi-Fi
+hiccups is worse than no remote. So Relay never depends on a single way of
+reaching the device. It keeps **six independent paths** open at once and sends
+every command over the best one that is alive right now:
+
+| Path | Needs | Good for |
 |---|---|---|
-| `packages/protocol` | Comandi, envelope firmato, `TransportManager` con failover | completo, typecheck pulito |
-| `apps/controller` | App React Native (Android + iOS) | schermate e trasporti scritti, mai compilata |
-| `services/relay` | Server di rendezvous Node, ~40 righe di logica | completo |
-| `apps/receiver-android` | App Kotlin nativa | seek completo, fullscreen completo, BLE è uno scheletro |
+| **Wi-Fi (local)** | both devices on the same network | fastest, works with the internet down |
+| **WebRTC (peer-to-peer)** | internet + your relay server to set it up | fast and direct from anywhere |
+| **Relay (WebSocket)** | internet + your relay server | works everywhere |
+| **Relay (HTTP)** | internet + your relay server | networks that block WebSockets (hotels, offices) |
+| **MQTT** | internet + an MQTT broker (public by default) | keeps working if your own relay is down |
+| **Bluetooth** | a few metres of distance | no network at all |
 
-## Le due catene
+If the current path fails, the next one takes over instantly because it is
+already connected. **You choose the order** in *Settings → Paths & priority*,
+and you can switch any path off.
 
-Il progetto è costruito attorno a due catene di fallback indipendenti. È l'idea
-centrale: nessun comando è legato a un singolo percorso di rete né a un singolo
-meccanismo di esecuzione.
+It is also secure by design: every command is signed with a key derived from a
+pairing code that only your two devices know. The relay server, an MQTT broker
+or anyone else on the network can pass messages along, but cannot forge a
+command or replay an old one.
 
-**Trasporto** — quale strada prende il comando:
+## What's in the box
 
-```
-LAN WebSocket   priorità 0    ~5 ms     funziona senza internet
-Relay remoto    priorità 10   ~80 ms    funziona ovunque
-BLE             priorità 20   ~200 ms   funziona senza alcuna rete
-```
+| Part | Runs on | What it does |
+|---|---|---|
+| **Relay Controller** | the phone in your hand (Android, iOS) | the remote |
+| **Relay Receiver** | the Android phone that plays the video | carries out the commands |
+| **Relay browser extension** | desktop Chrome or Brave | makes any tab's video controllable |
+| **Relay server** (optional) | any small server, a NAS, a Raspberry Pi | meeting point for the internet paths |
 
-Il controller apre tutti e tre insieme e instrada su quello migliore che risponde.
-Il passaggio verso il basso è immediato perché la riserva è già aperta; la
-risalita aspetta 15 secondi di salute continua, altrimenti l'app rimbalza fra
-Wi-Fi e relay ai bordi della copertura.
+The receiver only exists for Android: iOS does not let an app control other
+apps, so an iPhone can be the remote but not the screen.
 
-**Esecuzione** — come il comando diventa un'azione sul dispositivo:
+---
 
-```
-MediaSession    esatto al ms      serve l'accesso alle notifiche
-Accessibility   funziona ovunque  serve il servizio di accessibilità
-Shizuku         non presente      slot già predisposto, vedi docs/SHIZUKU.md
-```
+## Getting started
 
-Le due catene non si parlano. Un dispositivo a cui è stata revocata
-l'accessibilità continua a fare seek correttamente: perde solo lo schermo intero.
+### 1. Install
 
-## Avvio rapido
+Download the latest files from the
+[Releases page](https://github.com/sandoramix/slop-remote-relay/releases):
+
+- `relay-controller-<version>.apk` on the phone you'll hold
+- `relay-receiver-<version>.apk` on the Android phone that plays video
+- `relay-extension-<version>.zip` if you want to control a desktop browser
+
+Android will ask you to allow installing apps from your browser or file
+manager; that's expected for apps not from the Play Store.
+
+### 2. Set up the receiver (the phone that plays video)
+
+1. Open **Relay** on that phone. It generates a pairing code for you (or tap
+   *Genera un codice nuovo*).
+2. Optionally enter your relay server address (see *Using it away from home*).
+3. Tap **Salva e riavvia**. A QR code appears.
+4. Work through the **Permessi** list on the same screen:
+   - **Notification access** — lets Relay find the video that's playing and
+     jump to the exact second. This is what makes seeking precise.
+   - **Accessibility** — needed for fullscreen and as a fallback for seeking.
+     Relay only reads the screen to find the fullscreen button; it never
+     records or sends what is on it.
+   - **Bluetooth and notifications** — for the Bluetooth path.
+   - **Battery optimisation** and **manufacturer autostart** — so the receiver
+     is still listening tomorrow morning. Skipping these is the most common
+     reason a receiver "stops working" overnight.
+
+> On Android 13 and later, sideloaded apps may have Accessibility greyed out.
+> Open *App info → ⋮ → Allow restricted settings* first. See
+> [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) if that option is missing.
+
+### 3. Pair the remote
+
+On the phone you hold, open **Relay** and either:
+
+- **scan the receiver's QR code** with the camera and tap the link, or
+- type the **same pairing code** on the welcome screen.
+
+That's it. The remote shows which path it is using (for example *Wi-Fi locale
+· 6 ms*); tap it to see all six.
+
+### 4. Control a browser (optional)
+
+1. Unzip `relay-extension-<version>.zip`.
+2. In Chrome or Brave open `chrome://extensions`, turn on **Developer mode**,
+   click **Load unpacked** and pick the unzipped folder.
+3. Click the Relay icon, enter your relay server address, tap **Salva**.
+4. Scan the QR code in the popup with your phone.
+5. Click **Consenti** under *Schermo intero*. Fullscreen needs Chrome's
+   debugger permission: a web page only goes fullscreen when a person asks, and
+   this is the only way an extension can ask on your behalf. While the command
+   runs, Chrome briefly shows a "Relay is debugging this browser" bar.
+
+A browser can only be reached over the internet paths, so it needs a relay
+server (or MQTT).
+
+### Using it away from home — the relay server
+
+On the same Wi-Fi, nothing else is needed. To use the remote from elsewhere, or
+to control a browser, run the small relay server somewhere both devices can
+reach:
 
 ```bash
-# 1. Protocollo
+docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/relay-server:latest
+```
+
+Put it behind HTTPS (the receiver only accepts `wss://` in release builds). The
+simplest way is [Caddy](https://caddyserver.com):
+
+```
+relay.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Then enter `wss://relay.example.com` in the receiver, the controller
+(*Settings → Server*) and the extension.
+
+The server only ever sees an anonymous room id. It never learns your pairing
+code or the signing key, and it stores nothing.
+
+---
+
+## Tips and troubleshooting
+
+- **Seeking is imprecise (jumps in 10 s steps).** The receiver is missing
+  *Notification access*, or the app doesn't publish its playback state. With
+  notification access, jumps are exact to the second.
+- **Fullscreen does nothing.** Check that *Accessibility* is on for Relay. For a
+  video in a browser, the player's controls must exist on the page; Relay taps
+  the page's own fullscreen button.
+- **It worked yesterday, not today.** Almost always the manufacturer's battery
+  saver killed the receiver. Redo the last two permission steps.
+- **Advanced users: Shizuku.** If accessibility is blocked on the receiver (for
+  example by Android's Advanced Protection Mode), Relay can use
+  [Shizuku](https://shizuku.rikka.app) instead for fullscreen keys and taps.
+  See [docs/SHIZUKU.md](docs/SHIZUKU.md).
+- **Diagnostics.** On the remote, tap the path indicator: you'll see every
+  path's health and latency, what the receiver can do, and a log of recent
+  commands with which layer carried them out.
+
+---
+
+## For developers
+
+The repository is a monorepo with one folder per app:
+
+```
+apps/
+  controller/          Expo (React Native) app — the remote
+  receiver-android/    native Kotlin app — the receiver
+  browser-extension/   Manifest V3 extension — the browser receiver
+services/
+  relay/               Node relay server
+packages/
+  protocol/            wire protocol, signing, failover manager (TypeScript)
+  transports/          relay / HTTP / MQTT / WebRTC transports shared by controller and extension
+tools/                 test benches and smoke tests
+```
+
+```bash
 npm install
-npm run typecheck
-
-# 2. Relay (opzionale, serve solo per il percorso remoto)
-npm run dev -w @relay/server        # ascolta su :8080
-
-# 3. Controller
-npm run android -w @relay/controller
-
-# 4. Receiver
+npm run typecheck && npm test
+npm run relay                                   # relay on :8080
+npm run android -w @relay/controller            # controller (needs Android SDK)
 cd apps/receiver-android && ./gradlew installDebug
+npm run build -w @relay/browser-extension       # extension in apps/browser-extension/dist
 ```
 
-Poi sul receiver: apri l'app, inserisci un codice di accoppiamento, concedi i
-permessi nell'ordine indicato dalla schermata. Sul controller inserisci lo stesso
-codice. Da quel codice si derivano sia la chiave HMAC sia la stanza del relay, per
-cui non c'è altro da configurare.
-
-## Permessi via ADB
-
-Se la voce "Consenti impostazioni con restrizioni" non c'è (succede su diverse ROM
-modificate), i due grant si possono forzare da ADB:
-
-```bash
-adb shell settings put secure enabled_accessibility_services \
-  com.relay.receiver/com.relay.receiver.service.RelayAccessibilityService
-adb shell settings put secure accessibility_enabled 1
-
-adb shell cmd notification allow_listener \
-  com.relay.receiver/com.relay.receiver.service.RelayNotificationListener
-```
-
-## Prima di toccare il protocollo
-
-`Codec.canonicalize` esiste in due lingue e deve produrre byte identici. Quando
-cambi la forma dell'envelope:
-
-```bash
-npm run vectors -w @relay/protocol     # stampa i vettori di riferimento
-```
-
-Incolla l'output in `apps/receiver-android/app/src/test/java/com/relay/receiver/CodecTest.kt`
-e lancia `./gradlew test`. Senza questo passaggio la deriva si manifesta come un
-generico `signature` nei log, che non dice nulla su cosa sia cambiato.
-
-## Documentazione
-
-- `docs/STATO.md` — dove siamo adesso, cosa è verificato e come riprodurlo
-- `docs/BUILD.md` — cosa manca per compilare, fase per fase
-- `docs/ARCHITETTURA.md` — perché il receiver è nativo e il controller no
-- `docs/DISTRIBUZIONE.md` — Restricted Settings, Advanced Protection Mode, verifica sviluppatore
-- `docs/SHIZUKU.md` — cosa cambierebbe se lo aggiungessi
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the pieces fit, and why
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — building each app, test benches, conventions
+- [docs/STATUS.md](docs/STATUS.md) — what is verified, how, and what is still open
+- [docs/SHIZUKU.md](docs/SHIZUKU.md) — the optional shell-privileged executor
+- [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) — Android platform restrictions that affect installing
+- [docs/RELEASE.md](docs/RELEASE.md) — tagging a release and signing keys

@@ -9,8 +9,9 @@ import com.relay.receiver.core.ExecutorId
  *
  * The chain exists so that a command is not tied to a mechanism: "seek forward
  * 30 seconds" is satisfied by a media session if one is available, by tapping if
- * not, and later by Shizuku if the user decides to enable it. Adding Shizuku is
- * one new class implementing this interface plus one line in ExecutorChain.
+ * not, and by Shizuku when the user has set it up. ShizukuExecutor was added
+ * exactly that way: one class implementing this interface, one line in the
+ * chain built by RelayForegroundService.
  */
 interface ActionExecutor {
     val id: ExecutorId

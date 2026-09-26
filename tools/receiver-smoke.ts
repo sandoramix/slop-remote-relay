@@ -1,7 +1,7 @@
 /**
  * Protocol smoke test against a running receiver.
  *
- * Phase 2 in docs/BUILD.md is written around two handsets, but most of what it
+ * The original phase-2 check was written around two handsets, but most of what it
  * verifies is not about handsets at all: that the Kotlin side accepts a
  * signature the TypeScript side produced, that the reply verifies coming back,
  * that the dedupe window swallows a repeated id, and that forged and stale

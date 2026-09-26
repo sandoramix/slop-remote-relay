@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuilds the emulator test bench described in docs/STATO.md in one go:
+# Rebuilds the emulator test bench described in docs/DEVELOPMENT.md in one go:
 # installs the receiver, pairs it by writing its preferences file, grants the
 # accessibility service over adb, and forwards the LAN port.
 #
