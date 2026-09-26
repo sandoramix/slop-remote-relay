@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Relay</title>
+<style>
+  :root {
+    --bg: #14181e; --card: #1d232b; --secondary: #252c36; --border: #313a46;
+    --fg: #ede9e3; --muted: #8b95a3; --primary: #e8b04b; --ink: #1b2027;
+    --ok: #7fa88c; --bad: #e86868;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 360px; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { padding: 16px; display: grid; gap: 14px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  input[type=text], input[type=url] { width: 100%; background: var(--secondary); color: var(--fg);
+    border: 1px solid transparent; border-radius: 10px; padding: 9px 10px; font: inherit; }
+  input:focus { outline: none; border-color: var(--primary); }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input { flex: 1; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer;
+    background: var(--secondary); color: var(--fg); }
+  button.primary { background: var(--primary); color: var(--ink); width: 100%; padding: 11px; }
+  button:hover { filter: brightness(1.1); }
+  .paths { display: grid; gap: 6px; }
+  .path { display: flex; align-items: center; gap: 8px; }
+  .path .name { flex: 1; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .dot.up { background: var(--ok); }
+  .hint { font-size: 12px; color: var(--muted); }
+  .warn { font-size: 12px; color: var(--primary); }
+  #qr { background: #fff; border-radius: 12px; padding: 10px; justify-self: center; line-height: 0; }
+  #qr:empty { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Relay</h1>
+    <div class="sub">Questo browser viene comandato dal telefono</div>
+  </div>
+
+  <section class="card">
+    <div class="label">Accoppiamento</div>
+    <label>Codice
+      <div class="row"><input id="pairCode" type="text" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx" /><button id="generate" title="Genera un codice nuovo">Nuovo</button></div>
+    </label>
+    <label>Server relay<input id="relayUrl" type="url" spellcheck="false" placeholder="wss://relay.esempio.it" /></label>
+    <label>Broker MQTT<input id="mqttUrl" type="url" spellcheck="false" /></label>
+    <div id="weak" class="warn" hidden>Codice corto: chi gestisce il relay o un broker pubblico potrebbe indovinarlo.</div>
+    <button id="save" class="primary">Salva</button>
+    <div id="qr"></div>
+    <div id="qrHint" class="hint" hidden>Inquadra con la fotocamera del telefono per aggiungere questo browser al controller.</div>
+  </section>
+
+  <section class="card">
+    <div class="label">Percorsi</div>
+    <div id="paths" class="paths"></div>
+  </section>
+
+  <section class="card">
+    <div class="label">Schermo intero</div>
+    <div id="dbgState" class="hint"></div>
+    <button id="grantDebugger">Consenti</button>
+  </section>
+</main>
+<script type="module" src="popup.js"></script>
+</body>
+</html>

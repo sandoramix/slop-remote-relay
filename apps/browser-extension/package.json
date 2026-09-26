@@ -1,0 +1,23 @@
+{
+  "name": "@relay/browser-extension",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Relay receiver for desktop Chrome and Brave: drive the video in any tab from the phone",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "zip": "node build.mjs --zip"
+  },
+  "dependencies": {
+    "@relay/protocol": "*",
+    "@relay/transports": "*",
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "@types/chrome": "^0.3.0",
+    "typescript": "^5.6.3"
+  }
+}

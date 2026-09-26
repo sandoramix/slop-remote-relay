@@ -14,14 +14,16 @@
     "smoke": "tsx tools/receiver-smoke.ts",
     "test": "npm run test --workspaces --if-present",
     "smoke:paths": "tsx tools/paths-smoke.ts",
-    "send": "tsx tools/send.ts"
+    "send": "tsx tools/send.ts",
+    "smoke:extension": "tsx tools/extension-smoke.ts"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
     "@types/ws": "^8.5.13",
+    "node-datachannel": "^0.33.4",
+    "puppeteer": "^25.12.0",
     "tsx": "^4.19.2",
-    "ws": "^8.18.0",
-    "node-datachannel": "^0.33.4"
+    "ws": "^8.18.0"
   },
   "overrides": {
     "lightningcss": "1.30.1"

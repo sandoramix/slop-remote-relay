@@ -1,0 +1,16 @@
+{
+  "_comment": "Per-site strategies, as data. fullscreenKey is the site's own keyboard shortcut, sent as a real key event through the debugger; seekApi names a page-world seek for players that break when currentTime is written. Leaving fullscreen needs no recipe: document.exitFullscreen() works everywhere.",
+  "youtube.com": {
+    "fullscreenKey": "f"
+  },
+  "netflix.com": {
+    "fullscreenKey": "f",
+    "seekApi": "netflix"
+  },
+  "twitch.tv": {
+    "fullscreenKey": "f"
+  },
+  "primevideo.com": {
+    "fullscreenKey": "f"
+  }
+}
