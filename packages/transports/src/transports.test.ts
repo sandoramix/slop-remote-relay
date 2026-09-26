@@ -96,6 +96,10 @@ async function roundTrip(a: Transport, b: Transport): Promise<void> {
   const pa = probe();
   const pb = probe();
   await Promise.all([a.connect(pa.events), b.connect(pb.events)]);
+  // connect() resolving is not the same as ready for both roles: a WebRTC
+  // answerer is "listening" once signalling is up, and its data channel opens
+  // a moment after the offerer's. Wait for both to say so.
+  await until(() => pa.states.includes('connected') && pb.states.includes('connected'));
   try {
     await a.send('{"n":1,"s":"città 🎬"}');
     await until(() => pb.inbox.length > 0);
