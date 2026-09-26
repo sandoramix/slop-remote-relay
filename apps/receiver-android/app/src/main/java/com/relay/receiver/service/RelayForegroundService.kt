@@ -86,7 +86,7 @@ class RelayForegroundService : Service() {
             listOf(
                 mediaSession,
                 accessibility,
-                ShizukuExecutor(this, recipes),
+                ShizukuExecutor(this, recipes) { accessibility.isFullscreen() },
             ),
         )
 

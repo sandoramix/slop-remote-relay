@@ -29,6 +29,13 @@ import kotlinx.coroutines.delay
 class ShizukuExecutor(
     private val context: Context,
     private val recipes: RecipeEngine,
+    /**
+     * Reads the fullscreen state (AccessibilityExecutor.isFullscreen), or null
+     * when nothing can tell. A key event "succeeds" as soon as it is injected,
+     * whether or not the page reacts, so without this every key step would
+     * report success.
+     */
+    private val fullscreenState: () -> Boolean? = { null },
 ) : ActionExecutor {
 
     override val id = ExecutorId.SHIZUKU
@@ -41,8 +48,10 @@ class ShizukuExecutor(
     }
 
     override suspend fun execute(command: Command): ExecResult = when (command) {
-        is Command.Fullscreen -> runSteps(fullscreenSteps(), "fullscreen")
-        is Command.FullscreenExit -> runSteps(exitSteps(), "exit")
+        is Command.Fullscreen ->
+            if (command.toggle && fullscreenState() == true) runSteps(exitSteps(), "exit", want = false)
+            else runSteps(fullscreenSteps(), "fullscreen", want = true)
+        is Command.FullscreenExit -> runSteps(exitSteps(), "exit", want = false)
         is Command.PlayPause -> key("KEYCODE_MEDIA_PLAY_PAUSE")
             ?.let { ExecResult.ok(id, "media key") }
             ?: ExecResult.fail(id, "Shizuku non risponde")
@@ -60,8 +69,9 @@ class ShizukuExecutor(
         recipes.forPackage(pkg())?.exitFullscreen?.takeIf { it.isNotEmpty() }
             ?: listOf(Step.Key("KEYCODE_ESCAPE"), Step.Back)
 
-    private suspend fun runSteps(steps: List<Step>, what: String): ExecResult {
+    private suspend fun runSteps(steps: List<Step>, what: String, want: Boolean): ExecResult {
         val target = pkg()
+        if (fullscreenState() == want) return ExecResult.ok(id, "già nello stato richiesto")
         for (step in steps) {
             val done = when (step) {
                 is Step.Key -> key(step.code) != null
@@ -77,7 +87,16 @@ class ShizukuExecutor(
                 is Step.Node, is Step.MediaSession -> false
             }
             Log.d(TAG, "$what ${step::class.simpleName} -> $done")
-            if (done) return ExecResult.ok(id, "$what ${step::class.simpleName} on ${target ?: "?"}")
+            if (!done) continue
+            delay(VERIFY_MS)
+            when (fullscreenState()) {
+                want -> return ExecResult.ok(id, "$what ${step::class.simpleName} on ${target ?: "?"}")
+                null -> return ExecResult.ok(
+                    id,
+                    "$what ${step::class.simpleName} inviato su ${target ?: "?"} (non verificato)",
+                )
+                else -> Unit // injected, no effect: try the next step
+            }
         }
         return ExecResult.fail(id, "Nessun passo Shizuku applicabile su ${target ?: "app sconosciuta"}")
     }
@@ -136,6 +155,7 @@ class ShizukuExecutor(
         const val TAG = "ShizukuExecutor"
         const val SEEK_STEP_MS = 10_000L
         const val TAP_SETTLE_MS = 320L
+        const val VERIFY_MS = 700L
         val KEYCODE = Regex("^KEYCODE_[A-Z0-9_]{1,40}$")
         val PACKAGE_IN_RECORD = Regex("""\s([a-zA-Z][\w.]+)/[\w.$]+""")
     }
