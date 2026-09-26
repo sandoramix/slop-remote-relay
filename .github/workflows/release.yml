@@ -162,12 +162,16 @@ jobs:
   controller-ios:
     name: Controller — iOS (unsigned)
     needs: checks
-    runs-on: macos-15
+    # Expo SDK 57 builds ExpoModulesJSI with Swift 6.2, i.e. Xcode 26.
+    runs-on: macos-26
     # Signing an iOS build needs an Apple developer account; until one is set
     # up this produces an unsigned .ipa for re-signing tools. A failure here
     # must not block the Android and browser releases.
     continue-on-error: true
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
