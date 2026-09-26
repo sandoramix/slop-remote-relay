@@ -26,6 +26,8 @@ class CommandRouter(
     private val chain: ExecutorChain,
     private val mediaSession: MediaSessionExecutor,
     private val recipes: RecipeEngine,
+    /** Reads the fullscreen state for device.status; null when nothing can tell. */
+    private val fullscreenProbe: (String?) -> Boolean? = { null },
 ) {
 
     private val dedupe = DedupeWindow()
@@ -92,6 +94,8 @@ class CommandRouter(
             executors = chain.available(),
             recipeKnown = recipes.knows(foreground),
             batteryPercent = batteryPercent(),
+            title = snapshot?.title,
+            fullscreen = fullscreenProbe(foreground),
         )
     }
 

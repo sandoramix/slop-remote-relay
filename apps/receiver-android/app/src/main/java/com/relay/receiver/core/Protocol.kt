@@ -10,14 +10,18 @@ const val DEDUPE_WINDOW_SIZE = 256
 
 sealed interface Command {
     data class Fullscreen(val toggle: Boolean = true) : Command
+    data object FullscreenExit : Command
     data class Seek(val deltaMs: Long) : Command
+    data class SeekTo(val positionMs: Long) : Command
     data class PlayPause(val play: Boolean?) : Command
     data object Status : Command
 
     companion object {
         fun fromJson(json: JSONObject): Command? = when (json.optString("op")) {
             "fullscreen.enter" -> Fullscreen(json.optBoolean("toggle", true))
+            "fullscreen.exit" -> FullscreenExit
             "playback.seek" -> Seek(json.optLong("deltaMs"))
+            "playback.seekTo" -> SeekTo(json.optLong("positionMs").coerceAtLeast(0))
             "playback.playPause" ->
                 PlayPause(if (json.has("play")) json.getBoolean("play") else null)
             "device.status" -> Status
@@ -31,6 +35,9 @@ enum class ExecutorId(val wire: String) {
     ACCESSIBILITY("accessibility"),
     SHIZUKU("shizuku"),
     SETTINGS("settings"),
+    // Browser extension receiver only; listed so the enum mirrors messages.ts.
+    DOM("dom"),
+    CDP("cdp"),
 }
 
 /**
@@ -65,6 +72,8 @@ data class DeviceStatus(
     val executors: List<ExecutorId>,
     val recipeKnown: Boolean,
     val batteryPercent: Int?,
+    val title: String? = null,
+    val fullscreen: Boolean? = null,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("foregroundPackage", foregroundPackage ?: JSONObject.NULL)
@@ -75,5 +84,8 @@ data class DeviceStatus(
         put("executors", org.json.JSONArray(executors.map { it.wire }))
         put("recipeKnown", recipeKnown)
         put("batteryPercent", batteryPercent ?: JSONObject.NULL)
+        put("kind", "android")
+        put("title", title ?: JSONObject.NULL)
+        put("fullscreen", fullscreen ?: JSONObject.NULL)
     }
 }

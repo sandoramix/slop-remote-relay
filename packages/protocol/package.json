@@ -2,8 +2,8 @@
   "name": "@relay/protocol",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "react-native": "src/index.ts",
   "source": "src/index.ts",
   "scripts": {
@@ -16,5 +16,6 @@
   },
   "dependencies": {
     "tsx": "^4.19.2"
-  }
+  },
+  "type": "module"
 }

@@ -76,14 +76,17 @@ class RelayForegroundService : Service() {
 
         // Preference order. A ShizukuExecutor would slot in after accessibility
         // and needs no other change anywhere in the codebase.
+        val accessibility = AccessibilityExecutor(this, recipes)
         val chain = ExecutorChain(
             listOf(
                 mediaSession,
-                AccessibilityExecutor(this, recipes),
+                accessibility,
             ),
         )
 
-        val commandRouter = CommandRouter(this, secret, chain, mediaSession, recipes)
+        val commandRouter = CommandRouter(this, secret, chain, mediaSession, recipes) {
+            accessibility.isFullscreen()
+        }
         router = commandRouter
 
         val list = mutableListOf<Transport>(

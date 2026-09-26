@@ -43,12 +43,38 @@ sealed interface Step {
 
     /** Delegate to the media session layer (used by seek recipes). */
     data object MediaSession : Step
+
+    /**
+     * System Back. Every fullscreen player we target — YouTube, and the
+     * Fullscreen API in Chrome and Brave — leaves fullscreen on Back, which makes
+     * this the one exit route that does not depend on finding a control.
+     */
+    data object Back : Step
+
+    /**
+     * A key event, e.g. KEYCODE_F or KEYCODE_ESCAPE for a web player. Only the
+     * Shizuku executor can inject keys into another app; accessibility skips it.
+     */
+    data class Key(val code: String) : Step
 }
+
+/**
+ * How to tell that the foreground app is already fullscreen, which is what makes
+ * a toggle possible. Any one match is enough.
+ */
+data class FullscreenMarkers(
+    /** A visible node whose label contains one of these means "fullscreen now". */
+    val present: List<String> = emptyList(),
+    /** View ids that exist only outside fullscreen (a browser's URL bar). */
+    val absentViewIds: List<String> = emptyList(),
+)
 
 data class Recipe(
     val packageName: String,
     val fullscreen: List<Step>,
     val seek: List<Step>,
+    val exitFullscreen: List<Step> = emptyList(),
+    val markers: FullscreenMarkers? = null,
 )
 
 class RecipeEngine(context: Context) {
@@ -70,6 +96,15 @@ class RecipeEngine(context: Context) {
             ),
         ),
         Step.Rotate(landscape = true),
+    )
+
+    fun fallbackExitFullscreen(): List<Step> = listOf(Step.Back)
+
+    fun fallbackMarkers(): FullscreenMarkers = FullscreenMarkers(
+        present = listOf(
+            "esci da schermo intero", "exit full screen", "exit fullscreen",
+            "salir de pantalla completa", "quitter le mode plein écran", "vollbildmodus beenden",
+        ),
     )
 
     /**
@@ -116,6 +151,13 @@ class RecipeEngine(context: Context) {
                     packageName = packageName,
                     fullscreen = parseSteps(entry.optJSONArray("fullscreen")),
                     seek = parseSteps(entry.optJSONArray("seek")),
+                    exitFullscreen = parseSteps(entry.optJSONArray("exitFullscreen")),
+                    markers = entry.optJSONObject("fullscreenMarkers")?.let {
+                        FullscreenMarkers(
+                            present = it.optJSONArray("present").toStringList(),
+                            absentViewIds = it.optJSONArray("absentViewIds").toStringList(),
+                        )
+                    },
                 ),
             )
         }
@@ -143,6 +185,8 @@ class RecipeEngine(context: Context) {
                 )
                 "rotate" -> Step.Rotate(landscape = o.optBoolean("landscape", true))
                 "mediasession" -> Step.MediaSession
+                "back" -> Step.Back
+                "key" -> Step.Key(o.getString("code"))
                 else -> null
             }
         }

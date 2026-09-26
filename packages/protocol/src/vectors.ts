@@ -114,6 +114,55 @@ export const VECTORS: Array<{ name: string; input: Envelope }> = [
       },
     },
   },
+
+  // ------------------------------------------------------ added with v0.2 ops
+
+  {
+    name: 'fullscreen exit',
+    input: {
+      v: PROTOCOL_VERSION,
+      id: '55555555-5555-4555-8555-555555555555',
+      ts: 1757030400000,
+      type: 'cmd',
+      cmd: { op: 'fullscreen.exit' },
+    },
+  },
+  {
+    name: 'absolute seek past the 32-bit range',
+    input: {
+      v: PROTOCOL_VERSION,
+      id: '66666666-6666-4666-8666-666666666666',
+      ts: 1757030400000,
+      type: 'cmd',
+      // Longer than Int.MAX_VALUE ms is absurd for a video, but it proves the
+      // Kotlin side reads positions as Long rather than truncating to Int.
+      cmd: { op: 'playback.seekTo', positionMs: 3000000000 },
+      critical: true,
+    },
+  },
+  {
+    name: 'browser status with title and fullscreen',
+    input: {
+      v: PROTOCOL_VERSION,
+      id: '77777777-7777-4777-8777-777777777777',
+      ts: 1757030400000,
+      type: 'event',
+      event: 'status',
+      status: {
+        foregroundPackage: 'https://www.youtube.com/watch?v=x',
+        hasMediaSession: true,
+        positionMs: 61000,
+        durationMs: 3600000,
+        isPlaying: true,
+        executors: ['dom', 'cdp'],
+        recipeKnown: true,
+        batteryPercent: null,
+        kind: 'browser',
+        title: 'Un "titolo" / con — accenti è',
+        fullscreen: false,
+      },
+    },
+  },
 ];
 
 /** The pairing code the derivation vectors below are computed from. */

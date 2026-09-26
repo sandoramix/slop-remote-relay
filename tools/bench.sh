@@ -34,9 +34,16 @@ rm -f "$TMP"
 adb shell "run-as $PKG mkdir -p shared_prefs"
 adb shell "run-as $PKG cp /data/local/tmp/relay.config.xml shared_prefs/relay.config.xml"
 
-adb shell settings put secure enabled_accessibility_services \
-  "$PKG/$PKG.service.RelayAccessibilityService"
-adb shell settings put secure accessibility_enabled 1
+# The system clears the grant asynchronously after a package replace, so a
+# single write right after install can be undone a moment later. Retry until
+# the service is actually bound.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  adb shell settings put secure enabled_accessibility_services \
+    "$PKG/$PKG.service.RelayAccessibilityService"
+  adb shell settings put secure accessibility_enabled 1
+  sleep 2
+  adb shell dumpsys accessibility | grep -q "Bound services:{Service" && break
+done
 
 adb shell am force-stop "$PKG"
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null

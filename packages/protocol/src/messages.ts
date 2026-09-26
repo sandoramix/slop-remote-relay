@@ -24,10 +24,21 @@ export interface FullscreenCommand {
   toggle?: boolean;
 }
 
+/** Leave fullscreen on whatever is in the foreground. */
+export interface FullscreenExitCommand {
+  op: 'fullscreen.exit';
+}
+
 /** Move playback by a relative amount. Negative rewinds. */
 export interface SeekCommand {
   op: 'playback.seek';
   deltaMs: number;
+}
+
+/** Jump to an absolute position. Driven by the scrub bar on the dashboard. */
+export interface SeekToCommand {
+  op: 'playback.seekTo';
+  positionMs: number;
 }
 
 /** Toggle play/pause on the active media session. */
@@ -44,7 +55,9 @@ export interface StatusCommand {
 
 export type Command =
   | FullscreenCommand
+  | FullscreenExitCommand
   | SeekCommand
+  | SeekToCommand
   | PlayPauseCommand
   | StatusCommand;
 
@@ -86,8 +99,22 @@ export interface CommandEnvelope extends BaseEnvelope {
   critical?: boolean;
 }
 
-/** Which layer actually carried out the command. Invaluable when debugging. */
-export type ExecutorId = 'mediasession' | 'accessibility' | 'shizuku' | 'settings';
+/**
+ * Which layer actually carried out the command. Invaluable when debugging.
+ * `dom` and `cdp` belong to the browser extension receiver: a direct call on
+ * the page's <video>, or the same through the DevTools protocol when the page
+ * demands a real user gesture (fullscreen).
+ */
+export type ExecutorId =
+  | 'mediasession'
+  | 'accessibility'
+  | 'shizuku'
+  | 'settings'
+  | 'dom'
+  | 'cdp';
+
+/** What kind of receiver answered. Lets one controller drive several targets. */
+export type ReceiverKind = 'android' | 'browser';
 
 export interface AckEnvelope extends BaseEnvelope {
   type: 'ack';
@@ -113,6 +140,12 @@ export interface DeviceStatus {
   /** Whether the foreground app has a fullscreen recipe. */
   recipeKnown: boolean;
   batteryPercent: number | null;
+  /** Optional from here on: older receivers omit them. */
+  kind?: ReceiverKind;
+  /** Title of what is playing, when the receiver can see it. */
+  title?: string | null;
+  /** Whether the foreground player is fullscreen, when the receiver can tell. */
+  fullscreen?: boolean | null;
 }
 
 export interface EventEnvelope extends BaseEnvelope {
@@ -144,3 +177,23 @@ export const DEDUPE_WINDOW_SIZE = 256;
 export const DEFAULT_LAN_PORT = 47821;
 /** Service type advertised over NSD/mDNS for LAN discovery. */
 export const MDNS_SERVICE_TYPE = '_relayctl._tcp';
+
+/**
+ * Transport ids, shared by both ends so a receiver can report which paths are
+ * live and the controller can order them. The order here is only the default;
+ * the user's own order, stored on the controller, is what ranks them.
+ */
+export const TRANSPORT_IDS = ['lan', 'webrtc', 'relay', 'http', 'mqtt', 'ble'] as const;
+export type TransportId = (typeof TRANSPORT_IDS)[number];
+
+/** WebRTC signalling rides the relay in a sibling room, never the command room. */
+export const RTC_ROOM_SUFFIX = '-rtc';
+/** MQTT topics are `${MQTT_TOPIC_PREFIX}/${room}/${role}` — each side subscribes to its own role. */
+export const MQTT_TOPIC_PREFIX = 'relayctl';
+/**
+ * A public broker works because every frame is HMAC-signed: nobody on the broker
+ * can forge or replay a command. It can still read them — seek amounts and
+ * package names — so self-host (mosquitto with websockets) if that matters.
+ */
+export const DEFAULT_MQTT_URL = 'wss://broker.hivemq.com:8884/mqtt';
+export const DEFAULT_STUN_URLS = ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'];

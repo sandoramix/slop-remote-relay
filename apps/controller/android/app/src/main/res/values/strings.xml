@@ -1,5 +1,0 @@
-<resources>
-    <!-- Must match displayName in app.json. The component name registered from
-         JavaScript is app.json's "name" and lives in MainActivity instead. -->
-    <string name="app_name">Relay</string>
-</resources>

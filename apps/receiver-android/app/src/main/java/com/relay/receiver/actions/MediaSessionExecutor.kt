@@ -40,12 +40,13 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
         sessionManager != null && RelayNotificationListener.isBound
 
     override fun canHandle(command: Command): Boolean = when (command) {
-        is Command.Seek, is Command.PlayPause -> activeController() != null
+        is Command.Seek, is Command.SeekTo, is Command.PlayPause -> activeController() != null
         else -> false
     }
 
     override suspend fun execute(command: Command): ExecResult = when (command) {
         is Command.Seek -> seek(command.deltaMs)
+        is Command.SeekTo -> seekTo(command.positionMs)
         is Command.PlayPause -> playPause(command.play)
         else -> ExecResult.notHandled(id)
     }
@@ -113,6 +114,21 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
         return ExecResult.ok(id, "media key on ${controller.packageName} (imprecise)")
     }
 
+    /** Absolute seek for the scrub bar. Only sessions that support SEEK_TO can do this. */
+    private fun seekTo(positionMs: Long): ExecResult {
+        val controller = activeController() ?: return ExecResult.notHandled(id)
+        val state = controller.playbackState ?: return ExecResult.notHandled(id)
+        if (state.actions and PlaybackState.ACTION_SEEK_TO == 0L) {
+            return ExecResult.fail(id, "${controller.packageName} non supporta il salto a una posizione")
+        }
+        val duration = controller.metadata
+            ?.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION)
+            ?.takeIf { it > 0 }
+        val target = if (duration != null) positionMs.coerceIn(0L, duration - 250) else positionMs
+        controller.transportControls.seekTo(target)
+        return ExecResult.ok(id, "seekTo ${target}ms on ${controller.packageName}")
+    }
+
     private fun playPause(play: Boolean?): ExecResult {
         val controller = activeController() ?: return ExecResult.notHandled(id)
         val playing = controller.playbackState?.state == PlaybackState.STATE_PLAYING
@@ -135,6 +151,9 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
                 ?.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION)
                 ?.takeIf { it > 0 },
             isPlaying = state.state == PlaybackState.STATE_PLAYING,
+            title = controller.metadata
+                ?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE)
+                ?.take(120),
         )
     }
 
@@ -143,6 +162,7 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
         val positionMs: Long,
         val durationMs: Long?,
         val isPlaying: Boolean,
+        val title: String?,
     )
 
     private companion object {

@@ -1,6 +1,7 @@
 package com.relay.receiver
 
 import com.relay.receiver.core.Codec
+import com.relay.receiver.core.Command
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,7 +45,16 @@ class CodecTest {
 
         "status event with nulls and an array" to
             """{"event":"status","id":"44444444-4444-4444-8444-444444444444","status":{"batteryPercent":87,"durationMs":null,"executors":["mediasession","accessibility"],"foregroundPackage":null,"hasMediaSession":false,"isPlaying":false,"positionMs":null,"recipeKnown":false},"ts":1757030400000,"type":"event","v":1}""",
+        "fullscreen exit" to
+            """{"cmd":{"op":"fullscreen.exit"},"id":"55555555-5555-4555-8555-555555555555","ts":1757030400000,"type":"cmd","v":1}""",
+
+        "absolute seek past the 32-bit range" to
+            """{"cmd":{"op":"playback.seekTo","positionMs":3000000000},"critical":true,"id":"66666666-6666-4666-8666-666666666666","ts":1757030400000,"type":"cmd","v":1}""",
+
+        "browser status with title and fullscreen" to
+            """{"event":"status","id":"77777777-7777-4777-8777-777777777777","status":{"batteryPercent":null,"durationMs":3600000,"executors":["dom","cdp"],"foregroundPackage":"https://www.youtube.com/watch?v=x","fullscreen":false,"hasMediaSession":true,"isPlaying":true,"kind":"browser","positionMs":61000,"recipeKnown":true,"title":"Un \"titolo\" / con — accenti è"},"ts":1757030400000,"type":"event","v":1}""",
     )
+
 
     @Test
     fun `canonical form matches the TypeScript vectors`() {
@@ -129,5 +139,13 @@ class CodecTest {
         val verdict = Codec.verify(body.toString(), secret)
         assertTrue(verdict is Codec.Verdict.Rejected)
         assertEquals("skew", (verdict as Codec.Verdict.Rejected).reason)
+    }
+
+    @Test
+    fun `new ops parse, and positions stay Long`() {
+        val exit = Command.fromJson(JSONObject("""{"op":"fullscreen.exit"}"""))
+        assertEquals(Command.FullscreenExit, exit)
+        val seekTo = Command.fromJson(JSONObject(vectors[8].second).getJSONObject("cmd"))
+        assertEquals(Command.SeekTo(3_000_000_000L), seekTo)
     }
 }
