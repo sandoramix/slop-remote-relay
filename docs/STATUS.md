@@ -1,6 +1,6 @@
 # Status — start here
 
-Updated 2026-09-26. Branch `feat/build-out`. Nothing pushed.
+Updated 2026-09-26. Main branch `master`; first release `v0.2.0`.
 
 This file lets a new session pick up without rereading everything: what is
 verified, how to reproduce it, and what is still open.
