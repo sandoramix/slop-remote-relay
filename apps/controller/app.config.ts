@@ -6,7 +6,11 @@ import type { ExpoConfig } from 'expo/config';
  * committed. Anything that would once have been a hand edit in the native
  * projects is a config plugin or a field below.
  */
-const version = process.env.RELAY_VERSION ?? '0.2.0';
+// CI passes the release tag (v1.2.3); local builds keep the default.
+const version = (process.env.RELAY_VERSION ?? '0.2.0').replace(/^v/, '');
+const [major = 0, minor = 0, patch = 0] = version.split(/[.-]/).map((n: string) => Number.parseInt(n, 10) || 0);
+/** Monotonic across releases as long as minor and patch stay below 100. */
+const versionCode = major * 10_000 + minor * 100 + patch;
 
 const config: ExpoConfig = {
   name: 'Relay',
@@ -19,6 +23,7 @@ const config: ExpoConfig = {
   backgroundColor: '#14181E',
   ios: {
     bundleIdentifier: 'com.relay.controller',
+    buildNumber: String(versionCode),
     icon: './assets/expo.icon',
     infoPlist: {
       NSLocalNetworkUsageDescription:
@@ -30,6 +35,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.relay.controller',
+    versionCode,
     adaptiveIcon: {
       backgroundColor: '#14181E',
       foregroundImage: './assets/images/android-icon-foreground.png',

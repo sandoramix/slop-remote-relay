@@ -1,0 +1,46 @@
+name: CI
+
+# Fast checks on every push and pull request. Release builds live in
+# release.yml and only run for version tags.
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript — typecheck and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: npm run typecheck
+      - run: npm test
+      - name: Browser extension builds
+        run: npm run build -w @relay/browser-extension
+
+  receiver:
+    name: Android receiver — unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/receiver-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon test assembleDebug
