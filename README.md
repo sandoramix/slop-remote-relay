@@ -128,15 +128,25 @@ That's it. The remote shows which path it is using (for example *Wi-Fi locale
 
 ### 4. Control a browser (optional)
 
-1. Unzip `relay-extension-<version>.zip`.
+1. Unzip `relay-extension-<version>.zip` into a folder you'll keep, e.g.
+   `Documents/relay-extension` — updates go into the same folder.
 2. In Chrome or Brave open `chrome://extensions`, turn on **Developer mode**,
-   click **Load unpacked** and pick the unzipped folder.
-3. Click the Relay icon, enter your relay server address, tap **Salva**.
-4. Scan the QR code in the popup with your phone.
-5. Click **Consenti** under *Schermo intero*. Fullscreen needs Chrome's
-   debugger permission: a web page only goes fullscreen when a person asks, and
-   this is the only way an extension can ask on your behalf. While the command
-   runs, Chrome briefly shows a "Relay is debugging this browser" bar.
+   click **Load unpacked** and pick that folder.
+3. Click the Relay icon and follow the three setup steps: relay address,
+   pairing code, then scan the QR code with your phone.
+4. Click **Allow** on the fullscreen banner. Fullscreen needs Chrome's debugger
+   permission: a web page only goes fullscreen when a person asks, and this is
+   the only way an extension can ask on your behalf. While the command runs,
+   Chrome briefly shows a "Relay is debugging this browser" bar.
+
+The popup shows whether your phone is connected and over which path, which tab
+commands go to, and the last command. A green dot on the toolbar icon means a
+phone is connected.
+
+**Updates:** the extension checks GitHub twice a day. When a new version is
+out, the popup offers it: download the zip, unzip it over the same folder, and
+press **Reload Relay**. Pairing and settings are kept. (Chrome only lets Web
+Store extensions update themselves; this is the closest a GitHub release gets.)
 
 A browser can only be reached over the internet paths, so it needs a relay
 server (or MQTT).

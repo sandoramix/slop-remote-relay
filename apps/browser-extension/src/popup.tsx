@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { compareVersions } from '@relay/protocol';
 import qrcode from 'qrcode-generator';
 import {
   type BrowserTransportId,
@@ -10,6 +11,7 @@ import {
   type ReceiverState,
   type RuntimeMessage,
   type TargetInfo,
+  type UpdateInfo,
 } from './shared';
 
 // ------------------------------------------------------------------- i18n
@@ -444,6 +446,7 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         {!mqttOk ? <span class="error small">{t('invalidRelay')}</span> : null}
       </label>
       <FullscreenSetting />
+      <UpdateSetting />
       <button
         type="button"
         class="primary"
@@ -457,6 +460,127 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         }}
       >
         {saved ? t('saved') : t('save')}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- updates
+
+const currentVersion = () => chrome.runtime.getManifest().version;
+
+function useUpdate(): [UpdateInfo | null, (info: UpdateInfo | null) => void] {
+  const [info, setInfo] = useState<UpdateInfo | null>(null);
+  useEffect(() => {
+    void chrome.storage.local.get('update').then((r) => setInfo((r.update as UpdateInfo) ?? null));
+  }, []);
+  return [info, setInfo];
+}
+
+/**
+ * Recommended, never forced. An unpacked extension cannot update itself: the
+ * user downloads the zip, unzips it over the folder Relay is loaded from, and
+ * presses Reload here. Settings and pairing survive, because the manifest's
+ * key keeps the extension id fixed.
+ */
+function UpdateBanner() {
+  const [info] = useUpdate();
+  const [snoozed, setSnoozed] = useState<boolean | null>(null);
+  const [downloaded, setDownloaded] = useState(false);
+  useEffect(() => {
+    void chrome.storage.local.get('updateSnooze').then((r) => {
+      const s = r.updateSnooze as { version: string; until: number } | undefined;
+      setSnoozed(!!s && s.version === info?.version && Date.now() < s.until);
+    });
+  }, [info]);
+  if (!info || snoozed !== false || compareVersions(info.version, currentVersion()) <= 0) return null;
+
+  return (
+    <section class={`card update stack ${info.important ? 'important' : ''}`}>
+      <div class="stack tight">
+        <strong>{t(info.important ? 'updateImportant' : 'updateAvailable', { version: info.version })}</strong>
+        <span class="muted small">
+          {t('updateYouHave', { version: currentVersion() })} {info.important ? t('updateImportantBody') : t('updateRecommended')}
+        </span>
+      </div>
+      {info.summary.length ? (
+        <ul class="notes small">
+          {info.summary.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+      {!downloaded ? (
+        <div class="row">
+          <button
+            type="button"
+            class="primary grow"
+            onClick={() => {
+              void chrome.tabs.create({ url: info.zipUrl ?? info.pageUrl, active: false });
+              setDownloaded(true);
+            }}
+          >
+            {t('updateDownload')}
+          </button>
+          <button
+            type="button"
+            class="ghost"
+            onClick={() => {
+              const days = info.important ? 1 : 3;
+              void chrome.storage.local.set({ updateSnooze: { version: info.version, until: Date.now() + days * 86_400_000 } });
+              setSnoozed(true);
+            }}
+          >
+            {t('updateLater')}
+          </button>
+        </div>
+      ) : (
+        <div class="stack">
+          <span class="small">{t('updateSteps')}</span>
+          <button type="button" class="primary" onClick={() => chrome.runtime.reload()}>
+            {t('updateReload')}
+          </button>
+        </div>
+      )}
+      <a class="small" href={info.pageUrl} target="_blank" rel="noreferrer">
+        {t('updateNotes')}
+      </a>
+    </section>
+  );
+}
+
+function UpdateSetting() {
+  const [info, setInfo] = useUpdate();
+  const [checking, setChecking] = useState(false);
+  const newer = !!info && compareVersions(info.version, currentVersion()) > 0;
+  return (
+    <div class="row">
+      <span class="grow stack tight">
+        <span class="label">{t('updatesSetting')}</span>
+        <span class="muted small">
+          {checking
+            ? t('updateChecking')
+            : newer
+              ? t('updateAvailable', { version: info!.version })
+              : info
+                ? t('updateUpToDate', { version: currentVersion() })
+                : t('version', { version: currentVersion() })}
+        </span>
+      </span>
+      <button
+        type="button"
+        class="ghost"
+        disabled={checking}
+        onClick={async () => {
+          setChecking(true);
+          const next = (await chrome.runtime
+            .sendMessage({ to: 'worker', type: 'checkUpdate' } satisfies RuntimeMessage)
+            .catch(() => null)) as UpdateInfo | null;
+          if (next) setInfo(next);
+          setChecking(false);
+        }}
+      >
+        {t('updateCheck')}
       </button>
     </div>
   );
@@ -498,6 +622,7 @@ function App() {
   return (
     <main class="stack">
       <Header />
+      <UpdateBanner />
       {!paired ? (
         <Setup
           initial={settings}

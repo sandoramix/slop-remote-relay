@@ -205,5 +205,47 @@
   },
   "fsSettingOff": {
     "message": "Non consentito: i comandi di schermo intero falliranno"
+  },
+  "updateAvailable": {
+    "message": "Relay {version} è disponibile"
+  },
+  "updateImportant": {
+    "message": "Aggiornamento importante: Relay {version}"
+  },
+  "updateYouHave": {
+    "message": "Hai la {version}."
+  },
+  "updateRecommended": {
+    "message": "Consigliato aggiornare."
+  },
+  "updateImportantBody": {
+    "message": "Contiene correzioni importanti: installala appena puoi."
+  },
+  "updateDownload": {
+    "message": "Scarica"
+  },
+  "updateLater": {
+    "message": "Più tardi"
+  },
+  "updateSteps": {
+    "message": "Estrailo nella cartella da cui è caricato Relay, sostituendo i file. Poi premi Ricarica: associazione e impostazioni restano."
+  },
+  "updateReload": {
+    "message": "Ricarica Relay"
+  },
+  "updateNotes": {
+    "message": "Novità complete"
+  },
+  "updatesSetting": {
+    "message": "Aggiornamenti"
+  },
+  "updateChecking": {
+    "message": "Controllo…"
+  },
+  "updateUpToDate": {
+    "message": "Aggiornato ({version})"
+  },
+  "updateCheck": {
+    "message": "Controlla ora"
   }
 }

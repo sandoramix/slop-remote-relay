@@ -66,6 +66,8 @@ async function main() {
   const popup = await browser.newPage();
   await popup.setViewport({ width: 380, height: 900, deviceScaleFactor: 2 });
   await popup.goto(`chrome-extension://${id}/popup.html`);
+  // A real update check against GitHub, so the banner shows when this build is behind.
+  await popup.evaluate(() => chrome.runtime.sendMessage({ to: 'worker', type: 'checkUpdate' }));
   await shot(popup, '1-setup');
 
   const pairCode = 'k7vd-3mqx-9hpa-wr2e';

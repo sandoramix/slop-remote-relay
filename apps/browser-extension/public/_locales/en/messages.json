@@ -205,5 +205,47 @@
   },
   "fsSettingOff": {
     "message": "Not allowed: fullscreen commands will fail"
+  },
+  "updateAvailable": {
+    "message": "Relay {version} is available"
+  },
+  "updateImportant": {
+    "message": "Important update: Relay {version}"
+  },
+  "updateYouHave": {
+    "message": "You have {version}."
+  },
+  "updateRecommended": {
+    "message": "Updating is recommended."
+  },
+  "updateImportantBody": {
+    "message": "It contains important fixes: install it as soon as you can."
+  },
+  "updateDownload": {
+    "message": "Download"
+  },
+  "updateLater": {
+    "message": "Later"
+  },
+  "updateSteps": {
+    "message": "Unzip it into the folder Relay is loaded from, replacing the files. Then press Reload — your pairing and settings are kept."
+  },
+  "updateReload": {
+    "message": "Reload Relay"
+  },
+  "updateNotes": {
+    "message": "Full release notes"
+  },
+  "updatesSetting": {
+    "message": "Updates"
+  },
+  "updateChecking": {
+    "message": "Checking…"
+  },
+  "updateUpToDate": {
+    "message": "Up to date ({version})"
+  },
+  "updateCheck": {
+    "message": "Check now"
   }
 }

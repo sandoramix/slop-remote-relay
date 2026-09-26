@@ -22,7 +22,8 @@
     "storage",
     "offscreen",
     "scripting",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
   "optional_permissions": [
     "debugger"
@@ -42,5 +43,6 @@
       "run_at": "document_idle"
     }
   ],
-  "default_locale": "en"
+  "default_locale": "en",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnqJ5PmdRldLODOAHsEQl1tNAVHDJALzaP8T1K0o/2lT82frJ5rfoAMB+8ASn1sL+B+Z7UIGGhU0Xj8xlahWUHfs2613IDBh/ak+pSSUyZ6sTowVvkpT6utap0H1dxOA40tr8YJJzPer1Y0jnYPOI35SD7IpZFj0nLf6k8Uc57zh1N1ODswv11xLnOg4L1vpX8aOWfHoLYaYv/9jGu5cicly7D8AjOVAn2UUOlBJWreKere5dJfKPqPB3g9V9hRL9mSC2HEP20O+g/jWG+JQsLyYA7il/9GXlXMkAyBbAqNfjyp1QNKdHoLgltoGoRdMUtFwr2KsssbGojjW0b3cdXQIDAQAB"
 }

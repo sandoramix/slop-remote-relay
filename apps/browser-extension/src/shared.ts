@@ -78,6 +78,16 @@ export interface LastCommand {
   path: BrowserTransportId;
 }
 
+/** Result of the last update check, kept in chrome.storage.local under "update". */
+export interface UpdateInfo {
+  version: string;
+  pageUrl: string;
+  zipUrl: string | null;
+  summary: string[];
+  important: boolean;
+  checkedAt: number;
+}
+
 /** Everything the popup shows, from the offscreen document. */
 export interface ReceiverState {
   configured: boolean;
@@ -109,6 +119,8 @@ export type RuntimeMessage =
   | { to: 'any'; type: 'state'; state: ReceiverState }
   // popup → worker: the tab commands would go to
   | { to: 'worker'; type: 'getTarget' }
+  // popup → worker: check GitHub for a newer release now
+  | { to: 'worker'; type: 'checkUpdate' }
   // worker → offscreen: (re)start with these settings
   | { to: 'offscreen'; type: 'configure'; settings: ExtensionSettings }
   // popup → offscreen: current receiver state

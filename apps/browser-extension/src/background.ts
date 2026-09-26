@@ -1,4 +1,5 @@
 import type { Command, DeviceStatus, ExecutorId } from '@relay/protocol';
+import { compareVersions, LATEST_RELEASE_API, parseRelease, releaseSummary } from '@relay/protocol';
 import sites from './sites.json';
 import {
   type ActionResult,
@@ -9,6 +10,7 @@ import {
   type ReceiverState,
   type RuntimeMessage,
   type TargetInfo,
+  type UpdateInfo,
 } from './shared';
 
 /**
@@ -307,6 +309,40 @@ async function targetInfo(): Promise<TargetInfo | null> {
   };
 }
 
+// ---------------------------------------------------------------- updates
+
+/**
+ * Twice a day, ask GitHub for the latest release. An unpacked extension cannot
+ * replace its own files, so this only tells the popup; the user unzips the new
+ * version over the old folder and presses Reload there.
+ */
+async function checkForUpdate(): Promise<UpdateInfo | null> {
+  try {
+    const res = await fetch(LATEST_RELEASE_API, { headers: { accept: 'application/vnd.github+json' } });
+    if (!res.ok) return null;
+    const release = parseRelease(await res.json());
+    const info: UpdateInfo = {
+      version: release.version,
+      pageUrl: release.pageUrl,
+      zipUrl: release.assets.find((a) => /^relay-extension-.+\.zip$/.test(a.name))?.url ?? null,
+      summary: releaseSummary(release.notes),
+      important: release.important,
+      checkedAt: Date.now(),
+    };
+    await chrome.storage.local.set({ update: info });
+    const newer = compareVersions(info.version, chrome.runtime.getManifest().version) > 0;
+    void chrome.action.setTitle({ title: newer ? `Relay — ${info.version} available` : 'Relay' });
+    return info;
+  } catch {
+    return null;
+  }
+}
+
+chrome.alarms.create('update-check', { periodInMinutes: 12 * 60, delayInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'update-check') void checkForUpdate();
+});
+
 // ----------------------------------------------------------------- wiring
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -328,6 +364,10 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: tru
     return false;
   }
   if (msg.to !== 'worker') return false;
+  if (msg.type === 'checkUpdate') {
+    void checkForUpdate().then(respond);
+    return true;
+  }
   if (msg.type === 'getTarget') {
     void targetInfo().then(respond);
     return true;
