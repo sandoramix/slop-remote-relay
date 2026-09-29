@@ -33,7 +33,7 @@
     <p>Between your paired devices only:</p>
     <ul>
       <li><strong>Commands</strong> from the remote: jump, play, pause, fullscreen.</li>
-      <li><strong>Playback status</strong> back to the remote: whether a video is playing, its position and length, whether it's fullscreen, and the title of the video, page or app.</li>
+      <li><strong>Playback status</strong> back to the remote: whether a video is playing, its position and length, whether it's fullscreen, and the title of the video, page or app. From a browser this also includes the address (URL) of the tab being controlled and the computer's battery level.</li>
     </ul>
     <p>
       These messages travel over whichever connection is available: your local network, Bluetooth, WebRTC,
@@ -43,7 +43,7 @@
     <p>
       Every message is signed with a key derived from your pairing code, so nobody can forge or replay a
       command. Messages are <strong>not encrypted</strong> beyond the connection's own TLS: the operator of
-      the relay server or MQTT broker you use could read the playback status, including the video title.
+      the relay server or MQTT broker you use could read the playback status, including the video title and, for a browser, the tab's URL.
       If that matters to you, run your own relay server and switch MQTT off. The pairing code and the
       signing key are never sent.
     </p>
@@ -53,9 +53,10 @@
     <h2>What the browser extension reads</h2>
     <p>
       Skipper for Chrome runs on every page so it can find a video wherever you play one. On each page it
-      reads only the state of video elements (playing or paused, position, length, fullscreen) and the page
-      title. It does not read form fields, passwords, cookies or browsing history, and it doesn't record
-      the pages you visit.
+      reads only the state of video elements (playing or paused, position, length, fullscreen), the page
+      title and the page address. Only the tab it is controlling is reported to your phone. It does not
+      read form fields, passwords, cookies or browsing history, and it doesn't keep a record of the pages
+      you visit.
     </p>
     <p>
       It uses Chrome's <code>debugger</code> permission for one thing: pressing the player's fullscreen
