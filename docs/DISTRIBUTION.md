@@ -67,3 +67,12 @@ Chrome Web Store. It asks for `<all_urls>` to find videos on any page, and for
 Chrome silently drops it from optional_permissions — so it is requested at
 install. Store reviewers treat it strictly, so a listing would need to explain
 it clearly.
+
+For the store, build with `npm run zip:store -w @relay/browser-extension`. It
+writes `relay-extension-<version>-store.zip` without the manifest's `key`
+(the store rejects the field and assigns its own id) and without the `alarms`
+permission, which only the GitHub update check uses. A store install is
+recognised at runtime by the `update_url` Chrome adds to its manifest, and then
+skips the GitHub update check and banner. The privacy policy the listing needs
+is `pages/privacy.html`, published at
+<https://sandoramix.github.io/slop-remote-relay/privacy.html>.

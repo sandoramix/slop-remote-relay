@@ -8,7 +8,8 @@
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "zip": "node build.mjs --zip"
+    "zip": "node build.mjs --zip",
+    "zip:store": "node build.mjs --store"
   },
   "dependencies": {
     "@relay/protocol": "*",

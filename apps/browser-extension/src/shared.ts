@@ -19,6 +19,13 @@ export interface ExtensionSettings {
   disabled: BrowserTransportId[];
 }
 
+/**
+ * Chrome adds `update_url` to the manifest of an extension installed from the
+ * Web Store, which updates it by itself. Only unpacked installs need the
+ * GitHub update check and the unzip-and-reload banner.
+ */
+export const STORE_INSTALL = 'update_url' in chrome.runtime.getManifest();
+
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   pairCode: '',
   relayUrl: '',
