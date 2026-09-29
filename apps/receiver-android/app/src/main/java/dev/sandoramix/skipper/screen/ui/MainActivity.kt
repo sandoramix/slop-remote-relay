@@ -56,42 +56,54 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = BG
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(28), dp(20), dp(40))
-            setBackgroundColor(BG)
-        }
+        // Two columns once there is room (a tablet, or a phone in landscape
+        // wide enough): pairing on the left, paths and permissions on the right.
+        val wide = resources.configuration.screenWidthDp >= 600
 
-        root.addView(text("Skipper Screen", 30f, FG, bold = true))
-        root.addView(text("Ricevitore — questo telefono viene comandato", 14f, MUTED).apply {
+        val title = text("Skipper Screen", 30f, FG, bold = true)
+        val subtitle = text("Ricevitore — questo telefono viene comandato", 14f, MUTED).apply {
             setPadding(0, 0, 0, dp(16))
-        })
-
+        }
         statusView = text("", 15f, FG).apply { setLineSpacing(0f, 1.3f) }
-        root.addView(card(statusView))
 
         // ------------------------------------------------------------ pairing
-        root.addView(header("Accoppiamento"))
         pairInput = input("Codice di accoppiamento", prefs.getString(RelayForegroundService.KEY_PAIR_CODE, ""))
         relayInput = input("wss://relay.esempio.it (facoltativo)", prefs.getString(RelayForegroundService.KEY_RELAY_URL, ""))
         mqttInput = input(MqttTransport.DEFAULT_URL, prefs.getString(RelayForegroundService.KEY_MQTT_URL, ""))
+        // Fixed size: stretched to the card's width it filled a landscape tablet.
         qrView = ImageView(this).apply {
             adjustViewBounds = true
             setPadding(dp(12), dp(12), dp(12), dp(12))
             background = rounded(Color.WHITE, 16)
+            layoutParams = LinearLayout.LayoutParams(dp(QR_DP), dp(QR_DP)).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(4)
+            }
         }
-        root.addView(
-            card(
-                label("Codice"), pairInput,
-                button("Genera un codice nuovo", secondary = true) { pairInput.setText(generatePairCode()) },
-                label("Server relay"), relayInput,
-                label("Broker MQTT"), mqttInput,
-                label("Inquadra dal controller per associarlo"), qrView,
-            ),
+        val fields = listOf(
+            label("Codice"), pairInput,
+            button("Genera un codice nuovo", secondary = true) { pairInput.setText(generatePairCode()) },
+            label("Server relay"), relayInput,
+            label("Broker MQTT"), mqttInput,
         )
+        val qrBlock = column(label("Inquadra dal controller per associarlo"), qrView)
+        val pairingCard = if (wide) {
+            // QR beside the fields, so the pairing card stays short.
+            card(
+                LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    addView(column(*fields.toTypedArray()), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(qrBlock, LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply { marginStart = dp(16) })
+                },
+            )
+        } else {
+            card(*(fields + qrBlock).toTypedArray())
+        }
 
         // ------------------------------------------------------------ paths
-        root.addView(header("Percorsi attivi"))
         val disabled = prefs.getString(RelayForegroundService.KEY_DISABLED, "").orEmpty().split(",").toSet()
         val paths = listOf(
             "lan" to "Wi-Fi locale",
@@ -109,43 +121,57 @@ class MainActivity : Activity() {
                 toggles[id] = this
             }
         }
-        root.addView(card(*boxes.toTypedArray()))
-
-        root.addView(button("Salva e riavvia") { save() })
 
         // ------------------------------------------------------------ grants
-        root.addView(header("Permessi"))
         shizukuButton = button("Shizuku", secondary = true) {
             if (ShizukuBridge.running()) ShizukuBridge.requestPermission()
             else openUrl("https://shizuku.rikka.app/guide/setup/")
         }
-        root.addView(
-            card(
-                button("1. Accesso alle notifiche — salti esatti", secondary = true) {
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                },
-                button("2. Accessibilità — schermo intero", secondary = true) {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                },
-                button("3. Bluetooth e notifiche", secondary = true) { requestRuntimePermissions() },
-                button("4. Modifica impostazioni — rotazione", secondary = true) {
-                    startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
-                },
-                button("5. Escludi dall'ottimizzazione batteria", secondary = true) {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                },
-                button("6. Autostart del produttore (Xiaomi, Oppo, Samsung…)", secondary = true) {
-                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
-                },
-                shizukuButton,
-                text(
-                    "Shizuku è facoltativo: sblocca tasti e tocchi anche senza accessibilità, " +
-                        "ma va riavviato dopo ogni riavvio del telefono.",
-                    12f,
-                    MUTED,
-                ),
+        val grants = card(
+            button("1. Accesso alle notifiche — salti esatti", secondary = true) {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            },
+            button("2. Accessibilità — schermo intero", secondary = true) {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            },
+            button("3. Bluetooth e notifiche", secondary = true) { requestRuntimePermissions() },
+            button("4. Modifica impostazioni — rotazione", secondary = true) {
+                startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+            },
+            button("5. Escludi dall'ottimizzazione batteria", secondary = true) {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            },
+            button("6. Autostart del produttore (Xiaomi, Oppo, Samsung…)", secondary = true) {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+            },
+            shizukuButton,
+            text(
+                "Shizuku è facoltativo: sblocca tasti e tocchi anche senza accessibilità, " +
+                    "ma va riavviato dopo ogni riavvio del telefono.",
+                12f,
+                MUTED,
             ),
         )
+
+        val left = listOf(title, subtitle, card(statusView), header("Accoppiamento"), pairingCard)
+        val right = listOf(
+            header("Percorsi attivi"), card(*boxes.toTypedArray()),
+            button("Salva e riavvia") { save() },
+            header("Permessi"), grants,
+        )
+        val root = if (wide) {
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                val weight = { LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) }
+                addView(column(*left.toTypedArray()), weight())
+                addView(column(*right.toTypedArray()), weight().apply { marginStart = dp(24) })
+            }
+        } else {
+            column(*(left + right).toTypedArray())
+        }.apply {
+            setPadding(dp(20), dp(28), dp(20), dp(40))
+            setBackgroundColor(BG)
+        }
 
         setContentView(ScrollView(this).apply {
             setBackgroundColor(BG)
@@ -288,6 +314,11 @@ class MainActivity : Activity() {
         setPadding(dp(12), dp(10), dp(12), dp(10))
     }
 
+    private fun column(vararg children: View) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        children.forEach { addView(it) }
+    }
+
     private fun card(vararg children: View) = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         background = rounded(CARD, 20)
@@ -315,6 +346,9 @@ class MainActivity : Activity() {
     }
 
     companion object {
+        /** The QR's side, in dp: big enough to scan from a phone, never the whole screen. */
+        private const val QR_DP = 240
+
         // Same palette as the controller (apps/controller/global.css).
         private val BG = Color.rgb(20, 24, 30)
         private val CARD = Color.rgb(29, 35, 43)
