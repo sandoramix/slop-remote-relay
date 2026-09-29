@@ -9,6 +9,7 @@ import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { palette } from '../lib/palette';
 import { useRelayConnection } from '../state/session';
 import { useSettings } from '../state/settings';
+import { useUpdate } from '../state/update';
 
 // Keep the splash up until settings are loaded, so the first frame already
 // knows whether to show onboarding or the remote.
@@ -21,6 +22,15 @@ function KeepAwake() {
 
 function Connection() {
   useRelayConnection();
+  return null;
+}
+
+/** Asks GitHub for a newer release at start, at most every 12 hours. */
+function UpdateCheck() {
+  const check = useUpdate((s) => s.check);
+  useEffect(() => {
+    void check();
+  }, [check]);
   return null;
 }
 
@@ -40,6 +50,7 @@ export default function RootLayout() {
       <GluestackUIProvider mode="dark">
         <StatusBar style="light" />
         <Connection />
+        <UpdateCheck />
         {keepAwake ? <KeepAwake /> : null}
         <Stack
           screenOptions={{

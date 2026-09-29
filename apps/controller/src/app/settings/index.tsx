@@ -1,6 +1,7 @@
 import type { TransportId } from '@relay/protocol';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { Activity, FastForward, Plus, Route, Server } from 'lucide-react-native';
+import { Activity, Download, FastForward, Info, Plus, Route, Server } from 'lucide-react-native';
 import { Fragment } from 'react';
 import { ScrollView, Text } from 'react-native';
 import { Divider, LinkRow, Section, ToggleRow } from '../../components/form';
@@ -8,7 +9,11 @@ import { KindIcon } from '../../components/remote/TargetSwitcher';
 import { jumpLabel } from '../../lib/format';
 import { palette } from '../../lib/palette';
 import { TRANSPORTS } from '../../lib/transports/registry';
+import { openUpdate } from '../../components/UpdateBanner';
 import { isEnabled, normalizeOrder, useSettings } from '../../state/settings';
+import { currentVersion, newerRelease, useUpdate } from '../../state/update';
+
+const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
 
 /** Host of a ws/wss/http URL, without throwing on a half-typed one. */
 const hostOf = (raw: string) => raw.replace(/^[a-z]+:\/\//i, '').split('/')[0] || raw;
@@ -17,6 +22,17 @@ export default function SettingsScreen() {
   const s = useSettings();
   const order = normalizeOrder(s.transportOrder).filter((id) => isEnabled(s, id));
   const first = order[0] ? TRANSPORTS[order[0] as TransportId].label : 'nessuno';
+  const update = useUpdate();
+  const newer = newerRelease(update.latest);
+  const updateStatus = update.checking
+    ? 'Controllo…'
+    : newer
+      ? `${newer.version} disponibile`
+      : update.failed
+        ? 'Controllo non riuscito'
+        : update.checkedAt
+          ? 'Aggiornata'
+          : 'Controlla ora';
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 px-4 pb-12 pt-2">
@@ -87,7 +103,26 @@ export default function SettingsScreen() {
         />
       </Section>
 
-      <Text className="text-center text-xs text-muted-foreground">Skipper</Text>
+      <Section
+        title="Informazioni"
+        footer="Controlla da sola ogni 12 ore. L'aggiornamento non è mai obbligatorio."
+      >
+        <LinkRow
+          icon={<Info size={18} color={palette.muted} />}
+          label="Versione"
+          value={currentVersion()}
+          onPress={() => void Linking.openURL(SITE)}
+        />
+        <Divider />
+        <LinkRow
+          icon={<Download size={18} color={newer ? palette.primary : palette.muted} />}
+          label="Aggiornamenti"
+          value={updateStatus}
+          onPress={() => (newer ? openUpdate(newer) : void update.check(true))}
+        />
+      </Section>
+
+      <Text className="text-center text-xs text-muted-foreground">Skipper {currentVersion()}</Text>
     </ScrollView>
   );
 }

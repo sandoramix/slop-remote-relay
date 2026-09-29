@@ -8,6 +8,7 @@ import { FeedbackToast } from '../components/remote/FeedbackToast';
 import { NowPlaying } from '../components/remote/NowPlaying';
 import { SeekPad } from '../components/remote/SeekPad';
 import { TargetSwitcher } from '../components/remote/TargetSwitcher';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { palette } from '../lib/palette';
 
 /**
@@ -30,6 +31,7 @@ export default function Remote() {
             <Settings2 size={20} color={palette.foreground} />
           </Pressable>
         </View>
+        <UpdateBanner />
         <ConnectionChip />
         <NowPlaying />
         <SeekPad />
