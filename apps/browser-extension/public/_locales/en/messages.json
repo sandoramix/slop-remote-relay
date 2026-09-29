@@ -226,5 +226,38 @@
   },
   "updateCheck": {
     "message": "Check now"
+  },
+  "setupNoApp": {
+    "message": "No Skipper app on your phone yet?"
+  },
+  "getIt": {
+    "message": "Get it"
+  },
+  "aboutSection": {
+    "message": "How it works"
+  },
+  "aboutRemote": {
+    "message": "The Skipper app on your phone is the remote. This extension receives its commands and carries them out on the tab playing a video: jump, play/pause, fullscreen."
+  },
+  "aboutPaths": {
+    "message": "A browser can only be reached over the internet, so commands travel through your relay server or an MQTT broker. Each one is signed with the pairing code: nobody without it can send commands."
+  },
+  "aboutFullscreen": {
+    "message": "During a fullscreen command Chrome briefly shows a “debugging this browser” bar. That's the extension pressing the player's fullscreen button for you, because a page only goes fullscreen when a person asks."
+  },
+  "getAppTitle": {
+    "message": "Get the Skipper app"
+  },
+  "getAndroid": {
+    "message": "Android: download the APK"
+  },
+  "getIphone": {
+    "message": "iPhone: install with AltStore"
+  },
+  "installGuide": {
+    "message": "Step-by-step guide"
+  },
+  "guide": {
+    "message": "Guide"
   }
 }

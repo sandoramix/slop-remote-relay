@@ -226,5 +226,38 @@
   },
   "updateCheck": {
     "message": "Controlla ora"
+  },
+  "setupNoApp": {
+    "message": "Non hai ancora Skipper sul telefono?"
+  },
+  "getIt": {
+    "message": "Scaricalo"
+  },
+  "aboutSection": {
+    "message": "Come funziona"
+  },
+  "aboutRemote": {
+    "message": "L'app Skipper sul telefono è il telecomando. Questa estensione riceve i comandi e li esegue nella scheda che riproduce un video: salti, play/pausa, schermo intero."
+  },
+  "aboutPaths": {
+    "message": "Il browser si raggiunge solo via internet, quindi i comandi passano dal tuo server relay o da un broker MQTT. Ognuno è firmato con il codice di accoppiamento: senza quel codice nessuno può inviarne."
+  },
+  "aboutFullscreen": {
+    "message": "Durante un comando di schermo intero Chrome mostra per un attimo la barra “debug del browser”. È l'estensione che preme per te il pulsante schermo intero del player, perché una pagina va a schermo intero solo se lo chiede una persona."
+  },
+  "getAppTitle": {
+    "message": "Scarica l'app Skipper"
+  },
+  "getAndroid": {
+    "message": "Android: scarica l'APK"
+  },
+  "getIphone": {
+    "message": "iPhone: installala con AltStore"
+  },
+  "installGuide": {
+    "message": "Guida passo passo"
+  },
+  "guide": {
+    "message": "Guida"
   }
 }

@@ -129,6 +129,9 @@ function useNow(): number {
 
 // ------------------------------------------------------------------ views
 
+const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
+const LATEST_RELEASE = 'https://github.com/sandoramix/slop-remote-relay/releases/latest';
+
 function Header() {
   return (
     <header class="header">
@@ -151,6 +154,12 @@ function Setup({ initial, onDone }: { initial: ExtensionSettings; onDone: (s: Ex
       <div>
         <h2>{t('setupTitle')}</h2>
         <p class="muted">{t('setupIntro')}</p>
+        <p class="muted small">
+          {t('setupNoApp')}{' '}
+          <a href={`${SITE}#install`} target="_blank" rel="noreferrer">
+            {t('getIt')}
+          </a>
+        </p>
       </div>
       <label class="step">
         <span class="step-num">1</span>
@@ -278,6 +287,31 @@ function LastCommandRow({ cmd, now }: { cmd: LastCommand | null; now: number }) 
         {!cmd.ok && cmd.detail ? <span class="error small">{cmd.detail}</span> : null}
       </div>
     </section>
+  );
+}
+
+/** What the extension does and where to get the remote: for first-time users and store reviewers. */
+function AboutSection() {
+  return (
+    <>
+      <p class="small">{t('aboutRemote')}</p>
+      <p class="small muted">{t('aboutPaths')}</p>
+      <p class="small muted">{t('aboutFullscreen')}</p>
+      <div class="stack tight">
+        <strong class="small">{t('getAppTitle')}</strong>
+        <ul class="links small">
+          <li>
+            <a href={LATEST_RELEASE} target="_blank" rel="noreferrer">{t('getAndroid')}</a>
+          </li>
+          <li>
+            <a href={`${SITE}#install`} target="_blank" rel="noreferrer">{t('getIphone')}</a>
+          </li>
+          <li>
+            <a href={SITE} target="_blank" rel="noreferrer">{t('installGuide')}</a>
+          </li>
+        </ul>
+      </div>
+    </>
   );
 }
 
@@ -590,11 +624,19 @@ function App() {
           </Collapsible>
         </>
       )}
+      <Collapsible title={t('aboutSection')} open={!paired}>
+        <AboutSection />
+      </Collapsible>
       <footer class="footer muted small">
         <span>{t('version', { version: chrome.runtime.getManifest().version })}</span>
-        <a href="https://github.com/sandoramix/slop-remote-relay" target="_blank" rel="noreferrer">
-          {t('project')}
-        </a>
+        <span class="row">
+          <a href={SITE} target="_blank" rel="noreferrer">
+            {t('guide')}
+          </a>
+          <a href="https://github.com/sandoramix/slop-remote-relay" target="_blank" rel="noreferrer">
+            {t('project')}
+          </a>
+        </span>
       </footer>
     </main>
   );
