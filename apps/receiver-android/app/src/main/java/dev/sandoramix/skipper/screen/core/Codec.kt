@@ -123,6 +123,9 @@ object Codec {
     /** Pair code -> relay room id. Must match roomFromPairCode in the controller. */
     fun roomFromPairCode(code: String): String = sha256Hex("room:$code").take(24)
 
+    /** Room → 8-byte BLE advertising tag, as hex. Same as bleTagFromRoom in crypto.ts. */
+    fun bleTagFromRoom(room: String): String = sha256Hex("ble:$room").take(16)
+
     sealed interface Verdict {
         data class Valid(val envelope: JSONObject) : Verdict
         data class Rejected(val reason: String) : Verdict

@@ -79,6 +79,10 @@ const config: ExpoConfig = {
       {
         isBackgroundEnabled: false,
         modes: ['central'],
+        // Without it, Android 12+ needs location permission to return any scan
+        // result, and we only ask for BLUETOOTH_SCAN/CONNECT: scans came back
+        // empty with no error.
+        neverForLocation: true,
         bluetoothAlwaysPermission:
           'Skipper usa il Bluetooth per comandare il ricevitore quando non c\'è nessuna rete.',
       },

@@ -39,40 +39,6 @@ export async function ensureBlePermissions(): Promise<boolean> {
   return res === PermissionsAndroid.RESULTS.GRANTED;
 }
 
-export interface ScannedReceiver {
-  id: string;
-  name: string;
-  rssi: number | null;
-}
-
-/** Finds receivers advertising the relay service, for the device editor. */
-export async function scanReceivers(timeoutMs = 6000): Promise<ScannedReceiver[]> {
-  if (!(await ensureBlePermissions())) throw new Error('Permessi Bluetooth negati');
-  const ble = await manager();
-  const found = new Map<string, ScannedReceiver>();
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      ble.stopDeviceScan();
-      resolve([...found.values()]);
-    }, timeoutMs);
-    ble.startDeviceScan([RELAY_SERVICE_UUID], null, (error, device) => {
-      if (error) {
-        clearTimeout(timer);
-        ble.stopDeviceScan();
-        reject(error);
-        return;
-      }
-      if (device) {
-        found.set(device.id, {
-          id: device.id,
-          name: device.localName ?? device.name ?? device.id,
-          rssi: device.rssi,
-        });
-      }
-    });
-  });
-}
-
 function toBase64(bytes: Uint8Array): string {
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
@@ -84,6 +50,42 @@ function fromBase64(b64: string): Uint8Array {
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+/**
+ * Scans for a receiver advertising the relay service with our tag in its
+ * service data. Receivers advertise from a rotating private address, so a
+ * device id from an earlier scan goes stale: find it fresh on every connect.
+ */
+function findReceiver(ble: BleManager, tag: string, timeoutMs: number): Promise<Device> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      ble.stopDeviceScan();
+      reject(new Error('Ricevitore Bluetooth non trovato'));
+    }, timeoutMs);
+    ble.startDeviceScan([RELAY_SERVICE_UUID], { allowDuplicates: false }, (error, device) => {
+      if (error) {
+        clearTimeout(timer);
+        ble.stopDeviceScan();
+        reject(error);
+        return;
+      }
+      if (!device || advertisedTag(device) !== tag) return;
+      clearTimeout(timer);
+      ble.stopDeviceScan();
+      resolve(device);
+    });
+  });
+}
+
+/** The receiver's 8-byte tag, as hex, from the service data under our UUID. */
+function advertisedTag(device: Device): string | null {
+  // Full 128-bit form on Android; accept the 16-bit short form too.
+  const entry = Object.entries(device.serviceData ?? {}).find(([uuid]) =>
+    [RELAY_SERVICE_UUID, 'a17e'].includes(uuid.toLowerCase()),
+  );
+  if (!entry) return null;
+  return [...fromBase64(entry[1])].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -102,8 +104,9 @@ export class BleTransport implements Transport {
   private readonly inbound = new Map<number, Uint8Array[]>();
   private seq = 0;
 
+  /** @param tag bleTagFromRoom(room): picks our receiver out of a scan. */
   constructor(
-    private readonly deviceId: string,
+    private readonly tag: string,
     priority?: number,
   ) {
     this.priority = priority ?? 20;
@@ -112,7 +115,8 @@ export class BleTransport implements Transport {
   async connect(events: TransportEvents): Promise<void> {
     if (!(await ensureBlePermissions())) throw new Error('Permessi Bluetooth negati');
     const ble = await manager();
-    const device = await ble.connectToDevice(this.deviceId, { requestMTU: 247, timeout: 8000 });
+    const found = await findReceiver(ble, this.tag, 10_000);
+    const device = await ble.connectToDevice(found.id, { requestMTU: 247, timeout: 8000 });
     await device.discoverAllServicesAndCharacteristics();
     this.mtu = device.mtu ?? 23;
     this.device = device;

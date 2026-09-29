@@ -9,6 +9,7 @@ import {
 import { RTCPeerConnection } from 'react-native-webrtc';
 import type { Settings, Target } from '../../state/settings';
 import { isEnabled, normalizeOrder } from '../../state/settings';
+import { bleTagFromRoom } from '../crypto';
 import { BleTransport } from './ble';
 import { LanWebSocketTransport } from './lan';
 
@@ -102,8 +103,8 @@ export const TRANSPORTS: Record<TransportId, TransportMeta> = {
     label: 'Bluetooth',
     summary: 'Nessuna rete necessaria, a pochi metri dal ricevitore.',
     kinds: ['android'],
-    missing: ({ target }) => (target.bleDeviceId ? null : 'Nessun ricevitore Bluetooth associato'),
-    build: ({ target, priority }) => new BleTransport(target.bleDeviceId!, priority),
+    missing: () => null,
+    build: ({ room, priority }) => new BleTransport(bleTagFromRoom(room), priority),
   },
 };
 

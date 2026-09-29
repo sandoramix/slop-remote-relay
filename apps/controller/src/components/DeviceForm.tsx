@@ -1,11 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
-import { Bluetooth, Copy, Globe, RefreshCw, Search, Smartphone, Wand2 } from 'lucide-react-native';
+import { Copy, Globe, RefreshCw, Search, Smartphone, Wand2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { generatePairCode, pairCodeIsWeak, uuid } from '../lib/crypto';
 import { palette } from '../lib/palette';
 import { discoverReceivers, type DiscoveredReceiver } from '../lib/transports/discovery';
-import { scanReceivers, type ScannedReceiver } from '../lib/transports/ble';
 import { type Target, TargetSchema } from '../state/settings';
 import { Divider, Field, Section, SmallButton } from './form';
 
@@ -16,7 +15,6 @@ export function emptyTarget(kind: Target['kind'] = 'android'): Target {
     kind,
     pairCode: generatePairCode(),
     lanHost: null,
-    bleDeviceId: null,
   };
 }
 
@@ -26,9 +24,8 @@ export function emptyTarget(kind: Target['kind'] = 'android'): Target {
  * string typed on the receiver is all the pairing there is.
  */
 export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: Target) => void }) {
-  const [scanning, setScanning] = useState<'lan' | 'ble' | null>(null);
+  const [scanning, setScanning] = useState<'lan' | null>(null);
   const [lanFound, setLanFound] = useState<DiscoveredReceiver[] | null>(null);
-  const [bleFound, setBleFound] = useState<ScannedReceiver[] | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const patch = (p: Partial<Target>) => onChange({ ...value, ...p });
   const valid = TargetSchema.safeParse(value);
@@ -46,17 +43,6 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
     }
   };
 
-  const scanBle = async () => {
-    setScanning('ble');
-    setScanError(null);
-    try {
-      setBleFound(await scanReceivers());
-    } catch (e) {
-      setScanError((e as Error).message);
-    } finally {
-      setScanning(null);
-    }
-  };
 
   return (
     <View className="gap-6">
@@ -119,7 +105,7 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
       {isAndroid ? (
         <Section
           title="Vicino a te"
-          footer="Facoltativi. Wi-Fi locale e Bluetooth funzionano senza internet; il resto passa dai server."
+          footer="Facoltativo. Il Wi-Fi locale funziona senza internet. Il Bluetooth non va configurato: trova da solo il ricevitore quando sei a pochi metri."
         >
           <Field
             label="Indirizzo sulla rete locale"
@@ -140,32 +126,6 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
               onPick={(host) => {
                 patch({ lanHost: host });
                 setLanFound(null);
-              }}
-            />
-          ) : null}
-          <Divider />
-          <View className="flex-row items-center gap-3 px-4 py-3">
-            <Bluetooth size={18} color={palette.muted} />
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-foreground">Bluetooth</Text>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {value.bleDeviceId ?? 'Nessun ricevitore associato'}
-              </Text>
-            </View>
-            <SmallButton
-              label={scanning === 'ble' ? 'Ricerca…' : 'Cerca'}
-              icon={<RefreshCw size={14} color={palette.foreground} />}
-              onPress={scanBle}
-              disabled={scanning !== null}
-            />
-          </View>
-          {bleFound ? (
-            <FoundList
-              empty="Nessun ricevitore Bluetooth nelle vicinanze"
-              items={bleFound.map((r) => ({ key: r.id, title: r.name, subtitle: r.rssi != null ? `${r.rssi} dBm` : r.id }))}
-              onPick={(id) => {
-                patch({ bleDeviceId: id });
-                setBleFound(null);
               }}
             />
           ) : null}

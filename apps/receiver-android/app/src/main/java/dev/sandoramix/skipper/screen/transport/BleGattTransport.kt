@@ -14,7 +14,10 @@ import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
@@ -38,11 +41,14 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Needs BLUETOOTH_ADVERTISE and BLUETOOTH_CONNECT at runtime on Android 12+;
  * without them start() logs and the path simply stays down, which TransportSet
- * tolerates.
+ * tolerates. If Bluetooth is off at start, the path comes up when it is turned
+ * on, and goes down again when it is turned off.
  */
 class BleGattTransport(
     private val context: Context,
     private val scope: CoroutineScope,
+    /** Codec.bleTagFromRoom(room), hex: lets the controller pick us out of a scan. */
+    private val tag: String,
 ) : Transport {
 
     override val id = "ble"
@@ -58,6 +64,8 @@ class BleGattTransport(
     /** One notification in flight at a time: the stack drops overlapping ones. */
     private val notifyLock = Mutex()
     @Volatile private var lastNotifyDone = true
+    private var onFrame: (suspend (String, String) -> String?)? = null
+    private var adapterWatch: BroadcastReceiver? = null
 
     private fun permitted(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || listOf(
@@ -65,8 +73,35 @@ class BleGattTransport(
             android.Manifest.permission.BLUETOOTH_CONNECT,
         ).all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
-    @SuppressLint("MissingPermission")
     override fun start(onFrame: suspend (String, String) -> String?) {
+        this.onFrame = onFrame
+        watchAdapter()
+        open()
+    }
+
+    /** Follows the Bluetooth switch, so turning it on later needs no restart. */
+    private fun watchAdapter() {
+        if (adapterWatch != null) return
+        val watch = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+                    BluetoothAdapter.STATE_ON -> if (server == null) open()
+                    BluetoothAdapter.STATE_TURNING_OFF, BluetoothAdapter.STATE_OFF -> close()
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            watch,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        adapterWatch = watch
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun open() {
+        val onFrame = onFrame ?: return
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = manager?.adapter
         if (manager == null || adapter == null || !adapter.isEnabled) {
@@ -188,6 +223,8 @@ class BleGattTransport(
                 .build(),
             AdvertiseData.Builder()
                 .addServiceUuid(ParcelUuid(SERVICE_UUID))
+                // Our address rotates, so the controller finds us by this tag.
+                .addServiceData(ParcelUuid(SERVICE_UUID), tag.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
                 .setIncludeDeviceName(false)
                 .build(),
             callback,
@@ -251,8 +288,15 @@ class BleGattTransport(
 
     override fun isUp(): Boolean = subscribers.isNotEmpty()
 
-    @SuppressLint("MissingPermission")
     override fun stop() {
+        adapterWatch?.let { runCatching { context.unregisterReceiver(it) } }
+        adapterWatch = null
+        onFrame = null
+        close()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun close() {
         runCatching {
             val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
             advertiser?.let { manager?.adapter?.bluetoothLeAdvertiser?.stopAdvertising(it) }
@@ -261,6 +305,8 @@ class BleGattTransport(
         runCatching { server?.close() }
         server = null
         subscribers.clear()
+        mtu.clear()
+        inbound.clear()
     }
 
     companion object {

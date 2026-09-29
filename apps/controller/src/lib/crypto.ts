@@ -22,6 +22,13 @@ export const secretFromPairCode = (code: string): string => sha256Hex(`secret:${
 /** Pairing code → room id. Both devices derive the same room from the same code. */
 export const roomFromPairCode = (code: string): string => sha256Hex(`room:${code}`).slice(0, 24);
 
+/**
+ * Room → 8-byte tag the receiver advertises over BLE, so the controller can
+ * pick its own receiver out of a scan. Hashed again so the broadcast can't be
+ * matched to the room id a relay sees. Same as Codec.bleTagFromRoom.
+ */
+export const bleTagFromRoom = (room: string): string => sha256Hex(`ble:${room}`).slice(0, 16);
+
 /** RFC 4122 v4 from the platform CSPRNG. The receiver's idempotency key. */
 export const uuid = (): string => Crypto.randomUUID();
 

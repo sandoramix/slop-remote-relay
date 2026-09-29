@@ -33,7 +33,6 @@ export default function Pair() {
       kind: params.kind === 'browser' ? 'browser' : 'android',
       pairCode: params.code ?? '',
       lanHost: params.lan || existing?.lanHost || null,
-      bleDeviceId: existing?.bleDeviceId ?? null,
     });
     if (candidate.success) {
       if (params.relay && /^wss?:\/\//.test(params.relay)) state.set({ relayUrl: params.relay });

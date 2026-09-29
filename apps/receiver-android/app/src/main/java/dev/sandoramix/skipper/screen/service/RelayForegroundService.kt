@@ -108,7 +108,7 @@ class RelayForegroundService : Service() {
             relayUrl?.let { RelayClientTransport(it, room, scope) },
             relayUrl?.let { RelayHttpTransport(it, room, scope) },
             MqttTransport(mqttUrl, room, scope),
-            BleGattTransport(this, scope),
+            BleGattTransport(this, scope, Codec.bleTagFromRoom(room)),
         )
         val list = candidates.filter { it.id !in disabled }
 

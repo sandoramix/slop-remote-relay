@@ -104,6 +104,12 @@ class CodecTest {
         )
     }
 
+    /** The controller finds the receiver over BLE by this tag; crypto.ts computes the same. */
+    @Test
+    fun bleTagMatchesController() {
+        assertEquals("8e0050133401b654", Codec.bleTagFromRoom("0192d130ee3206a13382f6a8"))
+    }
+
     /** Pins the whole signing path, not just the serialisation feeding it. */
     @Test
     fun `hmac over a canonical envelope matches the TypeScript runner`() {

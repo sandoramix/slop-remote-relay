@@ -20,8 +20,6 @@ export const TargetSchema = z.object({
   pairCode: z.string().min(1),
   /** LAN address of an Android receiver; discovered over mDNS or typed. */
   lanHost: z.string().nullable().default(null),
-  /** BLE device id of an Android receiver, from a scan. */
-  bleDeviceId: z.string().nullable().default(null),
 });
 export type Target = z.infer<typeof TargetSchema>;
 
