@@ -72,7 +72,18 @@ npm run send -- cielo-lento-42 device.status
   labels, but that is inference until dumped on a device).
 - A web player whose control bar is below the fold: Chromium prunes those nodes,
   so the recipe falls through to rotation. Seen with an oversized test video.
-- Bluetooth: both sides are implemented, neither can run on the emulator.
+- Bluetooth: both sides are implemented, neither can run on the emulator. On
+  real phones the controller never found the receiver. Fixed without hardware
+  to test on: the controller's `BLUETOOTH_SCAN` lacked `neverForLocation`, so
+  Android 12+ returned no scan results (checked in the introspected manifest);
+  the receiver lacked the pre-Android-12 `BLUETOOTH`/`BLUETOOTH_ADMIN`
+  permissions; and a receiver started with Bluetooth off never advertised until
+  restarted. The controller also used to save the receiver's BLE address, which
+  goes stale because Android advertises from a rotating private address. Now
+  the receiver puts an 8-byte tag (`bleTagFromRoom`, pinned by a vector in
+  `CodecTest.kt` and checked against the TypeScript side) in its service data,
+  and the controller scans for it on every connect; there is nothing to set up
+  in the device form. None of this has run on two real phones yet.
 - WebRTC across real carrier NAT (a TURN server is configurable in the
   controller; the receiver uses STUN only for now).
 - Overnight resistance (phase 5 of the original plan).
@@ -81,6 +92,18 @@ npm run send -- cielo-lento-42 device.status
 
 - iOS controller: prebuilt and built only in CI on macOS, never run.
 - Release workflow: has to run once on GitHub; the iOS job is allowed to fail.
+- Skipper rename and store build: extension and controller typecheck, and the
+  store zip was checked to contain no `key`. The receiver's renamed strings were
+  not rebuilt with Gradle, and a store install (the `update_url` check) has not
+  been tried because the extension isn't in the store yet.
+- Package ids are now `dev.sandoramix.skipper` (controller) and
+  `dev.sandoramix.skipper.screen` (receiver, Kotlin packages moved to match).
+  The receiver compiles and its unit tests pass; the controller's introspected
+  config shows the new ids. They install as new apps: old `com.relay.*`
+  installs must be removed and paired again.
+- Pages site (`pages/`, `.github/workflows/pages.yml`): rendered locally at
+  1100 px and 390 px, not yet deployed. The first deploy needs *Settings →
+  Pages → Source: GitHub Actions*, which the AltStore job already relies on.
 
 **Known, not done**
 
