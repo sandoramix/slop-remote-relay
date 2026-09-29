@@ -106,6 +106,19 @@ code { background: var(--card); padding: 0.1rem 0.35rem; border-radius: 6px; fon
 pre { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; overflow-x: auto; }
 pre code { background: none; padding: 0; overflow-wrap: normal; }
 
+.shots { display: flex; flex-wrap: wrap; gap: 1.25rem; margin: 1rem 0; align-items: flex-start; }
+.shots figure { flex: 1 1 14rem; max-width: 20rem; }
+figure { margin: 0; }
+figure.wide { margin: 1rem 0; }
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 0.4rem; }
+
 .disclaimer p { color: var(--muted); }
 
 footer {

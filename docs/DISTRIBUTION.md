@@ -76,3 +76,5 @@ recognised at runtime by the `update_url` Chrome adds to its manifest, and then
 skips the GitHub update check and banner. The privacy policy the listing needs
 is `pages/privacy.html`, published at
 <https://sandoramix.github.io/slop-remote-relay/privacy.html>.
+Listing images (three 1280×800 screenshots, the 440×280 small promo tile and
+a 1400×560 marquee) are in `docs/store-assets/`.
