@@ -95,9 +95,11 @@ jobs:
       - name: Build unsigned archive
         working-directory: apps/controller/ios
         run: |
-          xcodebuild -workspace Relay.xcworkspace -scheme Relay -configuration Release \
+          # Prebuild names the project after the app (app.config.ts `name`).
+          WS=$(ls -d *.xcworkspace | head -n 1)
+          xcodebuild -workspace "$WS" -scheme "${WS%.xcworkspace}" -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/Relay.xcarchive" \
+            -archivePath "$RUNNER_TEMP/Controller.xcarchive" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
           ccache --show-stats
       - uses: actions/cache/save@v4
