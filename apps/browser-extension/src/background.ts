@@ -358,7 +358,7 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
     };
     await chrome.storage.local.set({ update: info });
     const newer = compareVersions(info.version, chrome.runtime.getManifest().version) > 0;
-    void chrome.action.setTitle({ title: newer ? `Relay — ${info.version} available` : 'Relay' });
+    void chrome.action.setTitle({ title: newer ? `Skipper — ${info.version} available` : 'Skipper' });
     return info;
   } catch {
     return null;

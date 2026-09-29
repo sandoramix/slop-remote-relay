@@ -13,10 +13,10 @@ modified ROMs don't show that entry at all. Then there are two ways out:
 
   ```bash
   adb shell settings put secure enabled_accessibility_services \
-    com.relay.receiver/com.relay.receiver.service.RelayAccessibilityService
+    dev.sandoramix.skipper.screen/dev.sandoramix.skipper.screen.service.RelayAccessibilityService
   adb shell settings put secure accessibility_enabled 1
   adb shell cmd notification allow_listener \
-    com.relay.receiver/com.relay.receiver.service.RelayNotificationListener
+    dev.sandoramix.skipper.screen/dev.sandoramix.skipper.screen.service.RelayNotificationListener
   ```
 
 - or install through an installer that uses `PackageInstaller.Session`, which

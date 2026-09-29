@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.relay.receiver"
+    namespace = "dev.sandoramix.skipper.screen"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.relay.receiver"
+        applicationId = "dev.sandoramix.skipper.screen"
         minSdk = 26          // MediaSession + dispatchGesture both need 24; 26 for channels
         targetSdk = 35
         versionCode = 1
@@ -28,7 +28,10 @@ android {
     kotlinOptions { jvmTarget = "17" }
 
     // ShellService talks to the app over AIDL across the Shizuku process boundary.
-    buildFeatures { aidl = true }
+    buildFeatures {
+        aidl = true
+        buildConfig = true
+    }
 
     defaultConfig {
         // CI passes the tag (v1.2.3) through; local builds keep the default.

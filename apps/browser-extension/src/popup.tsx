@@ -133,7 +133,7 @@ function Header() {
     <header class="header">
       <img src="icon-48.png" alt="" width={32} height={32} />
       <div>
-        <h1>Relay</h1>
+        <h1>Skipper</h1>
         <p class="muted small">{t('subtitle')}</p>
       </div>
     </header>

@@ -1,4 +1,4 @@
-# Relay
+# Skipper
 
 > **About this repository — it's slop, on purpose.** As the `slop-` prefix
 > says, everything here — code, tests, docs, even this README — was generated
@@ -7,7 +7,12 @@
 > Use it, fork it, learn from it, but expect rough edges: the chances of it
 > being maintained long-term are slim.
 
-**A remote control for whatever video is playing on another screen.**
+**Skip the intro from the sofa.** Your phone becomes the remote for whatever
+video is playing on another screen.
+
+Site and install guide: <https://sandoramix.github.io/slop-remote-relay/>.
+The code and packages are still called *Relay* internally; the apps ship as
+*Skipper*.
 
 You are on the sofa. The film is running on an Android phone propped up on the
 TV stand, or in a browser tab on the laptop across the room. You want to skip
@@ -59,9 +64,9 @@ command or replay an old one.
 
 | Part | Runs on | What it does |
 |---|---|---|
-| **Relay Controller** | the phone in your hand (Android, iOS) | the remote |
-| **Relay Receiver** | the Android phone that plays the video | carries out the commands |
-| **Relay browser extension** | desktop Chrome or Brave | makes any tab's video controllable |
+| **Skipper** (controller) | the phone in your hand (Android, iOS) | the remote |
+| **Skipper Screen** (receiver) | the Android phone that plays the video | carries out the commands |
+| **Skipper for Chrome** (extension) | desktop Chrome or Brave | makes any tab's video controllable |
 | **Relay server** (optional) | any small server, a NAS, a Raspberry Pi | meeting point for the internet paths |
 
 The receiver only exists for Android: iOS does not let an app control other
@@ -91,13 +96,13 @@ manager; that's expected for apps not from the Play Store.
 https://sandoramix.github.io/slop-remote-relay/altstore.json
 ```
 
-Install **Relay** from there. AltStore signs it with your own (free) Apple ID
+Install **Skipper** from there. AltStore signs it with your own (free) Apple ID
 and re-signs it every 7 days; new versions appear there automatically. Turn on
 *Developer Mode* in iOS settings when asked.
 
 ### 2. Set up the receiver (the phone that plays video)
 
-1. Open **Relay** on that phone. It generates a pairing code for you (or tap
+1. Open **Skipper Screen** on that phone. It generates a pairing code for you (or tap
    *Genera un codice nuovo*).
 2. Optionally enter your relay server address (see *Using it away from home*).
 3. Tap **Salva e riavvia**. A QR code appears.
@@ -118,7 +123,7 @@ and re-signs it every 7 days; new versions appear there automatically. Turn on
 
 ### 3. Pair the remote
 
-On the phone you hold, open **Relay** and either:
+On the phone you hold, open **Skipper** and either:
 
 - **scan the receiver's QR code** with the camera and tap the link, or
 - type the **same pairing code** on the welcome screen.
@@ -132,7 +137,7 @@ That's it. The remote shows which path it is using (for example *Wi-Fi locale
    `Documents/relay-extension` — updates go into the same folder.
 2. In Chrome or Brave open `chrome://extensions`, turn on **Developer mode**,
    click **Load unpacked** and pick that folder.
-3. Click the Relay icon and follow the three setup steps: relay address,
+3. Click the Skipper icon and follow the three setup steps: relay address,
    pairing code, then scan the QR code with your phone.
 4. That's it. Fullscreen works out of the box: it uses Chrome's debugger
    permission, because a web page only goes fullscreen when a person asks and
@@ -145,7 +150,7 @@ phone is connected.
 
 **Updates:** the extension checks GitHub twice a day. When a new version is
 out, the popup offers it: download the zip, unzip it over the same folder, and
-press **Reload Relay**. Pairing and settings are kept. (Chrome only lets Web
+press **Reload Skipper**. Pairing and settings are kept. (Chrome only lets Web
 Store extensions update themselves; this is the closest a GitHub release gets.)
 
 A browser can only be reached over the internet paths, so it needs a relay
@@ -183,7 +188,7 @@ code or the signing key, and it stores nothing.
 - **Seeking is imprecise (jumps in 10 s steps).** The receiver is missing
   *Notification access*, or the app doesn't publish its playback state. With
   notification access, jumps are exact to the second.
-- **Fullscreen does nothing.** Check that *Accessibility* is on for Relay. For a
+- **Fullscreen does nothing.** Check that *Accessibility* is on for Skipper Screen. For a
   video in a browser, the player's controls must exist on the page; Relay taps
   the page's own fullscreen button.
 - **It worked yesterday, not today.** Almost always the manufacturer's battery

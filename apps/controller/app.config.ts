@@ -13,7 +13,7 @@ const [major = 0, minor = 0, patch = 0] = version.split(/[.-]/).map((n: string) 
 const versionCode = major * 10_000 + minor * 100 + patch;
 
 const config: ExpoConfig = {
-  name: 'Relay',
+  name: 'Skipper',
   slug: 'relay-controller',
   version,
   orientation: 'portrait',
@@ -22,19 +22,19 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'dark',
   backgroundColor: '#14181E',
   ios: {
-    bundleIdentifier: 'com.relay.controller',
+    bundleIdentifier: 'dev.sandoramix.skipper',
     buildNumber: String(versionCode),
     icon: './assets/expo.icon',
     infoPlist: {
       NSLocalNetworkUsageDescription:
-        'Relay cerca il ricevitore sulla tua rete Wi-Fi per comandarlo senza passare da internet.',
+        'Skipper cerca il ricevitore sulla tua rete Wi-Fi per comandarlo senza passare da internet.',
       NSBonjourServices: ['_relayctl._tcp'],
       NSBluetoothAlwaysUsageDescription:
-        'Relay usa il Bluetooth per comandare il ricevitore quando non c\'è nessuna rete.',
+        'Skipper usa il Bluetooth per comandare il ricevitore quando non c\'è nessuna rete.',
     },
   },
   android: {
-    package: 'com.relay.controller',
+    package: 'dev.sandoramix.skipper',
     versionCode,
     adaptiveIcon: {
       backgroundColor: '#14181E',
@@ -80,7 +80,7 @@ const config: ExpoConfig = {
         isBackgroundEnabled: false,
         modes: ['central'],
         bluetoothAlwaysPermission:
-          'Relay usa il Bluetooth per comandare il ricevitore quando non c\'è nessuna rete.',
+          'Skipper usa il Bluetooth per comandare il ricevitore quando non c\'è nessuna rete.',
       },
     ],
     [

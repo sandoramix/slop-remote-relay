@@ -1,18 +1,18 @@
 {
   "extName": {
-    "message": "Relay"
+    "message": "Skipper"
   },
   "extDescription": {
-    "message": "Control the video in any tab from your phone: jump, play/pause, fullscreen."
+    "message": "Your phone becomes the remote for any video in this browser: skip intros, jump back, pause and go fullscreen from the sofa."
   },
   "subtitle": {
     "message": "Remote control for this browser"
   },
   "setupTitle": {
-    "message": "Set up Relay"
+    "message": "Set up Skipper"
   },
   "setupIntro": {
-    "message": "Pair this browser with the Relay app on your phone. It takes a minute."
+    "message": "Pair this browser with the Skipper app on your phone. It takes a minute."
   },
   "stepRelay": {
     "message": "Relay server"
@@ -42,7 +42,7 @@
     "message": "Waiting for your phone"
   },
   "waitingSub": {
-    "message": "Open Relay on your phone and pick this browser."
+    "message": "Open Skipper on your phone and pick this browser."
   },
   "offlineTitle": {
     "message": "Can't reach any path"
@@ -114,7 +114,7 @@
     "message": "Pair a phone"
   },
   "pairHint": {
-    "message": "Scan with your phone's camera to add this browser to Relay."
+    "message": "Scan with your phone's camera to add this browser to Skipper."
   },
   "code": {
     "message": "Code"
@@ -186,10 +186,10 @@
     "message": "Project on GitHub"
   },
   "updateAvailable": {
-    "message": "Relay {version} is available"
+    "message": "Skipper {version} is available"
   },
   "updateImportant": {
-    "message": "Important update: Relay {version}"
+    "message": "Important update: Skipper {version}"
   },
   "updateYouHave": {
     "message": "You have {version}."
@@ -207,10 +207,10 @@
     "message": "Later"
   },
   "updateSteps": {
-    "message": "Unzip it into the folder Relay is loaded from, replacing the files. Then press Reload — your pairing and settings are kept."
+    "message": "Unzip it into the folder Skipper is loaded from, replacing the files. Then press Reload — your pairing and settings are kept."
   },
   "updateReload": {
-    "message": "Reload Relay"
+    "message": "Reload Skipper"
   },
   "updateNotes": {
     "message": "Full release notes"

@@ -26,10 +26,10 @@ export default function Onboarding() {
       <KeyboardSafe>
         <ScrollView contentContainerClassName="gap-8 px-4 pb-10 pt-8" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
-            <Text className="text-4xl font-bold tracking-tight text-foreground">Relay</Text>
+            <Text className="text-4xl font-bold tracking-tight text-foreground">Skipper</Text>
             <Text className="text-base leading-6 text-muted-foreground">
-              Il telecomando per il video che stai guardando su un altro schermo. Associa il primo
-              dispositivo per iniziare.
+              Salta la sigla dal divano. Il telefono diventa il telecomando del video che gira su un altro
+              schermo. Associa il primo dispositivo per iniziare.
             </Text>
           </View>
 

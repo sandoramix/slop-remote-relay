@@ -66,7 +66,7 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
             active={isAndroid}
             icon={<Smartphone size={22} color={isAndroid ? palette.primary : palette.muted} />}
             title="Telefono Android"
-            subtitle="App Relay ricevitore"
+            subtitle="App Skipper Screen"
             onPress={() => patch({ kind: 'android' })}
           />
           <KindOption

@@ -87,7 +87,7 @@ export default function SettingsScreen() {
         />
       </Section>
 
-      <Text className="text-center text-xs text-muted-foreground">Relay controller</Text>
+      <Text className="text-center text-xs text-muted-foreground">Skipper</Text>
     </ScrollView>
   );
 }

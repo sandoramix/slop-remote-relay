@@ -86,21 +86,21 @@ if (versions.length === 0) {
 function publish() {
 
 const source = {
-  name: 'Relay',
-  subtitle: 'Remote control for the video on another screen',
+  name: 'Skipper',
+  subtitle: 'Skip the intro from the sofa',
   description:
-    'Relay turns your iPhone into a remote for a video playing on an Android phone or in a desktop browser: jump by any amount, scrub, play/pause and fullscreen, over Wi-Fi, WebRTC, your relay server, MQTT or Bluetooth.',
+    'Skipper turns your iPhone into the remote for a video playing on an Android phone or in a desktop browser: jump by any amount, scrub, play/pause and go fullscreen, over Wi-Fi, WebRTC, your relay server, MQTT or Bluetooth.',
   iconURL: `${pagesBase}/icon.png`,
   website: `https://github.com/${repo}`,
   tintColor: '#E8B04B',
   apps: [
     {
-      name: 'Relay',
-      bundleIdentifier: 'com.relay.controller',
+      name: 'Skipper',
+      bundleIdentifier: 'dev.sandoramix.skipper',
       developerName: owner,
       subtitle: 'The remote',
       localizedDescription:
-        'The remote for Relay. Pair it with the Relay receiver on an Android phone or with the Relay browser extension, then skip, scrub, pause and go fullscreen from your hand. Setup guide: ' +
+        'The remote. Pair it with Skipper Screen on an Android phone or with Skipper for Chrome, then skip, scrub, pause and go fullscreen from the sofa. Setup guide: ' +
         `https://github.com/${repo}#getting-started`,
       iconURL: `${pagesBase}/icon.png`,
       tintColor: '#E8B04B',

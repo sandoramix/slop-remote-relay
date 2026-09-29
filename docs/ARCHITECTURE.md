@@ -20,7 +20,7 @@
 
 `packages/protocol` is the contract: commands, the signed envelope, the
 canonical serialisation, and the failover `TransportManager`. Its Kotlin twin is
-`apps/receiver-android/app/src/main/java/com/relay/receiver/core/`.
+`apps/receiver-android/app/src/main/java/dev/sandoramix/skipper/screen/core/`.
 `packages/transports` holds the room-based paths (relay WS, relay HTTP, MQTT,
 WebRTC) that the controller and the browser extension share; they are
 symmetric, and only `role` differs.

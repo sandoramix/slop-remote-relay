@@ -1,18 +1,18 @@
 {
   "extName": {
-    "message": "Relay"
+    "message": "Skipper"
   },
   "extDescription": {
-    "message": "Comanda dal telefono il video in qualunque scheda: salti, play/pausa, schermo intero."
+    "message": "Il telefono diventa il telecomando dei video nel browser: salta le sigle, torna indietro, metti in pausa, schermo intero."
   },
   "subtitle": {
     "message": "Telecomando per questo browser"
   },
   "setupTitle": {
-    "message": "Configura Relay"
+    "message": "Configura Skipper"
   },
   "setupIntro": {
-    "message": "Associa questo browser all'app Relay sul telefono. Ci vuole un minuto."
+    "message": "Associa questo browser all'app Skipper sul telefono. Ci vuole un minuto."
   },
   "stepRelay": {
     "message": "Server relay"
@@ -42,7 +42,7 @@
     "message": "In attesa del telefono"
   },
   "waitingSub": {
-    "message": "Apri Relay sul telefono e scegli questo browser."
+    "message": "Apri Skipper sul telefono e scegli questo browser."
   },
   "offlineTitle": {
     "message": "Nessun percorso raggiungibile"
@@ -114,7 +114,7 @@
     "message": "Associa un telefono"
   },
   "pairHint": {
-    "message": "Inquadra con la fotocamera del telefono per aggiungere questo browser a Relay."
+    "message": "Inquadra con la fotocamera del telefono per aggiungere questo browser a Skipper."
   },
   "code": {
     "message": "Codice"
@@ -186,10 +186,10 @@
     "message": "Progetto su GitHub"
   },
   "updateAvailable": {
-    "message": "Relay {version} è disponibile"
+    "message": "Skipper {version} è disponibile"
   },
   "updateImportant": {
-    "message": "Aggiornamento importante: Relay {version}"
+    "message": "Aggiornamento importante: Skipper {version}"
   },
   "updateYouHave": {
     "message": "Hai la {version}."
@@ -207,10 +207,10 @@
     "message": "Più tardi"
   },
   "updateSteps": {
-    "message": "Estrailo nella cartella da cui è caricato Relay, sostituendo i file. Poi premi Ricarica: associazione e impostazioni restano."
+    "message": "Estrailo nella cartella da cui è caricato Skipper, sostituendo i file. Poi premi Ricarica: associazione e impostazioni restano."
   },
   "updateReload": {
-    "message": "Ricarica Relay"
+    "message": "Ricarica Skipper"
   },
   "updateNotes": {
     "message": "Novità complete"
