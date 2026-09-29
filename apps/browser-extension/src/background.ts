@@ -9,7 +9,7 @@ import {
   PRESENCE_WINDOW_MS,
   type ReceiverState,
   type RuntimeMessage,
-  STORE_INSTALL,
+  isStoreInstall,
   type TargetInfo,
   type UpdateInfo,
 } from './shared';
@@ -367,7 +367,7 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
 }
 
 // The store build has no alarms permission: the store updates it.
-if (!STORE_INSTALL) {
+if (!isStoreInstall()) {
   chrome.alarms.create('update-check', { periodInMinutes: 12 * 60, delayInMinutes: 1 });
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'update-check') void checkForUpdate();

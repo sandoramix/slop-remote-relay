@@ -10,7 +10,7 @@ import {
   PRESENCE_WINDOW_MS,
   type ReceiverState,
   type RuntimeMessage,
-  STORE_INSTALL,
+  isStoreInstall,
   type TargetInfo,
   type UpdateInfo,
 } from './shared';
@@ -441,7 +441,7 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         <input type="url" value={mqtt} spellcheck={false} onInput={(e) => setMqtt((e.target as HTMLInputElement).value)} />
         {!mqttOk ? <span class="error small">{t('invalidRelay')}</span> : null}
       </label>
-      {STORE_INSTALL ? null : <UpdateSetting />}
+      {isStoreInstall() ? null : <UpdateSetting />}
       <button
         type="button"
         class="primary"
@@ -598,7 +598,7 @@ function App() {
   return (
     <main class="stack">
       <Header />
-      {STORE_INSTALL ? null : <UpdateBanner />}
+      {isStoreInstall() ? null : <UpdateBanner />}
       {!paired ? (
         <Setup
           initial={settings}

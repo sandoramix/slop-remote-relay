@@ -23,8 +23,12 @@ export interface ExtensionSettings {
  * Chrome adds `update_url` to the manifest of an extension installed from the
  * Web Store, which updates it by itself. Only unpacked installs need the
  * GitHub update check and the unzip-and-reload banner.
+ *
+ * A function, not a constant: the offscreen document imports this module and
+ * has no chrome.runtime.getManifest, so evaluating it at load killed every
+ * transport there.
  */
-export const STORE_INSTALL = 'update_url' in chrome.runtime.getManifest();
+export const isStoreInstall = (): boolean => 'update_url' in chrome.runtime.getManifest();
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   pairCode: '',
