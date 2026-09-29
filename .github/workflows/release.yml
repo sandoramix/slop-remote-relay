@@ -333,9 +333,9 @@ jobs:
       - name: Create or update the release
         run: |
           if gh release view "$RELAY_VERSION" >/dev/null 2>&1; then
-            gh release edit "$RELAY_VERSION" --title "Relay $RELAY_VERSION" --notes-file notes.md
+            gh release edit "$RELAY_VERSION" --title "Skipper $RELAY_VERSION" --notes-file notes.md
           else
-            gh release create "$RELAY_VERSION" --verify-tag --title "Relay $RELAY_VERSION" --notes-file notes.md
+            gh release create "$RELAY_VERSION" --verify-tag --title "Skipper $RELAY_VERSION" --notes-file notes.md
           fi
 
   publish-extension:
