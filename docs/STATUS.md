@@ -44,6 +44,12 @@ In order of how well hidden they were.
    without a window-state event; now read from the active window first.
 8. **Shizuku key steps always "succeeded"** — injection has exit code 0 whether
    or not the page reacts. Now judged by the fullscreen markers.
+9. **Browsers never connected in 0.3.0 and 0.3.1.** `shared.ts` called
+   `chrome.runtime.getManifest()` at load to detect a Web Store install; the
+   offscreen document imports it and has no `getManifest`, so its script threw
+   and no transport started. Found by `smoke:extension` (18/18 at v0.2.6, 1/14
+   at v0.3.1); after the fix the popup screenshot tool showed a phone connected
+   and a seek executed. The smoke test itself was not rerun.
 
 Earlier, from the first build-out: canonicalisation divergence on `/`,
 `AccessibilityExecutor` ignoring seeks, the NSD port bug, the background
@@ -92,18 +98,24 @@ npm run send -- cielo-lento-42 device.status
 
 - iOS controller: prebuilt and built only in CI on macOS, never run.
 - Release workflow: has to run once on GitHub; the iOS job is allowed to fail.
-- Skipper rename and store build: extension and controller typecheck, and the
-  store zip was checked to contain no `key`. The receiver's renamed strings were
-  not rebuilt with Gradle, and a store install (the `update_url` check) has not
-  been tried because the extension isn't in the store yet.
+- Skipper rename and store build: the store zip was checked to contain no
+  `key`; a store install (the `update_url` check) has not been tried because the
+  extension isn't in the store yet. The renamed receiver and controller ran on
+  the emulator (Pixel 6 Pro, API 34): paired over local Wi-Fi from the
+  `relay://pair` link.
+- Controller update check: verified on an x86_64 release build of 0.3.0 on the
+  emulator — banner offering 0.3.1, "Più tardi" hides it, Settings shows the
+  version and "0.3.1 disponibile". The APK download itself was not installed.
+- Receiver tablet layout: two columns at ≥ 600 dp and a 240 dp QR, checked on
+  the phone emulator in portrait and with the display forced to 2560×1600 at
+  320 dpi; not on a real tablet.
 - Package ids are now `dev.sandoramix.skipper` (controller) and
   `dev.sandoramix.skipper.screen` (receiver, Kotlin packages moved to match).
   The receiver compiles and its unit tests pass; the controller's introspected
   config shows the new ids. They install as new apps: old `com.relay.*`
   installs must be removed and paired again.
-- Pages site (`pages/`, `.github/workflows/pages.yml`): rendered locally at
-  1100 px and 390 px, not yet deployed. The first deploy needs *Settings →
-  Pages → Source: GitHub Actions*, which the AltStore job already relies on.
+- Pages site (`pages/`, `.github/workflows/pages.yml`): deployed; guide images
+  checked locally at 1100 px and 390 px.
 
 **Known, not done**
 
