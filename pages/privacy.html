@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skipper: privacy policy</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="policy">
+  <header class="hero">
+    <p><a href="./">← Skipper</a></p>
+    <h1>Privacy policy</h1>
+    <p class="lead">Covers Skipper, Skipper Screen and Skipper for Chrome. Last updated 29 September 2026.</p>
+  </header>
+
+  <section>
+    <h2>The short version</h2>
+    <p>
+      Skipper has no accounts, no analytics, no ads and no servers run by the developer. Nothing is sold or
+      shared. Your devices talk to each other directly, or through a relay server or MQTT broker that you choose.
+    </p>
+  </section>
+
+  <section>
+    <h2>What stays on your device</h2>
+    <p>Your settings: the pairing code, the relay server and MQTT broker addresses, and which connections are switched off. They're stored locally (in the browser's extension storage, or in the app's private storage) and never leave the device except as described below.</p>
+  </section>
+
+  <section>
+    <h2>What is sent, and to whom</h2>
+    <p>Between your paired devices only:</p>
+    <ul>
+      <li><strong>Commands</strong> from the remote: jump, play, pause, fullscreen.</li>
+      <li><strong>Playback status</strong> back to the remote: whether a video is playing, its position and length, whether it's fullscreen, and the title of the video, page or app.</li>
+    </ul>
+    <p>
+      These messages travel over whichever connection is available: your local network, Bluetooth, WebRTC,
+      the relay server you configured, or an MQTT broker (by default the public HiveMQ broker,
+      <code>broker.hivemq.com</code>, which you can change or switch off).
+    </p>
+    <p>
+      Every message is signed with a key derived from your pairing code, so nobody can forge or replay a
+      command. Messages are <strong>not encrypted</strong> beyond the connection's own TLS: the operator of
+      the relay server or MQTT broker you use could read the playback status, including the video title.
+      If that matters to you, run your own relay server and switch MQTT off. The pairing code and the
+      signing key are never sent.
+    </p>
+  </section>
+
+  <section>
+    <h2>What the browser extension reads</h2>
+    <p>
+      Skipper for Chrome runs on every page so it can find a video wherever you play one. On each page it
+      reads only the state of video elements (playing or paused, position, length, fullscreen) and the page
+      title. It does not read form fields, passwords, cookies or browsing history, and it doesn't record
+      the pages you visit.
+    </p>
+    <p>
+      It uses Chrome's <code>debugger</code> permission for one thing: pressing the player's fullscreen
+      control on your behalf, because a web page only enters fullscreen when a person asks. It attaches to
+      the tab for the duration of that command and then detaches.
+    </p>
+  </section>
+
+  <section>
+    <h2>What the Android apps read</h2>
+    <p>
+      Skipper Screen uses Notification access to see which media session is playing and seek it precisely,
+      and Accessibility to find and press the fullscreen button of the app in front. It doesn't record,
+      store or send the contents of your screen or your notifications.
+    </p>
+  </section>
+
+  <section>
+    <h2>Updates</h2>
+    <p>When the browser extension is installed from a GitHub release, it checks <code>api.github.com</code> twice a day for a newer version. The request carries no personal data. The Chrome Web Store version skips this check, since the store updates it. The Android apps don't check for updates.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions or problems: <a href="https://github.com/sandoramix/slop-remote-relay/issues">open an issue on GitHub</a>.</p>
+  </section>
+</main>
+<footer>
+  <a href="./">Home</a>
+  <a href="https://github.com/sandoramix/slop-remote-relay">GitHub</a>
+</footer>
+</body>
+</html>

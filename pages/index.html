@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skipper: skip the intro from the sofa</title>
+<meta name="description" content="Your phone becomes the remote for any video on another screen: an Android phone on the TV stand or a tab in Chrome. Skip, rewind, pause and go fullscreen without getting up.">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <img class="logo" src="icon.png" alt="" width="72" height="72">
+  <h1>Skipper</h1>
+  <p class="tagline">Skip the intro from the sofa.</p>
+  <p class="lead">
+    The film is running on an Android phone propped up by the TV, or in a browser tab on the laptop
+    across the room. Skipper turns the phone in your hand into its remote: jump, rewind, pause and go
+    fullscreen without getting up.
+  </p>
+  <div class="actions">
+    <a class="button primary" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Download</a>
+    <a class="button" href="https://github.com/sandoramix/slop-remote-relay">Source on GitHub</a>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>What it does</h2>
+    <ul class="features">
+      <li><strong>Jump by any amount.</strong> 10 s, 30 s, 5 min, 1:30. Pick a preset or type one, hold to keep going.</li>
+      <li><strong>Scrub</strong> to an exact point on a progress bar.</li>
+      <li><strong>Play and pause.</strong></li>
+      <li><strong>Fullscreen on and off</strong>, including web players in Chrome and Brave.</li>
+      <li><strong>Several screens.</strong> Pair a phone and a browser and switch between them.</li>
+    </ul>
+    <p>
+      It works with YouTube, Netflix, Prime Video, Twitch, VLC and anything else that plays video,
+      because it doesn't talk to the apps. It talks to the device, and the device acts on whatever is in front.
+    </p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="parts">
+      <div class="part">
+        <h3>Skipper</h3>
+        <p class="where">the phone in your hand · Android, iPhone</p>
+        <p>The remote.</p>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="part">
+        <h3>Skipper Screen</h3>
+        <p class="where">the Android phone playing video</p>
+        <p>Receives commands and carries them out on the app in front.</p>
+      </div>
+      <div class="or">or</div>
+      <div class="part">
+        <h3>Skipper for Chrome</h3>
+        <p class="where">desktop Chrome or Brave</p>
+        <p>Makes the video in any tab controllable.</p>
+      </div>
+    </div>
+    <p>
+      Home Wi-Fi hiccups, so Skipper never relies on one connection. It keeps up to six open at the same
+      time (local Wi-Fi, WebRTC peer-to-peer, WebSocket and HTTP through your relay server, MQTT, Bluetooth)
+      and sends each command over the best one alive. When one drops, the next is already connected.
+    </p>
+    <p>
+      Every command is signed with a key derived from a pairing code only your devices know. A relay server
+      or MQTT broker can pass messages along, but it can't forge a command or replay an old one.
+    </p>
+  </section>
+
+  <section>
+    <h2>Install</h2>
+    <ol class="steps">
+      <li>
+        <h3>Download</h3>
+        <p>From the <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a>:</p>
+        <ul>
+          <li><code>relay-controller-&lt;version&gt;.apk</code> on the phone you'll hold</li>
+          <li><code>relay-receiver-&lt;version&gt;.apk</code> on the Android phone that plays video</li>
+        </ul>
+        <p class="note">Android asks you to allow installs from your browser or file manager. That's expected for apps outside the Play Store.</p>
+        <p class="note"><strong>iPhone as the remote:</strong> in <a href="https://altstore.io">AltStore</a> or <a href="https://sidestore.io">SideStore</a>, go to <em>Browse → Sources → +</em> and add <code>https://sandoramix.github.io/slop-remote-relay/altstore.json</code>.</p>
+      </li>
+      <li>
+        <h3>Set up Skipper Screen</h3>
+        <p>Open it on the phone that plays video, tap <em>Salva e riavvia</em>, and a QR code appears. Then work through the permission list on the same screen:</p>
+        <ul>
+          <li><strong>Notification access</strong>: finds the playing video and seeks to the exact second.</li>
+          <li><strong>Accessibility</strong>: for fullscreen. It reads the screen only to find the fullscreen button and never records or sends it.</li>
+          <li><strong>Battery optimisation and autostart</strong>: skip these and the screen stops listening overnight.</li>
+        </ul>
+        <p class="note">On Android 13+ Accessibility may be greyed out for sideloaded apps. Open <em>App info → ⋮ → Allow restricted settings</em> first.</p>
+      </li>
+      <li>
+        <h3>Pair the remote</h3>
+        <p>Open Skipper on the phone in your hand and scan the QR code, or type the same pairing code. The remote shows which connection it's using, for example <em>Wi-Fi locale · 6 ms</em>.</p>
+      </li>
+      <li>
+        <h3>Add a browser <span class="optional">optional</span></h3>
+        <p>Install Skipper for Chrome, click its icon and follow the three steps: relay address, pairing code, scan the QR code with your phone.</p>
+        <p class="note">
+          Not in the store yet? Download <code>relay-extension-&lt;version&gt;.zip</code>, unzip it into a folder you'll keep,
+          open <code>chrome://extensions</code>, turn on <em>Developer mode</em> and click <em>Load unpacked</em>.
+        </p>
+        <p class="note">A browser is reachable only over the internet, so it needs a relay server (below) or MQTT.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Away from home: the relay server</h2>
+    <p>On the same Wi-Fi nothing else is needed. To use the remote from elsewhere, or to control a browser, run the small relay server somewhere both devices can reach:</p>
+    <pre><code>docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/slop-remote-relay-server:latest</code></pre>
+    <p>Put it behind HTTPS (for example with <a href="https://caddyserver.com">Caddy</a>) and enter <code>wss://your.domain</code> in each app. The server sees only an anonymous room id. It never learns your pairing code and stores nothing.</p>
+  </section>
+
+  <section class="disclaimer">
+    <h2>A note on this project</h2>
+    <p>
+      Skipper is an experiment: code, tests and docs were written by AI to find out whether the idea holds up.
+      It works and it's free, but expect rough edges, and don't count on long-term maintenance.
+    </p>
+  </section>
+</main>
+
+<footer>
+  <a href="privacy.html">Privacy policy</a>
+  <a href="https://github.com/sandoramix/slop-remote-relay">GitHub</a>
+  <a href="https://github.com/sandoramix/slop-remote-relay/issues">Report a problem</a>
+</footer>
+</body>
+</html>
