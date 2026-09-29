@@ -14,6 +14,7 @@ git push origin v0.3.0
 | `relay-controller-<v>.apk` | `expo prebuild` + Gradle (arm64-v8a, armeabi-v7a) |
 | `relay-controller-<v>-unsigned.ipa` | `expo prebuild` + `xcodebuild` on macOS, unsigned |
 | `relay-extension-<v>.zip` | esbuild, `apps/browser-extension` |
+| `skipper-chrome-web-store-<v>.zip` | the same with `--store`: no manifest `key`, no `alarms` |
 | `relay-server-<v>.tgz` | `tsc`, `services/relay` |
 | `ghcr.io/<owner>/slop-remote-relay-server:<v>` and `:latest` | Docker, linux/amd64 + linux/arm64 |
 | `SHA256SUMS.txt` | checksums of all of the above |

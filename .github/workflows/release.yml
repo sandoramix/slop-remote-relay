@@ -5,7 +5,8 @@ name: Release
 #   relay-receiver-<v>.apk     Android receiver (Kotlin)
 #   relay-controller-<v>.apk   Android controller (Expo, prebuilt in CI)
 #   relay-controller-<v>-unsigned.ipa   iOS controller, unsigned (re-sign to install)
-#   relay-extension-<v>.zip    Chrome/Brave extension (load unpacked, or upload to a store)
+#   relay-extension-<v>.zip    Chrome/Brave extension, load unpacked
+#   skipper-chrome-web-store-<v>.zip  the same, for a Chrome Web Store upload
 #   relay-server-<v>.tgz       relay server, built JS
 #   ghcr.io/<owner>/slop-remote-relay-server:<v> and :latest   relay server image
 #
@@ -259,6 +260,8 @@ jobs:
           node build.mjs --zip
           mkdir -p "$GITHUB_WORKSPACE/out"
           mv relay-extension-*.zip "$GITHUB_WORKSPACE/out/relay-extension-${RELAY_VERSION}.zip"
+          node build.mjs --store
+          mv skipper-chrome-web-store-*.zip "$GITHUB_WORKSPACE/out/skipper-chrome-web-store-${RELAY_VERSION}.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: extension
@@ -392,7 +395,7 @@ jobs:
       - name: SHA256SUMS of everything published
         run: |
           mkdir files && cd files
-          gh release download "$RELAY_VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'relay-*'
+          gh release download "$RELAY_VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'relay-*' --pattern 'skipper-*'
           sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
           gh release upload "$RELAY_VERSION" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 

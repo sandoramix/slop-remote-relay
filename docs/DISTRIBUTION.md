@@ -69,7 +69,7 @@ install. Store reviewers treat it strictly, so a listing would need to explain
 it clearly.
 
 For the store, build with `npm run zip:store -w @relay/browser-extension`. It
-writes `relay-extension-<version>-store.zip` without the manifest's `key`
+writes `skipper-chrome-web-store-<version>.zip` (every release has one) without the manifest's `key`
 (the store rejects the field and assigns its own id) and without the `alarms`
 permission, which only the GitHub update check uses. A store install is
 recognised at runtime by the `update_url` Chrome adds to its manifest, and then

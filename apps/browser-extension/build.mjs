@@ -1,7 +1,9 @@
 // Bundles the extension into dist/ (load it unpacked from there), and with
 // --zip also writes relay-extension-<version>.zip for the release. --store
 // drops the manifest's `key` (the Chrome Web Store rejects it and assigns its
-// own id) and names the zip relay-extension-<version>-store.zip.
+// own id) and names the zip skipper-chrome-web-store-<version>.zip. That name
+// must never match relay-extension-*.zip: the update check offers that asset
+// to unpacked installs, and a zip without the key would change their id.
 import { build, context } from 'esbuild';
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -54,7 +56,7 @@ if (watch) {
 } else {
   await Promise.all(builds.map((b) => build(b)));
   if (zip) {
-    const name = `relay-extension-${version}${store ? '-store' : ''}.zip`;
+    const name = store ? `skipper-chrome-web-store-${version}.zip` : `relay-extension-${version}.zip`;
     rmSync(name, { force: true });
     // Bundled PowerShell on Windows, zip elsewhere: CI runs on Linux.
     if (process.platform === 'win32') {
