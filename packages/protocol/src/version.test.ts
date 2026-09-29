@@ -37,4 +37,9 @@ describe('releaseSummary', () => {
     const notes = "## What's changed\n\n### Fixes\n\n- **x:** y (abc1234)\n\n## Downloads\n\n- not this";
     assert.deepEqual(releaseSummary(notes), ['x: y']);
   });
+
+  it('joins a bullet that wraps onto indented lines', () => {
+    const notes = '## Highlights\n\n- **Store zip.** Releases now\n  include it.\n- Two\n\n  not a continuation';
+    assert.deepEqual(releaseSummary(notes), ['Store zip. Releases now include it.', 'Two']);
+  });
 });
