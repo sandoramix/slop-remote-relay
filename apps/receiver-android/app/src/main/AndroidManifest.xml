@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- In-app updates: hands the downloaded APK to the system installer. User-granted per app. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!--
       WRITE_SETTINGS backs the rotation fallback for fullscreen: forcing landscape
       makes YouTube enter its fullscreen player on its own. User-granted via
@@ -105,6 +108,11 @@
             android:exported="true"
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <!-- Result of the PackageInstaller session started by update/Updater. Only the system sends to it. -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".service.BootReceiver"

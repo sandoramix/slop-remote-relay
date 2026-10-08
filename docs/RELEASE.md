@@ -95,6 +95,33 @@ Without the secrets the workflow generates a throwaway key for that run and says
 so in the release notes: the APKs install, but cannot update an install from a
 different run.
 
+## In-app updates (Android)
+
+The receiver can update itself (`update/UpdateChecker.kt`, `update/Updater.kt`).
+It reads `releases/latest` of `sandoramix/slop-remote-relay` and compares the tag
+with its own `versionName` (same rules as `packages/protocol/src/version.ts`).
+When a newer release exists, the *Updates* card offers it; nothing is ever
+downloaded or installed without the button. A silent check runs when the app is
+opened, at most once per 12 hours, and never reports errors.
+
+- **Asset choice:** the first asset named `relay-receiver-*.apk`. If the release
+  has `SHA256SUMS.txt`, the download is verified against it and discarded on a
+  mismatch; the byte count must also match the asset size. Without the sums file
+  only Android's signature check protects the install.
+- **Stable key required:** the APK is installed over the running app through
+  `PackageInstaller`, so it must be signed with the same key as the installed
+  one. A release built with the throwaway CI key (no signing secrets, see
+  *Android signing*) cannot update an install signed with the real key, and
+  Android refuses it; the app shows that as a readable failure.
+- **One-time permission:** the first update sends the user to *Install unknown
+  apps* for Relay (`REQUEST_INSTALL_PACKAGES`); the update continues when they
+  come back. Android then asks for the usual install confirmation.
+- **Testing:** in debug builds only, the shared pref `update_api_url` replaces
+  the GitHub API url, so the flow can be pointed at a local fake server (serve a
+  GitHub-style release JSON and an APK signed with the same debug key and a
+  higher `versionCode`; build one with `-PrelayVersion=9.0.0`). Release builds
+  ignore the pref.
+
 ## Building signed APKs locally
 
 Keep the keystore and a properties file outside the repo, e.g.
@@ -114,6 +141,28 @@ tools/build-signed.sh v0.2.0        # → out/relay-{receiver,controller}-v0.2.0
 The script passes the same injected signing properties as the workflow, never
 prints the secrets, and ends by printing each APK's version and signing
 certificate — compare the SHA-256 with `keytool -list -v -keystore … -alias relay`.
+
+## In-app updates (Android controller)
+
+Settings → *Updates* (`apps/controller/src/lib/updater.ts`) checks the latest
+GitHub release, and on the user's tap downloads `relay-controller-<v>.apk` and
+opens the system installer, which updates in place. It relies on the release
+shape described above, so keep it intact:
+
+- the asset must be named `relay-controller-<version>.apk` (the `-unsigned.ipa`
+  is ignored) and the tag must be `v<major>.<minor>.<patch>`: the installed
+  version comes from `app.config.ts`, i.e. from the tag, and is compared with
+  `compareVersions` from `@relay/protocol`;
+- every release must be signed with the same key (see *Android signing*),
+  otherwise Android rejects the update;
+- if `SHA256SUMS.txt` is in the release, the APK is checked against it before
+  the installer opens and a mismatch aborts.
+
+The app checks silently at start-up, at most every 12 hours, and shows a dot on
+the settings button when something newer exists. It never downloads or installs
+on its own. The first install needs "Install unknown apps" allowed for Relay in
+Android settings; the app links there when the installer doesn't start.
+iOS has no equivalent and the section is hidden.
 
 ## Before tagging
 

@@ -22,6 +22,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import com.google.zxing.BarcodeFormat
@@ -33,6 +34,9 @@ import com.relay.receiver.core.localized
 import com.relay.receiver.service.RelayForegroundService
 import com.relay.receiver.shizuku.ShizukuBridge
 import com.relay.receiver.transport.MqttTransport
+import com.relay.receiver.update.UpdateState
+import com.relay.receiver.update.Updater
+import com.relay.receiver.update.releaseSummary
 import java.net.Inet4Address
 import java.net.URLEncoder
 import java.security.SecureRandom
@@ -53,6 +57,14 @@ class MainActivity : Activity() {
     private lateinit var mqttInput: EditText
     private lateinit var qrView: ImageView
     private lateinit var shizukuButton: Button
+    private lateinit var updateVersion: TextView
+    private lateinit var updateMessage: TextView
+    private lateinit var updateNotes: TextView
+    private lateinit var updateProgress: ProgressBar
+    private lateinit var updateCheck: Button
+    private lateinit var updateInstall: Button
+    private lateinit var updatePage: Button
+    private val updater by lazy { Updater.get(this) }
     private val toggles = mutableMapOf<String, CheckBox>()
 
     private val prefs by lazy { getSharedPreferences(RelayForegroundService.PREFS, MODE_PRIVATE) }
@@ -79,6 +91,20 @@ class MainActivity : Activity() {
 
         statusView = text("", 15f, FG).apply { setLineSpacing(0f, 1.3f) }
         root.addView(card(statusView))
+
+        // ------------------------------------------------------------ updates
+        root.addView(header(getString(R.string.update_header)))
+        updateVersion = text(getString(R.string.update_current, updater.installedVersion()), 14f, FG)
+        updateMessage = text("", 14f, FG).apply { visibility = View.GONE; setPadding(0, dp(8), 0, 0) }
+        updateNotes = text("", 13f, MUTED).apply { visibility = View.GONE; setPadding(0, dp(4), 0, 0) }
+        updateProgress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            visibility = View.GONE
+        }
+        updateCheck = button(getString(R.string.update_btn_check), secondary = true) { updater.check() }
+        updateInstall = button(getString(R.string.update_btn_install)) { updater.startUpdate(this@MainActivity) }
+        updatePage = button(getString(R.string.update_btn_release_page), secondary = true) { }
+        root.addView(card(updateVersion, updateMessage, updateNotes, updateProgress, updateInstall, updatePage, updateCheck))
 
         // ------------------------------------------------------------ pairing
         root.addView(header(getString(R.string.header_pairing)))
@@ -160,6 +186,73 @@ class MainActivity : Activity() {
             setBackgroundColor(BG)
             addView(root)
         })
+
+        // One quiet look at GitHub per 12 hours; it never downloads or installs anything.
+        if (updater.silentCheckDue()) updater.check(silent = true)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        updater.listener = ::renderUpdate
+        renderUpdate(updater.state)
+    }
+
+    override fun onStop() {
+        updater.listener = null
+        super.onStop()
+    }
+
+    private fun renderUpdate(s: UpdateState) {
+        val release = when (s) {
+            is UpdateState.Available -> s.release
+            is UpdateState.NeedsPermission -> s.release
+            is UpdateState.Downloading -> s.release
+            is UpdateState.ReadyToInstall -> s.release
+            is UpdateState.Installing -> s.release
+            is UpdateState.Failed -> s.release
+            else -> null
+        }
+        val message = when (s) {
+            is UpdateState.Checking -> getString(R.string.update_checking)
+            is UpdateState.UpToDate -> getString(R.string.update_up_to_date)
+            is UpdateState.Available -> getString(R.string.update_available, s.release.version)
+            is UpdateState.NeedsPermission -> getString(R.string.update_needs_permission)
+            is UpdateState.Downloading ->
+                if (s.total > 0) getString(R.string.update_downloading, (s.done * 100 / s.total).toInt())
+                else getString(R.string.update_downloading_unknown)
+            is UpdateState.ReadyToInstall -> getString(R.string.update_ready)
+            is UpdateState.Installing -> getString(R.string.update_installing)
+            is UpdateState.Failed -> s.message
+            else -> ""
+        }
+        updateMessage.text = message
+        updateMessage.visibility = if (message.isEmpty()) View.GONE else View.VISIBLE
+
+        val lines = if (release != null && s !is UpdateState.Failed) {
+            releaseSummary(release.notes).map { "• $it" } +
+                listOfNotNull(if (release.important) getString(R.string.update_important) else null)
+        } else emptyList()
+        updateNotes.text = lines.joinToString("\n")
+        updateNotes.visibility = if (lines.isEmpty()) View.GONE else View.VISIBLE
+
+        val downloading = s is UpdateState.Downloading
+        updateProgress.visibility = if (downloading) View.VISIBLE else View.GONE
+        if (s is UpdateState.Downloading) {
+            updateProgress.isIndeterminate = s.total <= 0
+            if (s.total > 0) updateProgress.progress = (s.done * 100 / s.total).toInt()
+        }
+
+        val canInstall = s is UpdateState.Available || s is UpdateState.NeedsPermission ||
+            s is UpdateState.Installing || (s is UpdateState.Failed && release != null)
+        updateInstall.visibility = if (canInstall) View.VISIBLE else View.GONE
+        updateInstall.text = getString(if (s is UpdateState.Failed) R.string.update_btn_retry else R.string.update_btn_install)
+
+        updatePage.visibility = if (release != null) View.VISIBLE else View.GONE
+        release?.let { r -> updatePage.setOnClickListener { openUrl(r.pageUrl) } }
+
+        val busy = s is UpdateState.Checking || downloading
+        updateCheck.isEnabled = !busy
+        updateCheck.alpha = if (busy) 0.5f else 1f
     }
 
     override fun onResume() {
@@ -168,6 +261,8 @@ class MainActivity : Activity() {
         // is where the relay comes back after the system killed it.
         RelayForegroundService.ensureRunning(this)
         refresh()
+        // Back from the "install unknown apps" screen: carry on with the update that asked for it.
+        updater.resumeAfterPermission(this)
     }
 
     private fun save() {

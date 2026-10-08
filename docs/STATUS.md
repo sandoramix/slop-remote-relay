@@ -20,6 +20,8 @@ verified, how to reproduce it, and what is still open.
 | Browser extension | yes, Chrome for Testing | `smoke:extension` over relay WS, HTTP, WebRTC — status, seekTo, pause, fullscreen in (CDP) and out; a tab already open when the extension is (re)installed is still found and driven — 18/18 |
 | Episode navigation (browser) | yes, Chrome for Testing | `smoke:extension`: next, previous, goto into a hidden range, stale list refused, last episode, on markup shaped like AnimeWorld's (the plan was read from the live site, the test page imitates it) |
 | Episode navigation (controller UI) | typechecked only | not yet run on a device or emulator |
+| In-app update, receiver | yes, emulator | against a local fake release server: silent check, unknown-sources hand-off, redirect, checksum match, system installer, in-place update 0.1.0 → 9.0.0; a wrong checksum is refused. Not seen: real GitHub release, release-build behaviour, Italian strings on screen, signing-key mismatch |
+| In-app update, controller | typechecked, manifest only | permission lands in the generated manifest; download and install never run on a device |
 | Release pipeline pieces | partly | receiver signed via injected properties with tag version (verified locally); extension zip; relay build as in the Dockerfile. The workflow itself has not run on GitHub yet |
 
 ## Bugs found and fixed along the way
