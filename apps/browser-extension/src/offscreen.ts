@@ -97,7 +97,7 @@ async function handle(raw: string, from: BrowserTransportId): Promise<void> {
 
   const cmd = (env as CommandEnvelope).cmd;
   if (cmd.op === 'device.status') {
-    const status = (await chrome.runtime.sendMessage({ to: 'worker', type: 'status' } satisfies RuntimeMessage)) as DeviceStatus;
+    const status = (await chrome.runtime.sendMessage({ to: 'worker', type: 'status', includeNavItems: cmd.includeNavItems } satisfies RuntimeMessage)) as DeviceStatus;
     await reply(await envelope<EventEnvelope>({ type: 'event', event: 'status', status }));
     return;
   }

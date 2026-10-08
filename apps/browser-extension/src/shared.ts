@@ -1,4 +1,5 @@
-import type { DeviceStatus } from '@relay/protocol';
+import type { DeviceStatus, NavStatus } from '@relay/protocol';
+import type { NavPlan } from './nav';
 import { DEFAULT_MQTT_URL } from '@relay/protocol';
 
 /**
@@ -50,12 +51,23 @@ export type FrameAction =
   | { kind: 'seek'; deltaMs: number }
   | { kind: 'seekTo'; positionMs: number }
   | { kind: 'playPause'; play?: boolean }
-  | { kind: 'exitFullscreen' };
+  | { kind: 'exitFullscreen' }
+  // Navigation runs in the top frame, where the page's episode list lives.
+  | { kind: 'navRead'; plan: NavPlan; withItems: boolean }
+  | { kind: 'navStep'; plan: NavPlan; delta: 1 | -1 }
+  | { kind: 'navGoto'; plan: NavPlan; index: number; label: string };
 
 export interface ActionResult {
   ok: boolean;
   detail?: string;
 }
+
+/** A navigation answer: where to go, when the page is to be opened from outside. */
+export interface NavResult extends ActionResult {
+  href?: string;
+}
+
+export type NavReadResult = NavStatus | null;
 
 export interface PathState {
   id: BrowserTransportId;
@@ -114,7 +126,7 @@ export type RuntimeMessage =
   // offscreen → worker: execute this verified command
   | { to: 'worker'; type: 'execute'; cmd: unknown }
   // offscreen → worker: build a status snapshot
-  | { to: 'worker'; type: 'status' }
+  | { to: 'worker'; type: 'status'; includeNavItems?: boolean }
   // offscreen → worker/popup: something the popup shows changed
   | { to: 'any'; type: 'state'; state: ReceiverState }
   // popup → worker: the tab commands would go to

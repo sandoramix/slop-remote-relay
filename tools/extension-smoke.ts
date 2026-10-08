@@ -78,8 +78,8 @@ class Controller {
     await this.transport.send(frame);
     return this.wait((e) => e.type === 'ack' && e.ref === id, 12_000);
   }
-  async status() {
-    await this.transport.send(sign({ type: 'cmd', cmd: { op: 'device.status' } }));
+  async status(includeNavItems = false) {
+    await this.transport.send(sign({ type: 'cmd', cmd: { op: 'device.status', ...(includeNavItems ? { includeNavItems } : {}) } }));
     const e = await this.wait((x) => x.type === 'event' && x.event === 'status');
     return (e?.status ?? null) as Record<string, unknown> | null;
   }
@@ -92,8 +92,20 @@ async function main(): Promise<void> {
     env: { ...process.env, PORT: String(RELAY_PORT) },
     stdio: ['ignore', 'ignore', 'inherit'],
   });
-  const page = createServer((_q, s) => {
+  const page = createServer((q, s) => {
     s.writeHead(200, { 'content-type': 'text/html' });
+    // /play/<series>/<n>: markup shaped like AnimeWorld's, with the episodes
+    // in hidden ranges of 50, which is what a long series looks like there.
+    const ep = /^\/play\/[^/]+\/(\d+)$/.exec(q.url ?? '');
+    if (ep) {
+      const lis = Array.from({ length: 120 }, (_, i) => i + 1).map((n) =>
+        `<li class="episode"><a data-episode-num="${n}" href="/play/test.x/${n}"${n === Number(ep[1]) ? ' class="active"' : ''}>${n}</a></li>`);
+      const ranges = [0, 1, 2].map((r) => `<ul class="episodes range ${r === 0 ? 'active' : 'hidden'}" data-range-id="${r}">${lis.slice(r * 50, r * 50 + 50).join('')}</ul>`);
+      s.end(`<!doctype html><title>Episode ${ep[1]}</title><body><style>.hidden{display:none}</style>
+        <div class="server active">${ranges.join('')}</div>
+        <video controls muted loop autoplay style="width:320px" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>`);
+      return;
+    }
     s.end(`<!doctype html><title>Relay extension test</title><body style="margin:0;background:#000">
       <div id="player" style="width:640px"><video controls muted loop autoplay style="width:100%"
         src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video></div>`);
@@ -107,7 +119,9 @@ async function main(): Promise<void> {
   const browser = await puppeteer.launch({
     headless: true,
     enableExtensions: true,
-    args: ['--autoplay-policy=no-user-gesture-required'],
+    // animeworld.ac resolves to the test page, so the shipped nav plan for that
+    // host is what gets exercised, not a copy of it.
+    args: ['--autoplay-policy=no-user-gesture-required', `--host-resolver-rules=MAP animeworld.ac 127.0.0.1`],
   });
   // Loaded over CDP rather than --load-extension, so step 3 can uninstall it.
   await browser.installExtension(ext);
@@ -178,6 +192,46 @@ async function main(): Promise<void> {
 
     await transport.close();
   }
+
+  // 2b -- episode navigation, driven by the shipped plan for animeworld.ac
+  console.log('\n[episode navigation]');
+  const navTab = await browser.newPage();
+  const epUrl = (n: number) => `http://animeworld.ac:${PAGE_PORT}/play/test.x/${n}`;
+  const landedOn = async (n: number) => {
+    await navTab.waitForFunction((u) => location.href === u, { timeout: 8000 }, epUrl(n)).catch(() => undefined);
+    return navTab.url() === epUrl(n);
+  };
+  await navTab.goto(epUrl(60));
+  await navTab.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 2, { timeout: 20_000 });
+  await navTab.bringToFront();
+  await sleep(1500);
+  const nc = new Controller(new RelayWsTransport({ url: `ws://127.0.0.1:${RELAY_PORT}`, room, role: 'controller' }));
+  await nc.connect();
+  const ns = (await nc.status()) as { nav?: { current: string; hasPrev: boolean; hasNext: boolean; count: number; items?: string[] } } | null;
+  check('status carries nav, without the list', ns?.nav?.current === '60' && ns.nav.count === 120 && ns.nav.hasPrev && ns.nav.hasNext && !ns.nav.items,
+    JSON.stringify(ns?.nav));
+  const full = (await nc.status(true)) as { nav?: { items?: string[] } } | null;
+  check('status lists every episode on request, hidden ranges included', full?.nav?.items?.length === 120 && full.nav.items[99] === '100');
+  const next = await nc.cmd({ op: 'nav.step', delta: 1 });
+  check('next episode', !!next?.ok && (await landedOn(61)), `${next?.detail}`);
+  await navTab.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 2, { timeout: 20_000 });
+  await sleep(1000);
+  const prev = await nc.cmd({ op: 'nav.step', delta: -1 });
+  check('previous episode', !!prev?.ok && (await landedOn(60)), `${prev?.detail}`);
+  await sleep(1500);
+  const go = await nc.cmd({ op: 'nav.goto', index: 99, label: '100' });
+  check('goto an episode in a hidden range', !!go?.ok && (await landedOn(100)), `${go?.detail}`);
+  await sleep(1500);
+  const stale = await nc.cmd({ op: 'nav.goto', index: 5, label: '999' });
+  check('goto refuses a list that changed', stale?.ok === false && String(stale.detail).includes('changed'), `${stale?.detail}`);
+  await navTab.goto(epUrl(120));
+  await navTab.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 2, { timeout: 20_000 });
+  await sleep(1500);
+  const end = await nc.cmd({ op: 'nav.step', delta: 1 });
+  check('no next after the last episode', end?.ok === false && String(end.detail).includes('last'), `${end?.detail}`);
+  await nc.transport.close();
+  await navTab.close();
+  await tab.bringToFront();
 
   // 3 -- a tab that was already open when the extension was installed: the
   // manifest never injects into it, and what is left of the previous copy's

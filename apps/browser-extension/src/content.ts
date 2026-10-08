@@ -1,4 +1,6 @@
-import type { ActionResult, FrameAction, MediaReport } from './shared';
+import type { NavStatus } from '@relay/protocol';
+import { currentIndex, type NavEntry, type NavPlan, planApplies, stepIndex } from './nav';
+import type { ActionResult, FrameAction, MediaReport, NavReadResult, NavResult } from './shared';
 
 /**
  * Runs in every frame. Finds the frame's main <video> and does what it is told
@@ -49,8 +51,80 @@ function seekTo(v: HTMLVideoElement, ms: number): string {
   return `currentTime ${Math.round(target)}ms`;
 }
 
-async function perform(action: FrameAction): Promise<ActionResult | MediaReport> {
+// ------------------------------------------------------------ navigation
+
+const MAX_NAV_ITEMS = 2000;
+
+function readEntries(plan: NavPlan): NavEntry[] {
+  if (!plan.items) return [];
+  const labelOf = (el: Element) =>
+    (!plan.label || plan.label === 'text' ? el.textContent : el.getAttribute(plan.label))?.trim() ?? '';
+  return [...document.querySelectorAll(plan.items)].slice(0, MAX_NAV_ITEMS).map((el) => ({
+    label: labelOf(el),
+    href: el instanceof HTMLAnchorElement && el.href ? el.href : null,
+    current: !!plan.current && el.matches(plan.current),
+  }));
+}
+
+/** A page control that can be pressed: present, not disabled, not hidden. */
+function usable(selector: string | undefined): HTMLElement | null {
+  const el = selector ? document.querySelector<HTMLElement>(selector) : null;
+  if (!el || (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') return null;
+  return el.getClientRects().length > 0 ? el : null;
+}
+
+function navRead(plan: NavPlan, withItems: boolean): NavReadResult {
+  if (!planApplies(plan, location.pathname)) return null;
+  const entries = readEntries(plan);
+  if (entries.length === 0) {
+    if (!usable(plan.next) && !usable(plan.prev)) return null;
+    return { current: null, hasPrev: !!usable(plan.prev), hasNext: !!usable(plan.next) };
+  }
+  const index = currentIndex(entries, location.href);
+  const status: NavStatus = {
+    current: index !== null ? entries[index]!.label : null,
+    hasPrev: stepIndex(entries.length, index, -1) !== null,
+    hasNext: stepIndex(entries.length, index, 1) !== null,
+    index,
+    count: entries.length,
+  };
+  if (withItems) status.items = entries.map((e) => e.label);
+  return status;
+}
+
+/** Opens an entry, or answers with its address for the worker to open. */
+function open(entry: NavEntry): NavResult {
+  if (!entry.href) return { ok: false, detail: `"${entry.label}" is not a link` };
+  return { ok: true, href: entry.href, detail: `episode ${entry.label}` };
+}
+
+function navStep(plan: NavPlan, delta: 1 | -1): NavResult {
+  if (!planApplies(plan, location.pathname)) return { ok: false, detail: 'navigation is not available on this page' };
+  const entries = readEntries(plan);
+  if (entries.length > 0) {
+    const index = currentIndex(entries, location.href);
+    if (index === null) return { ok: false, detail: 'cannot tell which episode this is' };
+    const to = stepIndex(entries.length, index, delta);
+    return to === null ? { ok: false, detail: delta > 0 ? 'already at the last episode' : 'already at the first episode' } : open(entries[to]!);
+  }
+  const button = usable(delta > 0 ? plan.next : plan.prev);
+  if (!button) return { ok: false, detail: delta > 0 ? 'no next episode' : 'no previous episode' };
+  // Answer first: the click usually unloads this page, and a reply sent after that is lost.
+  setTimeout(() => button.click(), 50);
+  return { ok: true, detail: delta > 0 ? 'next' : 'previous' };
+}
+
+function navGoto(plan: NavPlan, index: number, label: string): NavResult {
+  const entry = readEntries(plan)[index];
+  if (!entry || entry.label !== label) return { ok: false, detail: 'the episode list changed; refresh and pick again' };
+  return open(entry);
+}
+
+async function perform(action: FrameAction): Promise<ActionResult | MediaReport | NavResult | NavReadResult> {
   if (action.kind === 'report') return report();
+  if (action.kind === 'navRead') return navRead(action.plan, action.withItems);
+  if (action.kind === 'navStep') return navStep(action.plan, action.delta);
+  if (action.kind === 'navGoto') return navGoto(action.plan, action.index, action.label);
   if (action.kind === 'exitFullscreen') {
     if (!document.fullscreenElement) return { ok: true, detail: 'already out of fullscreen' };
     await document.exitFullscreen();

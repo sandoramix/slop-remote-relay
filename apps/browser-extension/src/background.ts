@@ -1,9 +1,12 @@
-import type { Command, DeviceStatus, ExecutorId } from '@relay/protocol';
+import type { Command, DeviceStatus, ExecutorId, NavStatus } from '@relay/protocol';
 import { compareVersions, LATEST_RELEASE_API, parseRelease, releaseSummary } from '@relay/protocol';
+import { type NavPlan } from './nav';
 import sites from './sites.json';
 import {
   type ActionResult,
   type FrameAction,
+  type NavReadResult,
+  type NavResult,
   loadSettings,
   type MediaReport,
   PRESENCE_WINDOW_MS,
@@ -25,7 +28,7 @@ import {
  * the price of the one action a page will only take from a person.
  */
 
-type SiteRecipe = { fullscreenKey?: string; exitKey?: string; seekApi?: string };
+type SiteRecipe = { fullscreenKey?: string; exitKey?: string; seekApi?: string; nav?: NavPlan };
 const SITES = sites as unknown as Record<string, SiteRecipe>;
 
 function siteFor(url: string): SiteRecipe | null {
@@ -241,6 +244,40 @@ async function exitFullscreen(t: Target): Promise<ActionResult & { executedBy?: 
   return { ...res, executedBy: 'dom' };
 }
 
+/**
+ * Episode navigation. The page's list is in the top frame, which is rarely the
+ * frame with the <video> (players are usually iframes), so it is the tab's own
+ * address that picks the plan and frame 0 that is asked.
+ */
+async function navPlanFor(t: Target): Promise<NavPlan | null> {
+  const tab = await chrome.tabs.get(t.tabId).catch(() => null);
+  return (tab?.url && siteFor(tab.url)?.nav) || null;
+}
+
+async function navigate(
+  t: Target,
+  action: (plan: NavPlan) => FrameAction,
+): Promise<ActionResult & { executedBy?: ExecutorId }> {
+  const plan = await navPlanFor(t);
+  if (!plan) return { ok: false, detail: 'No navigation plan for this site' };
+  const res = await toFrame<NavResult>({ ...t, frameId: 0 }, action(plan));
+  if (res.ok && res.href) {
+    const tab = await chrome.tabs.get(t.tabId);
+    // Only ever follow a link on the page's own site.
+    if (new URL(res.href).origin !== new URL(tab.url!).origin) return { ok: false, detail: 'refused: link leaves the site' };
+    await chrome.tabs.update(t.tabId, { url: res.href });
+  }
+  return { ok: res.ok, detail: res.detail, executedBy: 'dom' };
+}
+
+async function navStatus(t: Target | null, withItems: boolean): Promise<NavStatus | undefined> {
+  if (!t) return undefined;
+  const plan = await navPlanFor(t);
+  if (!plan) return undefined;
+  const res = await toFrame<NavReadResult>({ ...t, frameId: 0 }, { kind: 'navRead', plan, withItems }).catch(() => null);
+  return res ?? undefined;
+}
+
 async function execute(cmd: Command): Promise<ActionResult & { executedBy?: ExecutorId }> {
   const t = await pickTarget();
   if (!t) return { ok: false, detail: 'No tab with a video' };
@@ -275,13 +312,18 @@ async function execute(cmd: Command): Promise<ActionResult & { executedBy?: Exec
       return cmd.toggle && t.report.fullscreen ? exitFullscreen(t) : enterFullscreen(t);
     case 'fullscreen.exit':
       return exitFullscreen(t);
+    case 'nav.step':
+      return navigate(t, (plan) => ({ kind: 'navStep', plan, delta: cmd.delta }));
+    case 'nav.goto':
+      return navigate(t, (plan) => ({ kind: 'navGoto', plan, index: cmd.index, label: cmd.label }));
     default:
       return { ok: false, detail: `unsupported operation: ${cmd.op}` };
   }
 }
 
-async function status(): Promise<DeviceStatus> {
+async function status(includeNavItems = false): Promise<DeviceStatus> {
   const t = await pickTarget();
+  const nav = await navStatus(t, includeNavItems);
   const executors: ExecutorId[] = ['dom', ...((await hasDebugger()) ? (['cdp'] as const) : [])];
   const battery = await (navigator as unknown as { getBattery?: () => Promise<{ level: number }> })
     .getBattery?.()
@@ -298,6 +340,7 @@ async function status(): Promise<DeviceStatus> {
     batteryPercent: battery ? Math.round(battery.level * 100) : null,
     title: t?.report.title ?? null,
     fullscreen: t?.report.fullscreen ?? null,
+    ...(nav ? { nav } : {}),
   };
 }
 
@@ -406,7 +449,7 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: tru
     return true;
   }
   if (msg.type === 'status') {
-    void status().then(respond);
+    void status(msg.includeNavItems).then(respond);
     return true;
   }
   return false;
