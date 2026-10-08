@@ -61,6 +61,14 @@
     <string name="ok_already_state">già nello stato richiesto</string>
     <string name="ok_sent_unverified">%1$s %2$s inviato su %3$s (non verificato)</string>
     <string name="err_no_shizuku_step">Nessun passo Shizuku applicabile su %1$s</string>
+    <string name="err_nav_unavailable">La navigazione tra gli episodi non è disponibile su questa pagina</string>
+    <string name="err_nav_needs_accessibility">La navigazione tra gli episodi richiede il servizio di accessibilità</string>
+    <string name="err_nav_unknown_current">Impossibile capire quale episodio sia questo</string>
+    <string name="err_nav_at_last">Sei già all\'ultimo episodio</string>
+    <string name="err_nav_at_first">Sei già al primo episodio</string>
+    <string name="err_nav_other_range">Quell\'episodio è in un altro intervallo della lista, che la pagina non espone</string>
+    <string name="err_nav_list_changed">La lista degli episodi è cambiata; aggiorna e scegli di nuovo</string>
+    <string name="err_nav_click">Impossibile aprire l\'episodio %1$s</string>
     <string name="update_header">Aggiornamenti</string>
     <string name="update_current">Versione installata: %1$s</string>
     <string name="update_btn_check">Cerca aggiornamenti</string>

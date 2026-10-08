@@ -61,7 +61,7 @@ Notes from getting it to build:
 
 ```bash
 cd apps/receiver-android
-./gradlew test assembleDebug          # 12 unit tests: codec vectors, MQTT codec, commands
+./gradlew test assembleDebug          # 33 unit tests: codec vectors, MQTT codec, commands, navigation, updates
 ./gradlew installDebug
 ```
 
@@ -129,7 +129,8 @@ The same holds for the MQTT codec (`mqttCodec.ts` ↔ `MqttCodec.kt`, pinned by
 Fullscreen strategies are data in
 `apps/receiver-android/app/src/main/assets/recipes.json` — never code. Step kinds:
 `node`, `reveal`, `tap`, `rotate`, `back`, `key` (Shizuku only), `mediasession`;
-plus `exitFullscreen` and `fullscreenMarkers` per app. View ids and labels must
+plus `exitFullscreen` and `fullscreenMarkers` per app, and a `nav` section per
+browser for episode navigation (see ARCHITECTURE.md). View ids and labels must
 come from the real device (`adb shell uiautomator dump`), never from memory.
 Note that uiautomator can't dump while a video is animating; pause it first.
 

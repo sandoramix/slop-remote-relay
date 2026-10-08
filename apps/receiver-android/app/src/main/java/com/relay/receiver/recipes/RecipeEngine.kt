@@ -75,6 +75,8 @@ data class Recipe(
     val seek: List<Step>,
     val exitFullscreen: List<Step> = emptyList(),
     val markers: FullscreenMarkers? = null,
+    /** Episode navigation plans, for browsers (see Navigation.kt). */
+    val nav: BrowserNav? = null,
 )
 
 class RecipeEngine(context: Context) {
@@ -85,6 +87,8 @@ class RecipeEngine(context: Context) {
         packageName?.let { recipes[it] }
 
     fun knows(packageName: String?): Boolean = forPackage(packageName) != null
+
+    fun navFor(packageName: String?): BrowserNav? = forPackage(packageName)?.nav
 
     /** Every app gets these when it has no recipe of its own. */
     fun fallbackFullscreen(): List<Step> = listOf(
@@ -158,9 +162,39 @@ class RecipeEngine(context: Context) {
                             absentViewIds = it.optJSONArray("absentViewIds").toStringList(),
                         )
                     },
+                    nav = entry.optJSONObject("nav")?.let(::parseNav),
                 ),
             )
         }
+    }
+
+    /**
+     * A broken site entry (bad regex, missing field) is skipped on its own, so
+     * one typo cannot take navigation down for every other site.
+     */
+    private fun parseNav(o: JSONObject): BrowserNav {
+        val sites = o.optJSONArray("sites")
+        return BrowserNav(
+            urlBarViewIds = o.optJSONArray("urlBarViewIds").toStringList(),
+            sites = (0 until (sites?.length() ?: 0)).mapNotNull { i ->
+                runCatching {
+                    val s = sites!!.getJSONObject(i)
+                    fun rx(key: String) = s.optString(key).takeIf { it.isNotEmpty() }?.let(::Regex)
+                    NavPlan(
+                        site = s.getString("site"),
+                        url = rx("url"),
+                        title = rx("title"),
+                        current = Regex(s.getString("current")),
+                        currentNode = s.optString("currentNode").takeIf { it.isNotEmpty() },
+                        list = s.getString("list"),
+                        itemLabel = rx("itemLabel"),
+                        ranges = rx("ranges"),
+                        prev = rx("prev"),
+                        next = rx("next"),
+                    )
+                }.getOrNull()
+            },
+        )
     }
 
     private fun parseSteps(array: JSONArray?): List<Step> {

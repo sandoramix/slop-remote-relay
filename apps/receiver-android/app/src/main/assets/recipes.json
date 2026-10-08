@@ -178,6 +178,24 @@
       {
         "kind": "mediasession"
       }
-    ]
+    ],
+    "nav": {
+      "urlBarViewIds": [
+        ":id/url_bar"
+      ],
+      "sites": [
+        {
+          "site": "animeworld",
+          "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+          "title": " - AnimeWorld$",
+          "current": "Episodio (\\S+)",
+          "currentNode": "episode-comment",
+          "list": "animeId",
+          "ranges": "^(\\d+) - (?:.* - )?(\\d+)$",
+          "prev": "Precedente$",
+          "next": "Successivo$"
+        }
+      ]
+    }
   }
 }

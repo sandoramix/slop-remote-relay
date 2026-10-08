@@ -2,6 +2,7 @@ package com.relay.receiver
 
 import com.relay.receiver.core.Codec
 import com.relay.receiver.core.Command
+import com.relay.receiver.core.NavStatus
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -153,5 +154,19 @@ class CodecTest {
         assertEquals(Command.FullscreenExit, exit)
         val seekTo = Command.fromJson(JSONObject(vectors[8].second).getJSONObject("cmd"))
         assertEquals(Command.SeekTo(3_000_000_000L), seekTo)
+    }
+
+    @Test
+    fun `nav ops parse and the nav block serialises like the TypeScript one`() {
+        val goto = Command.fromJson(JSONObject(vectors[10].second).getJSONObject("cmd"))
+        assertEquals(Command.NavGoto(11, "OVA \\ 12 / \"è\""), goto)
+        assertEquals(Command.NavStep(-1), Command.fromJson(JSONObject("""{"op":"nav.step","delta":-1}""")))
+        assertEquals(null, Command.fromJson(JSONObject("""{"op":"nav.step","delta":5}""")))
+        assertEquals(Command.Status(true), Command.fromJson(JSONObject("""{"op":"device.status","includeNavItems":true}""")))
+        assertEquals(Command.Status(false), Command.fromJson(JSONObject("""{"op":"device.status"}""")))
+
+        val nav = NavStatus(current = "11", hasPrev = true, hasNext = false, items = listOf("1", "2", "11"), index = 2)
+        val expected = JSONObject(vectors[11].second).getJSONObject("status").getJSONObject("nav")
+        assertEquals(Codec.canonicalize(expected), Codec.canonicalize(nav.toJson()))
     }
 }

@@ -14,10 +14,22 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.relay.receiver.core.Command
 import com.relay.receiver.core.ExecResult
 import com.relay.receiver.core.ExecutorId
+import com.relay.receiver.core.NavStatus
+import com.relay.receiver.recipes.BrowserNav
+import com.relay.receiver.recipes.NavPlan
+import com.relay.receiver.recipes.NavAction
+import com.relay.receiver.recipes.NavPage
+import com.relay.receiver.recipes.NavRefusal
+import com.relay.receiver.recipes.Navigation
+import com.relay.receiver.recipes.NodeSnap
 import com.relay.receiver.recipes.RecipeEngine
 import com.relay.receiver.recipes.Step
 import com.relay.receiver.service.RelayAccessibilityService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -40,6 +52,9 @@ class AccessibilityExecutor(
 
     override fun isAvailable(): Boolean = service != null
 
+    /** For work that outlives a command's ack (closing a popup after a navigation). */
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /**
      * Seek is included on purpose. MediaSession sits ahead of this executor in
      * the chain and will take any seek it can, so the only way to reach here with
@@ -48,7 +63,8 @@ class AccessibilityExecutor(
      * seek out made ExecutorChain answer "no executor available" instead.
      */
     override fun canHandle(command: Command): Boolean = when (command) {
-        is Command.Fullscreen, is Command.FullscreenExit, is Command.Seek -> service != null
+        is Command.Fullscreen, is Command.FullscreenExit, is Command.Seek,
+        is Command.NavStep, is Command.NavGoto -> service != null
         else -> false
     }
 
@@ -57,7 +73,178 @@ class AccessibilityExecutor(
             if (command.toggle && isFullscreen() == true) exitFullscreen() else enterFullscreen()
         is Command.FullscreenExit -> exitFullscreen()
         is Command.Seek -> seekByTapping(command.deltaMs)
+        is Command.NavStep -> navigate { Navigation.step(it, command.delta) }
+        is Command.NavGoto -> navigate { Navigation.goto(it, command.index, command.label) }
         else -> ExecResult.notHandled(id)
+    }
+
+    // --------------------------------------------------------------- navigation
+
+    /** The window flattened for Navigation, with the live nodes alongside. */
+    private class Snapshot(val snaps: List<NodeSnap>, val nodes: List<AccessibilityNodeInfo>)
+
+    private fun snapshot(root: AccessibilityNodeInfo): Snapshot {
+        val snaps = ArrayList<NodeSnap>()
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        // Iterative depth-first walk; a long series puts thousands of nodes in
+        // Chrome's tree, too deep a recursion for comfort.
+        val stack = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
+        stack.addLast(root to -1)
+        while (stack.isNotEmpty() && snaps.size < MAX_NODES) {
+            val (node, parent) = stack.removeLast()
+            val index = snaps.size
+            snaps += NodeSnap(
+                parent = parent,
+                className = node.className?.toString(),
+                viewId = node.viewIdResourceName,
+                text = node.text?.toString(),
+                desc = node.contentDescription?.toString(),
+                clickable = node.isClickable,
+            )
+            nodes += node
+            for (i in node.childCount - 1 downTo 0) {
+                node.getChild(i)?.let { stack.addLast(it to index) }
+            }
+        }
+        return Snapshot(snaps, nodes)
+    }
+
+    private fun readNav(): Pair<NavPage, Snapshot>? {
+        val svc = service ?: return null
+        val nav = recipes.navFor(svc.foregroundPackage) ?: return null
+        val root = svc.rootInActiveWindow ?: return null
+        val started = System.currentTimeMillis()
+        val snap = snapshot(root)
+        Log.v(TAG, "nav: walked ${snap.snaps.size} nodes in ${System.currentTimeMillis() - started} ms")
+        return Navigation.read(nav, snap.snaps)?.let { it to snap }
+    }
+
+    /** The nav block of device.status, or null when no plan applies to what is in front. */
+    fun navStatus(withItems: Boolean): NavStatus? = try {
+        readNav()?.first?.status(withItems)
+    } catch (e: Exception) {
+        // The tree changes under our feet while a page loads; next poll will do.
+        Log.d(TAG, "nav status unreadable", e)
+        null
+    }
+
+    private suspend fun navigate(decide: (NavPage) -> NavAction): ExecResult {
+        val svc = service ?: return ExecResult.notHandled(id)
+        val pkg = svc.foregroundPackage
+        val nav = recipes.navFor(pkg)
+        val (page, snap) = readNav() ?: return ExecResult.fail(id, context.str(R.string.err_nav_unavailable))
+        return when (val action = decide(page)) {
+            is NavAction.Refuse -> ExecResult.fail(id, context.str(refusalText(action.reason)))
+            is NavAction.Click -> {
+                val failed = ExecResult.fail(id, context.str(R.string.err_nav_click, action.label ?: "?"))
+                val how = clickNode(svc, snap.nodes[action.node]) ?: return failed
+                val done = ExecResult.ok(id, "${page.plan.site}: ${action.label ?: "?"} ($how)")
+                if (nav == null || pkg == null) return done
+
+                if (!action.viaButton) {
+                    // A link navigates on its own, popup or not: answer now, while
+                    // the page reloads, and tidy up the popup behind the answer.
+                    background.launch { watch(svc, nav, page.plan, pkg, before = null, forMs = POPUP_WATCH_MS) }
+                    return done
+                }
+                // The site's button can be swallowed by its ad popup: believe it
+                // only once the episode changes, and press it once more after a
+                // popup has been closed. All inside the controller's 6 s.
+                var retried = false
+                val moved = watch(svc, nav, page.plan, pkg, before = page.current, forMs = BUTTON_WATCH_MS) {
+                    if (!retried) {
+                        retried = true
+                        delay(POPUP_SETTLE_MS)
+                        readNav()?.takeIf { it.first.current == page.current }?.let { (again, snapAgain) ->
+                            (decide(again) as? NavAction.Click)?.let { clickNode(svc, snapAgain.nodes[it.node]) }
+                        }
+                    }
+                }
+                when {
+                    moved -> done
+                    // The page is still loading, or the second press was swallowed
+                    // too; the status will tell within seconds.
+                    retried -> ExecResult.ok(id, "${page.plan.site}: ? ($how, unverified)")
+                    else -> failed
+                }
+            }
+        }
+    }
+
+    private fun refusalText(reason: NavRefusal): Int = when (reason) {
+        NavRefusal.UNKNOWN_CURRENT -> R.string.err_nav_unknown_current
+        NavRefusal.AT_FIRST -> R.string.err_nav_at_first
+        NavRefusal.AT_LAST -> R.string.err_nav_at_last
+        NavRefusal.OTHER_RANGE -> R.string.err_nav_other_range
+        NavRefusal.LIST_CHANGED -> R.string.err_nav_list_changed
+    }
+
+    /**
+     * ACTION_CLICK first. Chromium runs a web element's default action whether
+     * or not the element is on screen or marked clickable: an episode link with
+     * bounds [0,0][0,0] and the site's non-clickable "Precedente" text both took
+     * it on the emulator. Only a refused click falls back to scrolling the node
+     * into view and tapping it.
+     */
+    private suspend fun clickNode(svc: RelayAccessibilityService, node: AccessibilityNodeInfo): String? {
+        if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return "click"
+        node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+        delay(SCROLL_SETTLE_MS)
+        node.refresh()
+        val bounds = Rect().also { node.getBoundsInScreen(it) }
+        if (bounds.isEmpty || !tapAt(svc, bounds.exactCenterX(), bounds.exactCenterY(), double = false)) {
+            Log.d(TAG, "nav: node neither clickable nor tappable ($bounds)")
+            return null
+        }
+        return "tap"
+    }
+
+    /**
+     * Watches the browser for [forMs] after a click. A tab the site's ad script
+     * opened in front (an address the plan does not cover) or another app
+     * brought forward is closed with Back, once: Chrome closes a popup tab on
+     * Back and returns to the page that opened it. [onPopupClosed] runs after.
+     *
+     * With [before] set, returns true as soon as the page shows an episode other
+     * than [before]. Without it, returns once a popup has been closed, or at the
+     * deadline.
+     */
+    private suspend fun watch(
+        svc: RelayAccessibilityService,
+        nav: BrowserNav,
+        plan: NavPlan,
+        pkg: String,
+        before: String?,
+        forMs: Long,
+        onPopupClosed: suspend () -> Unit = {},
+    ): Boolean {
+        var closed = false
+        val deadline = System.currentTimeMillis() + forMs
+        while (System.currentTimeMillis() < deadline) {
+            delay(POLL_MS)
+            try {
+                val root = svc.rootInActiveWindow ?: continue
+                val front = svc.foregroundPackage
+                val snaps = snapshot(root).snaps
+                val popup = (front != null && front != pkg) || Navigation.foreign(nav, plan, snaps)
+                if (popup && !closed) {
+                    Log.d(TAG, "nav: popup in front (${front ?: "?"}, ${Navigation.url(nav, snaps)?.take(80)}), pressing Back")
+                    svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                    closed = true
+                    onPopupClosed()
+                    if (before == null) return false
+                    continue
+                }
+                if (before != null) {
+                    val now = Navigation.read(nav, snaps)?.current
+                    if (now != null && now != before) return true
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "nav: tree changed while watching", e) // a page loading
+            }
+        }
+        if (before != null) Log.d(TAG, "nav: the page did not move from $before")
+        return false
     }
 
     // --------------------------------------------------------------- fullscreen
@@ -369,5 +556,21 @@ class AccessibilityExecutor(
 
         /** How long a player gets to enter fullscreen before a step is judged. */
         const val VERIFY_MS = 700L
+
+        /** Enough for any page we have seen; the walk stops here rather than run away. */
+        const val MAX_NODES = 6000
+
+        const val SCROLL_SETTLE_MS = 400L
+
+        /** How long after a link click a popup is watched for. */
+        const val POPUP_WATCH_MS = 6_000L
+
+        /** How long a site button gets to move the page; the controller gives up on an ack at 6 s. */
+        const val BUTTON_WATCH_MS = 4_500L
+
+        /** After Back closes a popup, before the page underneath is read again. */
+        const val POPUP_SETTLE_MS = 500L
+
+        const val POLL_MS = 300L
     }
 }

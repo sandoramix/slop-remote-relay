@@ -28,6 +28,8 @@ class CommandRouter(
     private val recipes: RecipeEngine,
     /** Reads the fullscreen state for device.status; null when nothing can tell. */
     private val fullscreenProbe: (String?) -> Boolean? = { null },
+    /** Reads the nav block for device.status (with or without the item list); null when no plan applies. */
+    private val navProbe: (Boolean) -> NavStatus? = { null },
 ) {
 
     private val dedupe = DedupeWindow()
@@ -67,7 +69,7 @@ class CommandRouter(
             ?: return ack(ref, ok = false, detail = "operazione sconosciuta", tookMs = 0)
 
         if (command is Command.Status) {
-            return event("status", status())
+            return event("status", status(command.includeNavItems))
         }
 
         val result = chain.run(command)
@@ -80,7 +82,7 @@ class CommandRouter(
         )
     }
 
-    fun status(): DeviceStatus {
+    fun status(includeNavItems: Boolean = false): DeviceStatus {
         val snapshot = mediaSession.snapshot()
         val foreground = RelayAccessibilityService.instance?.foregroundPackage
             ?: snapshot?.packageName
@@ -96,6 +98,7 @@ class CommandRouter(
             batteryPercent = batteryPercent(),
             title = snapshot?.title,
             fullscreen = fullscreenProbe(foreground),
+            nav = navProbe(includeNavItems),
         )
     }
 

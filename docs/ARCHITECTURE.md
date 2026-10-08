@@ -155,8 +155,86 @@ site in `apps/browser-extension/src/sites.json` (schema in `src/nav.ts`):
 `items` selects *every* entry in order, including those a "1 - 50" range tab
 hides, so long series need nothing special. A site with no list to read can name
 its own buttons instead (`"next": "...", "prev": "..."`). Read the selectors off
-the real page, never guess them. The Android receiver has no navigation yet: it
-answers these ops as unsupported and the controller hides the controls.
+the real page, never guess them.
+
+## Navigating a series (Android)
+
+Same ops, same `nav` status block, read through the accessibility tree of the
+browser instead of the DOM. Still data: a `nav` section under the browser's
+package in `recipes.json`, one plan per site (schema and logic in
+`recipes/Navigation.kt`, unit-tested on plain node snapshots in
+`NavigationTest`; `AccessibilityExecutor` only flattens the tree and clicks):
+
+```json
+"com.android.chrome": { "nav": {
+  "urlBarViewIds": [":id/url_bar"],
+  "sites": [{
+    "site": "animeworld",
+    "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+    "title": " - AnimeWorld$",
+    "current": "Episodio (\\S+)",
+    "currentNode": "episode-comment",
+    "list": "animeId",
+    "ranges": "^(\\d+) - (?:.* - )?(\\d+)$",
+    "prev": "Precedente$",
+    "next": "Successivo$"
+  }]
+} }
+```
+
+What the tree offers, from `uiautomator dump` on the emulator (Chrome exposes
+web content only while an accessibility service is on, which ours is):
+
+- **Which site.** `url` is matched against the address bar
+  (`com.android.chrome:id/url_bar`, text like
+  `animeworld.ac/play/chainsmoker-cat-ita.quc1Q/HL20PjNyUr`). Chrome drops its
+  toolbar from the tree as soon as the page scrolls, which is exactly while a
+  video is watched, so `title` is matched against the page title (the text of
+  the `android.webkit.WebView` node) when the bar is absent.
+- **Which episode.** The site's `.active` class is not exposed. `current` is a
+  regex whose group 1 is the label, read from the element with HTML id
+  `currentNode` (Chromium reports HTML ids as `viewIdResourceName`, bare) and
+  else from the title. The node matters: the site's own previous/next buttons
+  switch episode in-page and rewrite the address but **not the title** (seen:
+  title "Episodio 901", address and comments tab on 900).
+- **The list.** Every clickable node with a content description under the
+  element whose id is `list`, in tree order (= DOM order); the label is the
+  content description ("1".."11"). Off-screen entries are in the tree with
+  bounds `[0,0][0,0]`.
+- **Long series.** Only the *active* range is in the tree (One Piece at 937:
+  901–938 only; 907 is genuinely missing on the site), and the range tabs are
+  one merged TextView ("1 - 5051 - 100…901 - 938"), not individually
+  clickable. `ranges` reads the ends of the whole series from that text, so
+  `hasPrev`/`hasNext` stay right at a range boundary. On Android `items`,
+  `index` and `count` describe the active range only — unlike the extension,
+  which lists the whole series.
+
+**How a step is made.** The neighbouring entry's link first; the site's own
+button (`prev`/`next`, matched on node text, e.g. "? Precedente") only when the
+neighbour is in a hidden range. Measured, not assumed:
+
+- `ACTION_CLICK` works on an entry with zero bounds and on the site's
+  "Precedente"/"Successivo" TextViews although they are not marked clickable;
+  no scrolling into view is needed. (A refused click falls back to
+  `ACTION_SHOW_ON_SCREEN` and a real tap at the node's centre.)
+- AnimeWorld opens an ad popup tab on **every** click. A link click navigates
+  the page underneath anyway; a button click was swallowed by the popup (page
+  unchanged) at least once. So after any click the receiver watches for a tab
+  whose address the plan does not cover (or another app in front) and presses
+  Back once, which closes Chrome's popup tab and returns to the opener.
+- A link step answers at once (tens of ms) and closes the popup in the
+  background. A button step waits until the page shows a different episode,
+  presses again once after closing a popup, and answers within 4.5 s (the
+  controller gives up at 6 s); if the page has not settled by then it answers
+  ok with "unverified".
+- At either end, and on a `goto` whose label no longer matches `items[index]`,
+  the receiver refuses before clicking anything.
+
+Limits: Chrome only. Brave has no nav plan because its tree has not been dumped
+on a device; add one from a dump, never by analogy with Chrome. A popup that
+opens *behind* the page (seen once, a "Loading…" tab) is not closed. The status
+loop walks the browser's tree every 3 s while a plan applies (~1000 nodes,
+~25 ms on the emulator).
 
 ## Adding a command
 

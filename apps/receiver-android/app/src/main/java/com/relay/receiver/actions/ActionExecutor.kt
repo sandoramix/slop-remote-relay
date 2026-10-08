@@ -35,8 +35,11 @@ interface ActionExecutor {
  */
 class ExecutorChain(
     private val executors: List<ActionExecutor>,
-    /** Resolved per call so the receiver language applies live. */
-    private val noExecutorDetail: () -> String,
+    /**
+     * Resolved per call so the receiver language applies live, and per command
+     * so it can say what is missing (navigation only exists through accessibility).
+     */
+    private val noExecutorDetail: (Command) -> String,
 ) {
 
     suspend fun run(command: Command): ExecResult {
@@ -53,7 +56,7 @@ class ExecutorChain(
             handled = false,
             ok = false,
             executor = null,
-            detail = noExecutorDetail(),
+            detail = noExecutorDetail(command),
         )
     }
 

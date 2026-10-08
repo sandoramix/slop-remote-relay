@@ -18,6 +18,7 @@ import com.relay.receiver.actions.ExecutorChain
 import com.relay.receiver.actions.MediaSessionExecutor
 import com.relay.receiver.actions.ShizukuExecutor
 import com.relay.receiver.core.Codec
+import com.relay.receiver.core.Command
 import com.relay.receiver.core.CommandRouter
 import com.relay.receiver.recipes.RecipeEngine
 import com.relay.receiver.transport.BleGattTransport
@@ -89,11 +90,18 @@ class RelayForegroundService : Service() {
                 accessibility,
                 ShizukuExecutor(this, recipes) { accessibility.isFullscreen() },
             ),
-        ) { str(R.string.err_no_executor) }
-
-        val commandRouter = CommandRouter(this, secret, chain, mediaSession, recipes) {
-            accessibility.isFullscreen()
+        ) { command ->
+            when (command) {
+                is Command.NavStep, is Command.NavGoto -> str(R.string.err_nav_needs_accessibility)
+                else -> str(R.string.err_no_executor)
+            }
         }
+
+        val commandRouter = CommandRouter(
+            this, secret, chain, mediaSession, recipes,
+            fullscreenProbe = { accessibility.isFullscreen() },
+            navProbe = { withItems -> accessibility.navStatus(withItems) },
+        )
         router = commandRouter
 
         // Every path at once: the receiver is reachable on all of them and the
@@ -135,7 +143,9 @@ class RelayForegroundService : Service() {
                 val set = transports
                 if (router != null && set != null) {
                     val status = router.status()
-                    val summary = "${status.foregroundPackage}|${status.isPlaying}|${set.liveIds()}"
+                    // The episode is in here so that the remote sees the new one
+                    // as soon as a step has loaded, without waiting for its own poll.
+                    val summary = "${status.foregroundPackage}|${status.isPlaying}|${status.nav?.current}|${set.liveIds()}"
                     if (summary != lastSummary) {
                         lastSummary = summary
                         set.broadcast(router.event("status", status))

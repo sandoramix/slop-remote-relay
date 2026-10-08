@@ -14,7 +14,12 @@ sealed interface Command {
     data class Seek(val deltaMs: Long) : Command
     data class SeekTo(val positionMs: Long) : Command
     data class PlayPause(val play: Boolean?) : Command
-    data object Status : Command
+    /** `includeNavItems` asks for the full episode list in `DeviceStatus.nav.items`. */
+    data class Status(val includeNavItems: Boolean = false) : Command
+    /** Next (+1) or previous (-1) episode. */
+    data class NavStep(val delta: Int) : Command
+    /** Jump to `items[index]` of the last nav status, refused if its label is no longer `label`. */
+    data class NavGoto(val index: Int, val label: String) : Command
 
     companion object {
         fun fromJson(json: JSONObject): Command? = when (json.optString("op")) {
@@ -24,7 +29,15 @@ sealed interface Command {
             "playback.seekTo" -> SeekTo(json.optLong("positionMs").coerceAtLeast(0))
             "playback.playPause" ->
                 PlayPause(if (json.has("play")) json.getBoolean("play") else null)
-            "device.status" -> Status
+            "device.status" -> Status(json.optBoolean("includeNavItems", false))
+            "nav.step" -> when (json.optInt("delta")) {
+                1 -> NavStep(1)
+                -1 -> NavStep(-1)
+                else -> null
+            }
+            "nav.goto" ->
+                if (json.has("index") && json.has("label")) NavGoto(json.getInt("index"), json.getString("label"))
+                else null
             else -> null
         }
     }
@@ -74,6 +87,8 @@ data class DeviceStatus(
     val batteryPercent: Int?,
     val title: String? = null,
     val fullscreen: Boolean? = null,
+    /** Present only while a nav plan applies to what is in front. */
+    val nav: NavStatus? = null,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("foregroundPackage", foregroundPackage ?: JSONObject.NULL)
@@ -87,5 +102,26 @@ data class DeviceStatus(
         put("kind", "android")
         put("title", title ?: JSONObject.NULL)
         put("fullscreen", fullscreen ?: JSONObject.NULL)
+        nav?.let { put("nav", it.toJson()) }
+    }
+}
+
+/** Mirror of NavStatus in messages.ts: where the playing thing sits in its series. */
+data class NavStatus(
+    val current: String?,
+    val hasPrev: Boolean,
+    val hasNext: Boolean,
+    /** Only when the status request asked for them (includeNavItems). */
+    val items: List<String>? = null,
+    val index: Int? = null,
+    val count: Int? = null,
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("current", current ?: JSONObject.NULL)
+        put("hasPrev", hasPrev)
+        put("hasNext", hasNext)
+        items?.let { put("items", org.json.JSONArray(it)) }
+        put("index", index ?: JSONObject.NULL)
+        count?.let { put("count", it) }
     }
 }

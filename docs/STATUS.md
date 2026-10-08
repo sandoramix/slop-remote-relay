@@ -1,6 +1,6 @@
 # Status — start here
 
-Updated 2026-09-26. Main branch `master`; first release `v0.2.0`.
+Updated 2026-10-09. Main branch `master`; first release `v0.2.0`.
 
 This file lets a new session pick up without rereading everything: what is
 verified, how to reproduce it, and what is still open.
@@ -9,7 +9,7 @@ verified, how to reproduce it, and what is still open.
 
 | Area | Verified | How |
 |---|---|---|
-| Protocol, both languages | yes | canonical vectors in `CodecTest` (TS ↔ Kotlin), 12 Kotlin + 13 TS tests |
+| Protocol, both languages | yes | canonical vectors in `CodecTest` (TS ↔ Kotlin), including the nav ops and status block |
 | Failover manager | yes | unit tests: user order wins at startup, instant failover, promotion after sustained health, mirror |
 | Shared transports | yes | live relay: WS, HTTP (incl. cross-channel and same-channel routing), WebRTC over libdatachannel; MQTT against broker.hivemq.com |
 | Android receiver, every remote path | yes, emulator | `smoke:paths`: relay WS, HTTP, MQTT, WebRTC — 12/12 |
@@ -19,7 +19,8 @@ verified, how to reproduce it, and what is still open.
 | Shizuku executor | yes, emulator | Shizuku 13.6 started over adb, accessibility off: exit fullscreen via `KEYCODE_ESCAPE` |
 | Browser extension | yes, Chrome for Testing | `smoke:extension` over relay WS, HTTP, WebRTC — status, seekTo, pause, fullscreen in (CDP) and out; a tab already open when the extension is (re)installed is still found and driven — 18/18 |
 | Episode navigation (browser) | yes, Chrome for Testing | `smoke:extension`: next, previous, goto into a hidden range, stale list refused, last episode, on markup shaped like AnimeWorld's (the plan was read from the live site, the test page imitates it) |
-| Episode navigation (controller UI) | typechecked only | not yet run on a device or emulator |
+| Episode navigation (Android, Chrome) | yes, emulator | Nexus10_34, Chrome on the live animeworld.ac, via `npm run send` over LAN: status `nav` on Chainsmoker Cat ep 11 (current 11, index 10, count 11, items only with `includeNavItems`); `nav.step -1` → 10 and `+1` → 11 (address and status confirmed); `+1` at 11 refused "Already at the last episode"; `goto` with a wrong label and an out-of-range index refused; `goto` 851 on One Piece; One Piece range crossing both ways through the site's button (901 → 900 → 901, address confirmed), then a link step 900 → 899; ad popup tab closed by Back after each click; with accessibility off the step answers "needs the accessibility service" and `nav` disappears from status. 10 unit tests in `NavigationTest` |
+| Episode navigation (controller UI) | typechecked only | not yet run on a device or emulator; the Android receiver now reports `nav`, so the controls should appear |
 | In-app update, receiver | yes, emulator | against a local fake release server: silent check, unknown-sources hand-off, redirect, checksum match, system installer, in-place update 0.1.0 → 9.0.0; a wrong checksum is refused. Not seen: real GitHub release, release-build behaviour, Italian strings on screen, signing-key mismatch |
 | In-app update, controller | typechecked, manifest only | permission lands in the generated manifest; download and install never run on a device |
 | Release pipeline pieces | partly | receiver signed via injected properties with tag version (verified locally); extension zip; relay build as in the Dockerfile. The workflow itself has not run on GitHub yet |
@@ -77,6 +78,12 @@ npm run send -- cielo-lento-42 device.status
 - A web player whose control bar is below the fold: Chromium prunes those nodes,
   so the recipe falls through to rotation. Seen with an oversized test video.
 - Bluetooth: both sides are implemented, neither can run on the emulator.
+- Episode navigation on a phone-sized Chrome (the emulator is a tablet layout)
+  and in Brave (no nav plan: its tree has never been dumped). Italian error
+  strings never seen on screen. A popup that opens *behind* the page is left
+  open (one "Loading…" tab seen). The emulator process died once mid-test on
+  the One Piece page with ~15 tabs open on swiftshader; it was restarted and
+  the test passed afterwards, nothing pointed at the receiver.
 - WebRTC across real carrier NAT (a TURN server is configurable in the
   controller; the receiver uses STUN only for now).
 - Overnight resistance (phase 5 of the original plan).

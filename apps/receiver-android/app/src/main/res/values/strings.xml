@@ -61,6 +61,14 @@
     <string name="ok_already_state">already in the requested state</string>
     <string name="ok_sent_unverified">%1$s %2$s sent on %3$s (unverified)</string>
     <string name="err_no_shizuku_step">No applicable Shizuku step on %1$s</string>
+    <string name="err_nav_unavailable">Episode navigation is not available on this page</string>
+    <string name="err_nav_needs_accessibility">Episode navigation needs the accessibility service</string>
+    <string name="err_nav_unknown_current">Cannot tell which episode this is</string>
+    <string name="err_nav_at_last">Already at the last episode</string>
+    <string name="err_nav_at_first">Already at the first episode</string>
+    <string name="err_nav_other_range">That episode is in another range of the list, which the page does not expose</string>
+    <string name="err_nav_list_changed">The episode list changed; refresh and pick again</string>
+    <string name="err_nav_click">Could not open episode %1$s</string>
     <string name="update_header">Updates</string>
     <string name="update_current">Installed version: %1$s</string>
     <string name="update_btn_check">Check for updates</string>
