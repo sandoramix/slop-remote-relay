@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { jumpLabel, parseJump } from '../../lib/format';
 import { haptic } from '../../lib/haptics';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { useSettings } from '../../state/settings';
 import { useCommand, useCommandState } from './useCommand';
@@ -14,10 +15,11 @@ const REPEAT_MS = 650;
  * Pick a jump, then press back or forward.
  *
  * The amount is free: the chips are the user's presets (any number, any size),
- * and "Altro" takes a typed value like 45, 2m, 1:30 or 1h. Two oversized keys do
+ * and "Other" takes a typed value like 45, 2m, 1:30 or 1h. Two oversized keys do
  * the jumping, so the thumb finds them without looking; holding one repeats.
  */
 export function SeekPad() {
+  const t = useT();
   const presets = useSettings((s) => s.seekPresets);
   const selected = useSettings((s) => s.selectedSeek);
   const set = useSettings((s) => s.set);
@@ -62,11 +64,11 @@ export function SeekPad() {
         <Pressable
           onPress={() => setEditing((v) => !v)}
           accessibilityRole="button"
-          accessibilityLabel="Salto personalizzato"
+          accessibilityLabel={t('seek.custom')}
           className="flex-row items-center gap-1 rounded-full border border-dashed border-border px-4 py-2 active:opacity-70"
         >
           <Plus size={14} color={palette.muted} />
-          <Text className="text-sm font-medium text-muted-foreground">Altro</Text>
+          <Text className="text-sm font-medium text-muted-foreground">{t('seek.other')}</Text>
         </Pressable>
       </ScrollView>
 
@@ -77,7 +79,7 @@ export function SeekPad() {
               value={draft}
               onChangeText={setDraft}
               autoFocus
-              placeholder="es. 45, 2m, 1:30, 1h"
+              placeholder={t('seek.placeholder')}
               placeholderTextColor={palette.muted}
               keyboardType="numbers-and-punctuation"
               returnKeyType="done"
@@ -88,25 +90,25 @@ export function SeekPad() {
               onPress={() => commitCustom(false)}
               disabled={!parsed}
               className={`h-11 w-11 items-center justify-center rounded-xl ${parsed ? 'bg-primary' : 'bg-secondary'}`}
-              accessibilityLabel="Usa questo salto"
+              accessibilityLabel={t('seek.useThis')}
             >
               <Check size={20} color={parsed ? palette.primaryInk : palette.muted} />
             </Pressable>
             <Pressable
               onPress={() => setEditing(false)}
               className="h-11 w-11 items-center justify-center rounded-xl bg-secondary"
-              accessibilityLabel="Annulla"
+              accessibilityLabel={t('common.cancel')}
             >
               <X size={20} color={palette.muted} />
             </Pressable>
           </View>
           <View className="flex-row items-center justify-between">
             <Text className="text-xs text-muted-foreground">
-              {draft ? (parsed ? `= ${jumpLabel(parsed)}` : 'Formato non riconosciuto') : 'Qualsiasi durata, fino a 24 ore'}
+              {draft ? (parsed ? `= ${jumpLabel(parsed)}` : t('seek.badFormat')) : t('seek.anyDuration')}
             </Text>
             {parsed ? (
               <Pressable onPress={() => commitCustom(true)} hitSlop={8}>
-                <Text className="text-xs font-semibold text-primary">Salva fra i preferiti</Text>
+                <Text className="text-xs font-semibold text-primary">{t('seek.saveFavourite')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -122,6 +124,7 @@ export function SeekPad() {
 }
 
 function SeekKey({ direction, seconds }: { direction: -1 | 1; seconds: number }) {
+  const t = useT();
   const run = useCommand();
   const busy = useCommandState((s) => s.busy);
   const key = direction < 0 ? 'back' : 'fwd';
@@ -151,8 +154,8 @@ function SeekKey({ direction, seconds }: { direction: -1 | 1; seconds: number })
       delayLongPress={450}
       disabled={busy !== null && busy !== key}
       accessibilityRole="button"
-      accessibilityLabel={`${direction < 0 ? 'Indietro' : 'Avanti'} di ${jumpLabel(seconds)}`}
-      accessibilityHint="Tieni premuto per ripetere"
+      accessibilityLabel={t(direction < 0 ? 'seek.back' : 'seek.forward', { amount: jumpLabel(seconds) })}
+      accessibilityHint={t('seek.holdHint')}
       className={`h-36 flex-1 items-center justify-center gap-2 rounded-3xl border ${holding ? 'border-primary bg-primary/10' : 'border-border bg-secondary'} active:bg-accent`}
     >
       {busy === key && !holding ? (

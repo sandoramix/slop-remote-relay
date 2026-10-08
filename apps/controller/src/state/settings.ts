@@ -25,6 +25,9 @@ export const TargetSchema = z.object({
 });
 export type Target = z.infer<typeof TargetSchema>;
 
+export const LANGUAGES = ['en', 'it'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
 const TransportIdSchema = z.enum(TRANSPORT_IDS);
 
 const TurnSchema = z.object({
@@ -58,6 +61,8 @@ export const SettingsSchema = z.object({
   /** Mirror commands across two transports. Costs a duplicate frame, buys reliability. */
   mirrorCritical: z.boolean().catch(true),
   haptics: z.boolean().catch(true),
+  /** UI language. Never taken from the device: English unless the user picks otherwise. */
+  language: z.enum(LANGUAGES).catch('en'),
   keepAwake: z.boolean().catch(false),
 });
 export type Settings = z.infer<typeof SettingsSchema>;

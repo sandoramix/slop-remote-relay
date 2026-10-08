@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import { Section } from '../../components/form';
 import { StateDot } from '../../components/StateDot';
 import { haptic } from '../../lib/haptics';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { plan } from '../../lib/transports/registry';
 import { useSession } from '../../state/session';
@@ -18,6 +19,7 @@ import { normalizeOrder, useActiveTarget, useSettings } from '../../state/settin
  * app flapping between two paths at the edge of Wi-Fi coverage.
  */
 export default function TransportsScreen() {
+  const t = useT();
   const settings = useSettings();
   const target = useActiveTarget();
   const topology = useSession((s) => s.topology);
@@ -31,17 +33,16 @@ export default function TransportsScreen() {
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 px-4 pb-12 pt-2">
       <Text className="px-1 text-sm leading-5 text-muted-foreground">
-        Il primo percorso disponibile porta i comandi; gli altri restano pronti come riserva. Usa le
-        frecce per cambiare l'ordine.
+        {t('transports.intro')}
       </Text>
 
       <Section
-        title={target ? `Ordine per ${target.name}` : 'Ordine'}
-        footer="L'ordine vale per tutti i dispositivi; i percorsi che un dispositivo non supporta vengono saltati."
+        title={target ? t('transports.orderFor', { name: target.name }) : t('transports.order')}
+        footer={t('transports.footer')}
       >
         {planned.map(({ meta, skipped }, index) => {
           const enabled = settings.transportEnabled[meta.id] ?? true;
-          const live = topology?.transports.find((t) => t.id === meta.id);
+          const live = topology?.transports.find((x) => x.id === meta.id);
           const position = skipped ? null : ++rank;
           return (
             <View key={meta.id}>
@@ -79,7 +80,7 @@ export default function TransportsScreen() {
                   }}
                   trackColor={{ false: palette.secondary, true: palette.primary }}
                   thumbColor={palette.foreground}
-                  accessibilityLabel={`Attiva ${meta.label}`}
+                  accessibilityLabel={t('transports.enable', { name: meta.label })}
                 />
               </View>
             </View>
@@ -91,6 +92,7 @@ export default function TransportsScreen() {
 }
 
 function Arrow({ up, disabled, onPress }: { up?: boolean; disabled: boolean; onPress: () => void }) {
+  const t = useT();
   const Icon = up ? ChevronUp : ChevronDown;
   return (
     <Pressable
@@ -101,7 +103,7 @@ function Arrow({ up, disabled, onPress }: { up?: boolean; disabled: boolean; onP
       disabled={disabled}
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={up ? 'Sposta su' : 'Sposta giù'}
+      accessibilityLabel={up ? t('transports.up') : t('transports.down')}
       className={`h-7 w-8 items-center justify-center rounded-lg bg-secondary ${disabled ? 'opacity-30' : ''} active:bg-accent`}
     >
       <Icon size={16} color={palette.foreground} />

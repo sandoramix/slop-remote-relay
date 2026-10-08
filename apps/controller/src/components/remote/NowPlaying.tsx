@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Slider, SliderFilledTrack, SliderThumb, SliderTrack } from '@/components/ui/slider';
 import { clock, prettySource } from '../../lib/format';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { useSession } from '../../state/session';
 import { useCommand, useCommandState } from './useCommand';
@@ -18,6 +19,7 @@ const STALE_MS = 12_000;
  * freezes it at the finger; releasing sends one absolute seek.
  */
 export function NowPlaying() {
+  const t = useT();
   const status = useSession((s) => s.status);
   const statusAt = useSession((s) => s.statusAt);
   const busy = useCommandState((s) => s.busy);
@@ -44,18 +46,18 @@ export function NowPlaying() {
       <View className="flex-row items-start gap-4">
         <View className="flex-1 gap-1">
           <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {source ?? (status ? 'Nessuna app in primo piano' : 'In attesa del dispositivo')}
-            {stale && status ? ' · non aggiornato' : ''}
+            {source ?? (status ? t('now.noForeground') : t('now.waiting'))}
+            {stale && status ? t('now.stale') : ''}
           </Text>
           <Text className="text-lg font-semibold leading-6 text-foreground" numberOfLines={2}>
-            {status?.title || (status?.hasMediaSession ? 'In riproduzione' : 'Nessun contenuto multimediale rilevato')}
+            {status?.title || (status?.hasMediaSession ? t('now.playing') : t('now.noMedia'))}
           </Text>
         </View>
         <Pressable
           onPress={() => void run('pp', (c) => c.playPause())}
           disabled={busy !== null}
           accessibilityRole="button"
-          accessibilityLabel={status?.isPlaying ? 'Pausa' : 'Riproduci'}
+          accessibilityLabel={status?.isPlaying ? t('now.pause') : t('now.play')}
           className="h-14 w-14 items-center justify-center rounded-full bg-primary active:opacity-80"
         >
           {busy === 'pp' ? (
@@ -80,7 +82,7 @@ export function NowPlaying() {
               setDragMs(null);
               void run('scrub', (c) => c.seekTo(v));
             }}
-            accessibilityLabel="Posizione"
+            accessibilityLabel={t('now.position')}
             className="h-8"
           >
             <SliderTrack className="h-1.5 rounded-full bg-secondary">
@@ -99,8 +101,7 @@ export function NowPlaying() {
         </View>
       ) : status && !status.hasMediaSession ? (
         <Text className="text-xs leading-5 text-muted-foreground">
-          Il salto userà i tocchi sullo schermo (a passi di 10 s). Per salti esatti concedi al
-          ricevitore l'accesso alle notifiche.
+          {t('now.noSessionHint')}
         </Text>
       ) : null}
     </View>

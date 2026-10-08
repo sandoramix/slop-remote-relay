@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /** 75 → "1:15", 3725 → "1:02:05". Input in seconds. */
 export function clock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -27,7 +29,7 @@ export function parseJump(input: string): number | null {
     const seconds = parts.reduce((acc, p) => acc * 60 + p, 0);
     return seconds > 0 ? seconds : null;
   }
-  const m = t.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secondi?|m|min|minuti?|h|ore?)?$/);
+  const m = t.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs?|seconds?|secondi?|m|mins?|minutes?|minuti?|h|hours?|ore?)?$/);
   if (!m) return null;
   const value = Number(m[1]);
   const unit = m[2] ?? 's';
@@ -63,11 +65,22 @@ export function prettySource(source: string | null | undefined): string | null {
   return last.charAt(0).toUpperCase() + last.slice(1);
 }
 
-export const EXECUTOR_LABEL: Record<string, string> = {
-  mediasession: 'MediaSession',
-  accessibility: 'Accessibilità',
-  shizuku: 'Shizuku',
-  settings: 'Impostazioni',
-  dom: 'pagina',
-  cdp: 'DevTools',
-};
+/** What ran a command, as a person reads it; unknown ids are shown as they came. */
+export function executorLabel(id: string): string {
+  switch (id) {
+    case 'mediasession':
+      return 'MediaSession';
+    case 'accessibility':
+      return t('exec.accessibility');
+    case 'shizuku':
+      return 'Shizuku';
+    case 'settings':
+      return t('exec.settings');
+    case 'dom':
+      return t('exec.dom');
+    case 'cdp':
+      return 'DevTools';
+    default:
+      return id;
+  }
+}

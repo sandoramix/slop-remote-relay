@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { create } from 'zustand';
 import type { CommandResult } from '../../lib/client';
-import { EXECUTOR_LABEL } from '../../lib/format';
+import { executorLabel } from '../../lib/format';
+import { t } from '../../lib/i18n';
 import { haptic } from '../../lib/haptics';
 import { useSession } from '../../state/session';
 import { TRANSPORTS } from '../../lib/transports/registry';
@@ -34,11 +35,11 @@ export const useCommandState = create<CommandState>()((set) => ({
 
 function describe(result: CommandResult): Omit<Feedback, 'id'> {
   const via = result.via ? (TRANSPORTS[result.via as TransportId]?.label ?? result.via) : null;
-  const by = result.executedBy ? EXECUTOR_LABEL[result.executedBy] ?? result.executedBy : null;
-  const meta = [by && `via ${by}`, via, `${result.rttMs} ms`].filter(Boolean).join(' · ');
+  const by = result.executedBy ? executorLabel(result.executedBy) : null;
+  const meta = [by && t('cmd.via', { by }), via, `${result.rttMs} ms`].filter(Boolean).join(' · ');
   return result.ok
-    ? { tone: 'ok', title: result.detail && result.detail.length < 48 ? result.detail : 'Fatto', detail: meta }
-    : { tone: 'error', title: 'Non riuscito', detail: result.detail ?? meta };
+    ? { tone: 'ok', title: result.detail && result.detail.length < 48 ? result.detail : t('cmd.done'), detail: meta }
+    : { tone: 'error', title: t('cmd.failed'), detail: result.detail ?? meta };
 }
 
 /**
@@ -59,7 +60,7 @@ export function useCommand() {
       const client = useSession.getState().client;
       if (!client) {
         haptic.error();
-        show({ tone: 'error', title: 'Non collegato', detail: 'Nessun percorso verso il dispositivo' });
+        show({ tone: 'error', title: t('cmd.notConnected'), detail: t('cmd.noPath') });
         return;
       }
       haptic.tap();
@@ -70,14 +71,14 @@ export function useCommand() {
         else haptic.error();
         if (!options.quiet || !result.ok) show(describe(result));
         useSession.getState().pushLog(
-          `${key}: ${result.ok ? 'ok' : 'errore'} ${result.detail ?? ''} (${result.rttMs} ms)`,
+          `${key}: ${result.ok ? 'ok' : 'error'} ${result.detail ?? ''} (${result.rttMs} ms)`,
           result.ok ? 'ok' : 'error',
         );
         void client.refreshStatus().catch(() => undefined);
       } catch (error) {
         haptic.error();
         const message = error instanceof Error ? error.message : String(error);
-        show({ tone: 'error', title: 'Errore', detail: message });
+        show({ tone: 'error', title: t('cmd.error'), detail: message });
         useSession.getState().pushLog(`${key}: ${message}`, 'error');
       } finally {
         if (!options.quiet) setBusy(null);

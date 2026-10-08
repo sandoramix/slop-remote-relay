@@ -3,6 +3,7 @@ import { Check, ChevronDown, Globe, Plus, Smartphone } from 'lucide-react-native
 import { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { haptic } from '../../lib/haptics';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { type Target, useActiveTarget, useSettings } from '../../state/settings';
 
@@ -11,6 +12,7 @@ export const KindIcon = ({ kind, size = 18, color = palette.foreground }: { kind
 
 /** Name of the device being driven; tap to switch between paired devices. */
 export function TargetSwitcher() {
+  const t = useT();
   const target = useActiveTarget();
   const targets = useSettings((s) => s.targets);
   const setActive = useSettings((s) => s.setActiveTarget);
@@ -26,7 +28,7 @@ export function TargetSwitcher() {
           setOpen(true);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`Dispositivo: ${target.name}. Cambia dispositivo`}
+        accessibilityLabel={t('target.label', { name: target.name })}
         className="flex-row items-center gap-2 active:opacity-70"
         hitSlop={8}
       >
@@ -42,26 +44,26 @@ export function TargetSwitcher() {
           <Pressable className="gap-1 rounded-t-3xl border-t border-border bg-card px-4 pb-10 pt-3">
             <View className="mb-3 h-1 w-10 self-center rounded-full bg-border" />
             <Text className="mb-2 px-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Dispositivi
+              {t('target.devices')}
             </Text>
-            {targets.map((t) => (
+            {targets.map((d) => (
               <Pressable
-                key={t.id}
+                key={d.id}
                 onPress={() => {
                   haptic.tap();
-                  setActive(t.id);
+                  setActive(d.id);
                   setOpen(false);
                 }}
                 className="flex-row items-center gap-3 rounded-2xl px-3 py-3.5 active:bg-accent"
               >
-                <KindIcon kind={t.kind} />
+                <KindIcon kind={d.kind} />
                 <View className="flex-1">
-                  <Text className="text-base font-medium text-foreground">{t.name}</Text>
+                  <Text className="text-base font-medium text-foreground">{d.name}</Text>
                   <Text className="text-xs text-muted-foreground">
-                    {t.kind === 'browser' ? 'Estensione del browser' : 'Telefono Android'}
+                    {d.kind === 'browser' ? t('target.browser') : t('target.android')}
                   </Text>
                 </View>
-                {t.id === target.id ? <Check size={18} color={palette.primary} /> : null}
+                {d.id === target.id ? <Check size={18} color={palette.primary} /> : null}
               </Pressable>
             ))}
             <Pressable
@@ -72,7 +74,7 @@ export function TargetSwitcher() {
               className="mt-1 flex-row items-center gap-3 rounded-2xl px-3 py-3.5 active:bg-accent"
             >
               <Plus size={18} color={palette.primary} />
-              <Text className="text-base font-medium text-primary">Aggiungi dispositivo</Text>
+              <Text className="text-base font-medium text-primary">{t('target.add')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

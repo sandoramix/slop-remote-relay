@@ -2,6 +2,7 @@ import type { TransportId } from '@relay/protocol';
 import { router } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { TRANSPORTS } from '../../lib/transports/registry';
 import { useSession } from '../../state/session';
@@ -12,6 +13,7 @@ import { useSession } from '../../state/session';
  * diagnostics screen with every path's health.
  */
 export function ConnectionChip() {
+  const t = useT();
   const topology = useSession((s) => s.topology);
   const error = useSession((s) => s.error);
 
@@ -20,7 +22,7 @@ export function ConnectionChip() {
   const connecting = topology?.transports.some((t) => t.state === 'connecting') ?? true;
 
   let tone: string = palette.muted;
-  let label = 'Connessione…';
+  let label = t('chip.connecting');
   if (error) {
     tone = palette.destructive;
     label = error;
@@ -29,14 +31,14 @@ export function ConnectionChip() {
     label = TRANSPORTS[active.id as TransportId]?.label ?? active.label;
   } else if (!connecting) {
     tone = palette.destructive;
-    label = 'Nessun percorso raggiungibile';
+    label = t('chip.noPath');
   }
 
   return (
     <Pressable
       onPress={() => router.push('/diagnostics')}
       accessibilityRole="button"
-      accessibilityLabel={`Connessione: ${label}. Apri la diagnostica`}
+      accessibilityLabel={t('chip.label', { label })}
       className="flex-row items-center gap-2 self-start rounded-full border border-border bg-card px-3 py-1.5 active:opacity-70"
     >
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tone }} />
@@ -49,7 +51,7 @@ export function ConnectionChip() {
         </Text>
       ) : null}
       {standby > 0 ? (
-        <Text className="text-xs text-muted-foreground">+{standby} di riserva</Text>
+        <Text className="text-xs text-muted-foreground">{t('chip.standby', { n: standby })}</Text>
       ) : null}
       <ChevronRight size={14} color={palette.muted} />
     </Pressable>

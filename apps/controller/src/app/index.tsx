@@ -9,6 +9,7 @@ import { FeedbackToast } from '../components/remote/FeedbackToast';
 import { NowPlaying } from '../components/remote/NowPlaying';
 import { SeekPad } from '../components/remote/SeekPad';
 import { TargetSwitcher } from '../components/remote/TargetSwitcher';
+import { useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 
 /**
@@ -16,6 +17,7 @@ import { palette } from '../lib/palette';
  * the jump keys in the middle where the thumb rests, fullscreen at the bottom.
  */
 export default function Remote() {
+  const t = useT();
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
       <ScrollView contentContainerClassName="gap-5 px-4 pb-28 pt-2">
@@ -24,7 +26,7 @@ export default function Remote() {
           <Pressable
             onPress={() => router.push('/settings')}
             accessibilityRole="button"
-            accessibilityLabel="Impostazioni"
+            accessibilityLabel={t('remote.settings')}
             hitSlop={10}
             className="h-10 w-10 items-center justify-center rounded-full bg-card active:opacity-70"
           >

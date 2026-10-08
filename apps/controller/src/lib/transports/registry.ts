@@ -8,6 +8,7 @@ import {
 } from '@relay/transports';
 import { RTCPeerConnection } from 'react-native-webrtc';
 import type { Settings, Target } from '../../state/settings';
+import { t } from '../i18n';
 import { isEnabled, normalizeOrder } from '../../state/settings';
 import { BleTransport } from './ble';
 import { LanWebSocketTransport } from './lan';
@@ -45,19 +46,27 @@ const createPeerConnection: PeerConnectionFactory = (config) =>
 export const TRANSPORTS: Record<TransportId, TransportMeta> = {
   lan: {
     id: 'lan',
-    label: 'Wi-Fi locale',
-    summary: 'Diretto sulla stessa rete. Il più veloce, funziona senza internet.',
+    get label() {
+      return t('transport.lan.label');
+    },
+    get summary() {
+      return t('transport.lan.summary');
+    },
     kinds: ['android'],
-    missing: ({ target }) => (target.lanHost ? null : 'Indirizzo locale non impostato'),
+    missing: ({ target }) => (target.lanHost ? null : t('transport.lan.missing')),
     build: ({ target, priority }) =>
       new LanWebSocketTransport({ host: target.lanHost!, priority }),
   },
   webrtc: {
     id: 'webrtc',
-    label: 'WebRTC P2P',
-    summary: 'Diretto fra i dispositivi via internet. Il relay serve solo ad aprirlo.',
+    get label() {
+      return t('transport.webrtc.label');
+    },
+    get summary() {
+      return t('transport.webrtc.summary');
+    },
     kinds: ['android', 'browser'],
-    missing: ({ settings }) => (settings.relayUrl ? null : 'Serve il server relay per la segnalazione'),
+    missing: ({ settings }) => (settings.relayUrl ? null : t('transport.webrtc.missing')),
     build: ({ settings, room, hmac, priority }) =>
       new WebRtcTransport({
         signalUrl: settings.relayUrl!,
@@ -72,37 +81,53 @@ export const TRANSPORTS: Record<TransportId, TransportMeta> = {
   },
   relay: {
     id: 'relay',
-    label: 'Relay remoto',
-    summary: 'Attraverso il tuo server relay, via WebSocket. Funziona ovunque.',
+    get label() {
+      return t('transport.relay.label');
+    },
+    get summary() {
+      return t('transport.relay.summary');
+    },
     kinds: ['android', 'browser'],
-    missing: ({ settings }) => (settings.relayUrl ? null : 'Server relay non impostato'),
+    missing: ({ settings }) => (settings.relayUrl ? null : t('transport.relay.missing')),
     build: ({ settings, room, priority }) =>
       new RelayWsTransport({ url: settings.relayUrl!, room, role: 'controller', priority }),
   },
   http: {
     id: 'http',
-    label: 'Relay HTTP',
-    summary: 'Stesso server, ma in HTTP semplice: passa dove i WebSocket sono bloccati.',
+    get label() {
+      return t('transport.http.label');
+    },
+    get summary() {
+      return t('transport.http.summary');
+    },
     kinds: ['android', 'browser'],
-    missing: ({ settings }) => (settings.relayUrl ? null : 'Server relay non impostato'),
+    missing: ({ settings }) => (settings.relayUrl ? null : t('transport.relay.missing')),
     build: ({ settings, room, priority }) =>
       new RelayHttpTransport({ url: settings.relayUrl!, room, role: 'controller', priority }),
   },
   mqtt: {
     id: 'mqtt',
-    label: 'MQTT',
-    summary: 'Attraverso un broker MQTT: resta in piedi anche se il tuo relay è giù.',
+    get label() {
+      return t('transport.mqtt.label');
+    },
+    get summary() {
+      return t('transport.mqtt.summary');
+    },
     kinds: ['android', 'browser'],
-    missing: ({ settings }) => (settings.mqttUrl ? null : 'Broker MQTT non impostato'),
+    missing: ({ settings }) => (settings.mqttUrl ? null : t('transport.mqtt.missing')),
     build: ({ settings, room, priority }) =>
       new MqttTransport({ url: settings.mqttUrl, room, role: 'controller', priority }),
   },
   ble: {
     id: 'ble',
-    label: 'Bluetooth',
-    summary: 'Nessuna rete necessaria, a pochi metri dal ricevitore.',
+    get label() {
+      return t('transport.ble.label');
+    },
+    get summary() {
+      return t('transport.ble.summary');
+    },
     kinds: ['android'],
-    missing: ({ target }) => (target.bleDeviceId ? null : 'Nessun ricevitore Bluetooth associato'),
+    missing: ({ target }) => (target.bleDeviceId ? null : t('transport.ble.missing')),
     build: ({ target, priority }) => new BleTransport(target.bleDeviceId!, priority),
   },
 };
@@ -118,9 +143,9 @@ export function plan(ctx: Omit<BuildContext, 'priority'>): PlannedTransport[] {
   return normalizeOrder(ctx.settings.transportOrder).map((id) => {
     const meta = TRANSPORTS[id];
     let skipped: string | null = null;
-    if (!isEnabled(ctx.settings, id)) skipped = 'Disattivato';
+    if (!isEnabled(ctx.settings, id)) skipped = t('transport.disabled');
     else if (!meta.kinds.includes(ctx.target.kind)) {
-      skipped = ctx.target.kind === 'browser' ? 'Non disponibile per il browser' : 'Non disponibile';
+      skipped = ctx.target.kind === 'browser' ? t('transport.unavailableBrowser') : t('transport.unavailable');
     } else skipped = meta.missing(ctx);
     return { meta, skipped };
   });

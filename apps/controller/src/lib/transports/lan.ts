@@ -1,5 +1,6 @@
 import type { Transport, TransportEvents } from '@relay/protocol';
 import { DEFAULT_LAN_PORT } from '@relay/protocol';
+import { t } from '../i18n';
 
 export interface LanOptions {
   host: string;
@@ -17,7 +18,9 @@ export interface LanOptions {
  */
 export class LanWebSocketTransport implements Transport {
   readonly id = 'lan';
-  readonly label = 'Wi-Fi locale';
+  get label(): string {
+    return t('transport.lan.label');
+  }
   readonly priority: number;
   readonly worksRemotely = false;
 

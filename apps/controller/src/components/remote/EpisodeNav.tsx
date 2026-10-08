@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, SkipBack, SkipForward } from 'lucide-react-nati
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { haptic } from '../../lib/haptics';
+import { useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { useSession } from '../../state/session';
 import { useCommand, useCommandState } from './useCommand';
@@ -16,6 +17,7 @@ const REFRESH_AFTER_MS = 1800;
  * the receiver reports a navigable series (status.nav); hidden otherwise.
  */
 export function EpisodeNav() {
+  const t = useT();
   const nav = useSession((s) => s.status?.nav);
   const run = useCommand();
   const busy = useCommandState((s) => s.busy);
@@ -59,7 +61,7 @@ export function EpisodeNav() {
         onPress={() => step(delta)}
         disabled={!enabled || busy !== null}
         accessibilityRole="button"
-        accessibilityLabel={delta > 0 ? 'Episodio successivo' : 'Episodio precedente'}
+        accessibilityLabel={delta > 0 ? t('episode.next') : t('episode.prev')}
         className={`h-14 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card active:opacity-70 ${enabled ? '' : 'opacity-40'}`}
       >
         {busy === key ? (
@@ -67,7 +69,7 @@ export function EpisodeNav() {
         ) : (
           <>
             {delta < 0 ? <Icon size={20} color={palette.foreground} /> : null}
-            <Text className="text-base font-semibold text-foreground">{delta > 0 ? 'Successivo' : 'Precedente'}</Text>
+            <Text className="text-base font-semibold text-foreground">{delta > 0 ? t('episode.nextShort') : t('episode.prevShort')}</Text>
             {delta > 0 ? <Icon size={20} color={palette.foreground} /> : null}
           </>
         )}
@@ -92,7 +94,7 @@ export function EpisodeNav() {
         className="flex-row items-center justify-between rounded-2xl bg-card px-4 py-3 active:opacity-70"
       >
         <Text className="text-sm font-semibold text-foreground">
-          {nav.current ? `Episodio ${nav.current}` : 'Episodi'}
+          {nav.current ? t('episode.current', { n: nav.current }) : t('episode.list')}
           {nav.count ? ` · ${nav.count}` : ''}
         </Text>
         {open ? <ChevronUp size={18} color={palette.foreground} /> : <ChevronDown size={18} color={palette.foreground} />}
@@ -132,7 +134,7 @@ export function EpisodeNav() {
                     onPress={() => void run('goto', (c) => c.navGoto(at, label)).then(refreshSoon)}
                     disabled={busy !== null}
                     accessibilityRole="button"
-                    accessibilityLabel={`Episodio ${label}`}
+                    accessibilityLabel={t('episode.item', { n: label })}
                     accessibilityState={{ selected: on }}
                     className={`min-w-14 items-center rounded-xl border px-3 py-2.5 ${on ? 'border-primary bg-primary' : 'border-border bg-card'} active:opacity-70`}
                   >

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardSafe } from '../../components/KeyboardSafe';
 import { ScrollView } from 'react-native';
 import { Divider, Field, PrimaryButton, Section } from '../../components/form';
+import { useT } from '../../lib/i18n';
 import { useSettings } from '../../state/settings';
 
 const isWsUrl = (v: string) => /^wss?:\/\/[^\s/]+/i.test(v);
@@ -12,6 +13,7 @@ const isWsUrl = (v: string) => /^wss?:\/\/[^\s/]+/i.test(v);
  * change here redials every path and doing that per keystroke is pointless.
  */
 export default function ServersScreen() {
+  const t = useT();
   const s = useSettings();
   const [relay, setRelay] = useState(s.relayUrl ?? '');
   const [mqtt, setMqtt] = useState(s.mqttUrl);
@@ -20,18 +22,18 @@ export default function ServersScreen() {
   const [turnUser, setTurnUser] = useState(s.turn?.username ?? '');
   const [turnPass, setTurnPass] = useState(s.turn?.credential ?? '');
 
-  const relayError = relay && !isWsUrl(relay) ? 'Deve iniziare con ws:// o wss://' : null;
-  const mqttError = mqtt && !isWsUrl(mqtt) ? 'Serve un endpoint WebSocket (wss://…/mqtt)' : null;
+  const relayError = relay && !isWsUrl(relay) ? t('servers.wsError') : null;
+  const mqttError = mqtt && !isWsUrl(mqtt) ? t('servers.mqttError') : null;
 
   return (
     <KeyboardSafe>
       <ScrollView contentContainerClassName="gap-6 px-4 pb-12 pt-2" keyboardShouldPersistTaps="handled">
         <Section
-          title="Relay"
-          footer="Il tuo server services/relay. Porta WebSocket, HTTP di riserva e la segnalazione WebRTC. Non vede mai la chiave: solo l'id della stanza."
+          title={t('servers.relay')}
+          footer={t('servers.relayFooter')}
         >
           <Field
-            label="Indirizzo"
+            label={t('servers.address')}
             value={relay}
             onChangeText={setRelay}
             placeholder="wss://relay.esempio.it"
@@ -42,10 +44,10 @@ export default function ServersScreen() {
 
         <Section
           title="MQTT"
-          footer="Un broker pubblico va bene perché ogni comando è firmato; può però leggerli. Per la massima riservatezza usa un tuo mosquitto con WebSocket."
+          footer={t('servers.mqttFooter')}
         >
           <Field
-            label="Broker (WebSocket)"
+            label={t('servers.mqttBroker')}
             value={mqtt}
             onChangeText={setMqtt}
             placeholder={DEFAULT_MQTT_URL}
@@ -55,24 +57,24 @@ export default function ServersScreen() {
         </Section>
 
         <Section
-          title="WebRTC"
-          footer="STUN basta sulla maggior parte delle reti. Sulle reti mobili con NAT simmetrico serve un TURN, altrimenti il percorso diretto non si apre e subentra il relay."
+          title={t('servers.webrtc')}
+          footer={t('servers.webrtcFooter')}
         >
           <Field
-            label="STUN"
+            label={t('servers.stun')}
             value={stun}
             onChangeText={setStun}
             placeholder={DEFAULT_STUN_URLS.join(', ')}
-            hint="Separati da virgola"
+            hint={t('servers.stunHint')}
           />
           <Divider />
-          <Field label="TURN" value={turnUrl} onChangeText={setTurnUrl} placeholder="turn:turn.esempio.it:3478" />
-          <Field label="Utente TURN" value={turnUser} onChangeText={setTurnUser} />
-          <Field label="Password TURN" value={turnPass} onChangeText={setTurnPass} secureTextEntry />
+          <Field label={t('servers.turn')} value={turnUrl} onChangeText={setTurnUrl} placeholder="turn:turn.esempio.it:3478" />
+          <Field label={t('servers.turnUser')} value={turnUser} onChangeText={setTurnUser} />
+          <Field label={t('servers.turnPass')} value={turnPass} onChangeText={setTurnPass} secureTextEntry />
         </Section>
 
         <PrimaryButton
-          label="Salva"
+          label={t('common.save')}
           disabled={!!relayError || !!mqttError}
           onPress={() =>
             s.set({

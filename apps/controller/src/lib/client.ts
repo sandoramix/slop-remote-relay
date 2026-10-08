@@ -16,6 +16,7 @@ import {
   TransportManager,
 } from '@relay/protocol';
 import { uuid } from './crypto';
+import { t } from './i18n';
 
 export interface ClientEvents {
   onTopology: (snapshot: TopologySnapshot) => void;
@@ -61,10 +62,10 @@ export class RelayClient {
 
   async start(): Promise<void> {
     if (this.options.transports.length === 0) {
-      throw new Error('Nessun percorso utilizzabile per questo dispositivo');
+      throw new Error(t('client.noTransports'));
     }
     if (this.options.transports.length < 2) {
-      this.events.onLog('Solo un percorso attivo: nessun fallback disponibile.');
+      this.events.onLog(t('client.singlePath'));
     }
     this.manager = new TransportManager(this.options.transports, {
       onMessage: (raw) => void this.handleInbound(raw),
@@ -86,7 +87,7 @@ export class RelayClient {
 
   /** Sends a command and resolves with the receiver's ack, or rejects on timeout. */
   async send(cmd: Command, timeoutMs = 6000): Promise<CommandResult> {
-    if (!this.manager) throw new Error('Non collegato');
+    if (!this.manager) throw new Error(t('client.notConnected'));
 
     const envelope: CommandEnvelope = {
       v: PROTOCOL_VERSION,
@@ -103,7 +104,7 @@ export class RelayClient {
     const ack = new Promise<AckEnvelope>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.waiting.delete(envelope.id);
-        reject(new Error('Nessuna risposta dal ricevitore'));
+        reject(new Error(t('client.noReply')));
       }, timeoutMs);
       this.waiting.set(envelope.id, { resolve, timer });
     });
@@ -153,7 +154,7 @@ export class RelayClient {
   private async handleInbound(raw: string): Promise<void> {
     const result = await decodeAndVerify(raw, this.signer);
     if (!result.ok) {
-      this.events.onLog(`Messaggio scartato: ${result.reason}`);
+      this.events.onLog(t('client.dropped', { reason: result.reason }));
       return;
     }
 

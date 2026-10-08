@@ -2,22 +2,24 @@ import type { TransportId } from '@relay/protocol';
 import { RefreshCw } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Section } from '../components/form';
-import { EXECUTOR_LABEL, prettySource } from '../lib/format';
+import { executorLabel, prettySource } from '../lib/format';
+import { useT, type TranslationKey } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { TRANSPORTS } from '../lib/transports/registry';
 import { useSession } from '../state/session';
 import { StateDot } from '../components/StateDot';
 
-const STATE_LABEL: Record<string, string> = {
-  idle: 'fermo',
-  connecting: 'connessione…',
-  connected: 'collegato',
-  degraded: 'instabile',
-  failed: 'non raggiungibile',
+const STATE_LABEL: Record<string, TranslationKey> = {
+  idle: 'state.idle',
+  connecting: 'state.connecting',
+  connected: 'state.connected',
+  degraded: 'state.degraded',
+  failed: 'state.failed',
 };
 
 /** Every path's health, the receiver's capabilities, and a short event log. */
 export default function Diagnostics() {
+  const t = useT();
   const topology = useSession((s) => s.topology);
   const status = useSession((s) => s.status);
   const log = useSession((s) => s.log);
@@ -25,52 +27,52 @@ export default function Diagnostics() {
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 px-4 pb-12 pt-2">
-      <Section title="Percorsi">
+      <Section title={t('diag.paths')}>
         {topology?.transports.length ? (
-          topology.transports.map((t, i) => (
-            <View key={t.id}>
+          topology.transports.map((p, i) => (
+            <View key={p.id}>
               {i > 0 ? <View className="ml-4 h-px bg-border" /> : null}
               <View className="flex-row items-center gap-3 px-4 py-3">
-                <StateDot state={t.state} active={t.active} />
+                <StateDot state={p.state} active={p.active} />
                 <Text className="flex-1 text-base text-foreground">
-                  {TRANSPORTS[t.id as TransportId]?.label ?? t.label}
+                  {TRANSPORTS[p.id as TransportId]?.label ?? p.label}
                 </Text>
                 <Text className="text-sm text-muted-foreground" style={{ fontVariant: ['tabular-nums'] }}>
-                  {t.rttMs != null ? `${t.rttMs} ms` : STATE_LABEL[t.state] ?? t.state}
+                  {p.rttMs != null ? `${p.rttMs} ms` : STATE_LABEL[p.state] ? t(STATE_LABEL[p.state]!) : p.state}
                 </Text>
               </View>
             </View>
           ))
         ) : (
-          <Text className="px-4 py-3 text-sm text-muted-foreground">Nessun percorso attivo</Text>
+          <Text className="px-4 py-3 text-sm text-muted-foreground">{t('diag.noPaths')}</Text>
         )}
       </Section>
 
-      <Section title="Ricevitore">
-        <Row label="App in primo piano" value={prettySource(status?.foregroundPackage) ?? '—'} />
-        <Row label="Sessione multimediale" value={status ? (status.hasMediaSession ? 'sì' : 'no') : '—'} />
+      <Section title={t('diag.receiver')}>
+        <Row label={t('diag.foregroundApp')} value={prettySource(status?.foregroundPackage) ?? '—'} />
+        <Row label={t('diag.mediaSession')} value={status ? (status.hasMediaSession ? t('common.yes') : t('common.no')) : '—'} />
         <Row
-          label="Esecutori"
-          value={status?.executors.length ? status.executors.map((e) => EXECUTOR_LABEL[e] ?? e).join(', ') : '—'}
+          label={t('diag.executors')}
+          value={status?.executors.length ? status.executors.map((e) => executorLabel(e)).join(', ') : '—'}
         />
-        <Row label="Ricetta per l'app" value={status ? (status.recipeKnown ? 'sì' : 'generica') : '—'} />
-        <Row label="Batteria" value={status?.batteryPercent != null ? `${status.batteryPercent}%` : '—'} />
+        <Row label={t('diag.recipe')} value={status ? (status.recipeKnown ? t('common.yes') : t('diag.recipeGeneric')) : '—'} />
+        <Row label={t('diag.battery')} value={status?.batteryPercent != null ? `${status.batteryPercent}%` : '—'} />
       </Section>
 
       <View className="gap-2">
         <View className="flex-row items-center justify-between px-1">
-          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Eventi</Text>
+          <Text className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t('diag.events')}</Text>
           <Pressable
             onPress={() => void client?.refreshStatus().catch(() => undefined)}
             hitSlop={8}
-            accessibilityLabel="Aggiorna"
+            accessibilityLabel={t('diag.refresh')}
           >
             <RefreshCw size={16} color={palette.muted} />
           </Pressable>
         </View>
         <View className="gap-1 rounded-2xl border border-border bg-card p-3">
           {log.length === 0 ? (
-            <Text className="text-xs text-muted-foreground">Ancora niente.</Text>
+            <Text className="text-xs text-muted-foreground">{t('diag.noEvents')}</Text>
           ) : (
             log.map((l, i) => (
               <Text

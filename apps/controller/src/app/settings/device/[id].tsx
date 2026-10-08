@@ -5,11 +5,13 @@ import { KeyboardSafe } from '../../../components/KeyboardSafe';
 import { Alert, ScrollView } from 'react-native';
 import { DeviceForm, emptyTarget } from '../../../components/DeviceForm';
 import { PrimaryButton, SmallButton } from '../../../components/form';
+import { useT } from '../../../lib/i18n';
 import { palette } from '../../../lib/palette';
 import { TargetSchema, useSettings } from '../../../state/settings';
 
 /** Edit a paired device, or add one when the id is "new". */
 export default function DeviceEditor() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const existing = useSettings((s) => s.targets.find((t) => t.id === id));
   const [draft, setDraft] = useState(() => existing ?? emptyTarget());
@@ -20,11 +22,11 @@ export default function DeviceEditor() {
 
   return (
     <KeyboardSafe>
-      <Stack.Screen options={{ title: existing ? existing.name : 'Nuovo dispositivo' }} />
+      <Stack.Screen options={{ title: existing ? existing.name : t('nav.newDevice') }} />
       <ScrollView contentContainerClassName="gap-6 px-4 pb-10 pt-4" keyboardShouldPersistTaps="handled">
         <DeviceForm value={draft} onChange={setDraft} />
         <PrimaryButton
-          label={existing ? 'Salva' : 'Aggiungi'}
+          label={existing ? t('common.save') : t('common.add')}
           disabled={!valid}
           onPress={() => {
             upsert(draft);
@@ -34,14 +36,14 @@ export default function DeviceEditor() {
         />
         {existing && count > 1 ? (
           <SmallButton
-            label="Rimuovi dispositivo"
+            label={t('device.remove')}
             tone="danger"
             icon={<Trash2 size={16} color={palette.destructive} />}
             onPress={() =>
-              Alert.alert('Rimuovere il dispositivo?', `${existing.name} non sarà più comandabile da qui.`, [
-                { text: 'Annulla', style: 'cancel' },
+              Alert.alert(t('device.removeTitle'), t('device.removeBody', { name: existing.name }), [
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: 'Rimuovi',
+                  text: t('common.remove'),
                   style: 'destructive',
                   onPress: () => {
                     remove(existing.id);

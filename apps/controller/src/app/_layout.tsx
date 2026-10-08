@@ -6,6 +6,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { useRelayConnection } from '../state/session';
 import { useSettings } from '../state/settings';
@@ -25,6 +26,7 @@ function Connection() {
 }
 
 export default function RootLayout() {
+  const t = useT();
   const keepAwake = useSettings((s) => s.keepAwake);
   const hydrated = useSettings((s) => s.hydrated);
   const paired = useSettings((s) => s.targets.length > 0);
@@ -61,12 +63,12 @@ export default function RootLayout() {
           */}
           <Stack.Protected guard={paired}>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="diagnostics" options={{ title: 'Diagnostica' }} />
-            <Stack.Screen name="settings/index" options={{ title: 'Impostazioni' }} />
-            <Stack.Screen name="settings/transports" options={{ title: 'Percorsi e priorità' }} />
-            <Stack.Screen name="settings/seek" options={{ title: 'Salti' }} />
-            <Stack.Screen name="settings/servers" options={{ title: 'Server' }} />
-            <Stack.Screen name="settings/device/[id]" options={{ title: 'Dispositivo' }} />
+            <Stack.Screen name="diagnostics" options={{ title: t('nav.diagnostics') }} />
+            <Stack.Screen name="settings/index" options={{ title: t('nav.settings') }} />
+            <Stack.Screen name="settings/transports" options={{ title: t('nav.transports') }} />
+            <Stack.Screen name="settings/seek" options={{ title: t('nav.seek') }} />
+            <Stack.Screen name="settings/servers" options={{ title: t('nav.servers') }} />
+            <Stack.Screen name="settings/device/[id]" options={{ title: t('nav.device') }} />
           </Stack.Protected>
           <Stack.Protected guard={!paired}>
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />

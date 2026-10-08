@@ -3,6 +3,7 @@ import { Bluetooth, Copy, Globe, RefreshCw, Search, Smartphone, Wand2 } from 'lu
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { generatePairCode, pairCodeIsWeak, uuid } from '../lib/crypto';
+import { t, useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { discoverReceivers, type DiscoveredReceiver } from '../lib/transports/discovery';
 import { scanReceivers, type ScannedReceiver } from '../lib/transports/ble';
@@ -12,7 +13,7 @@ import { Divider, Field, Section, SmallButton } from './form';
 export function emptyTarget(kind: Target['kind'] = 'android'): Target {
   return {
     id: uuid(),
-    name: kind === 'browser' ? 'Browser' : 'Telefono',
+    name: kind === 'browser' ? t('device.defaultBrowser') : t('device.defaultPhone'),
     kind,
     pairCode: generatePairCode(),
     lanHost: null,
@@ -25,7 +26,8 @@ export function emptyTarget(kind: Target['kind'] = 'android'): Target {
  * the HMAC key and the rendezvous room are both derived from it, so the same
  * string typed on the receiver is all the pairing there is.
  */
-export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: Target) => void }) {
+export function DeviceForm({ value, onChange }: { value: Target; onChange: (target: Target) => void }) {
+  const t = useT();
   const [scanning, setScanning] = useState<'lan' | 'ble' | null>(null);
   const [lanFound, setLanFound] = useState<DiscoveredReceiver[] | null>(null);
   const [bleFound, setBleFound] = useState<ScannedReceiver[] | null>(null);
@@ -60,55 +62,55 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
 
   return (
     <View className="gap-6">
-      <Section title="Tipo">
+      <Section title={t('form.type')}>
         <View className="flex-row gap-2 p-2">
           <KindOption
             active={isAndroid}
             icon={<Smartphone size={22} color={isAndroid ? palette.primary : palette.muted} />}
-            title="Telefono Android"
-            subtitle="App Relay ricevitore"
+            title={t('form.androidTitle')}
+            subtitle={t('form.androidSubtitle')}
             onPress={() => patch({ kind: 'android' })}
           />
           <KindOption
             active={!isAndroid}
             icon={<Globe size={22} color={!isAndroid ? palette.primary : palette.muted} />}
-            title="Browser"
-            subtitle="Estensione Chrome/Brave"
+            title={t('form.browserTitle')}
+            subtitle={t('form.browserSubtitle')}
             onPress={() => patch({ kind: 'browser' })}
           />
         </View>
       </Section>
 
       <Section
-        title="Identità"
-        footer="Inserisci lo stesso codice nel ricevitore. Da questo codice derivano la chiave di firma e la stanza sul relay: tienilo lungo."
+        title={t('form.identity')}
+        footer={t('form.identityFooter')}
       >
         <Field
-          label="Nome"
+          label={t('form.name')}
           value={value.name}
           onChangeText={(name) => patch({ name })}
-          placeholder="es. Telefono in salotto"
+          placeholder={t('form.namePlaceholder')}
           autoCapitalize="sentences"
-          error={valid.success || value.name.trim() ? null : 'Serve un nome'}
+          error={valid.success || value.name.trim() ? null : t('form.nameRequired')}
         />
         <Divider />
         <Field
-          label="Codice di accoppiamento"
+          label={t('form.pairCode')}
           value={value.pairCode}
           onChangeText={(pairCode) => patch({ pairCode: pairCode.trim() })}
           placeholder="xxxx-xxxx-xxxx-xxxx"
-          error={value.pairCode ? null : 'Serve un codice'}
+          error={value.pairCode ? null : t('form.codeRequired')}
           hint={
             value.pairCode && pairCodeIsWeak(value.pairCode)
-              ? 'Codice corto: chi gestisce il relay o un broker MQTT pubblico potrebbe indovinarlo.'
+              ? t('form.codeWeak')
               : undefined
           }
           right={
             <View className="flex-row gap-2">
-              <IconButton label="Genera nuovo codice" onPress={() => patch({ pairCode: generatePairCode() })}>
+              <IconButton label={t('form.generateCode')} onPress={() => patch({ pairCode: generatePairCode() })}>
                 <Wand2 size={18} color={palette.foreground} />
               </IconButton>
-              <IconButton label="Copia codice" onPress={() => void Clipboard.setStringAsync(value.pairCode)}>
+              <IconButton label={t('form.copyCode')} onPress={() => void Clipboard.setStringAsync(value.pairCode)}>
                 <Copy size={18} color={palette.foreground} />
               </IconButton>
             </View>
@@ -118,24 +120,24 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
 
       {isAndroid ? (
         <Section
-          title="Vicino a te"
-          footer="Facoltativi. Wi-Fi locale e Bluetooth funzionano senza internet; il resto passa dai server."
+          title={t('form.nearby')}
+          footer={t('form.nearbyFooter')}
         >
           <Field
-            label="Indirizzo sulla rete locale"
+            label={t('form.lanAddress')}
             value={value.lanHost ?? ''}
             onChangeText={(h) => patch({ lanHost: h.trim() || null })}
             placeholder="192.168.1.20"
             keyboardType="numbers-and-punctuation"
             right={
-              <IconButton label="Cerca sulla rete" onPress={scanLan} disabled={scanning !== null}>
+              <IconButton label={t('form.lanSearch')} onPress={scanLan} disabled={scanning !== null}>
                 {scanning === 'lan' ? <ActivityIndicator color={palette.foreground} /> : <Search size={18} color={palette.foreground} />}
               </IconButton>
             }
           />
           {lanFound ? (
             <FoundList
-              empty="Nessun ricevitore trovato su questa rete"
+              empty={t('form.lanEmpty')}
               items={lanFound.map((r) => ({ key: r.host, title: r.name, subtitle: r.host }))}
               onPick={(host) => {
                 patch({ lanHost: host });
@@ -147,13 +149,13 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
           <View className="flex-row items-center gap-3 px-4 py-3">
             <Bluetooth size={18} color={palette.muted} />
             <View className="flex-1">
-              <Text className="text-sm font-medium text-foreground">Bluetooth</Text>
+              <Text className="text-sm font-medium text-foreground">{t('form.bluetooth')}</Text>
               <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {value.bleDeviceId ?? 'Nessun ricevitore associato'}
+                {value.bleDeviceId ?? t('form.bleNone')}
               </Text>
             </View>
             <SmallButton
-              label={scanning === 'ble' ? 'Ricerca…' : 'Cerca'}
+              label={scanning === 'ble' ? t('form.bleSearching') : t('form.bleSearch')}
               icon={<RefreshCw size={14} color={palette.foreground} />}
               onPress={scanBle}
               disabled={scanning !== null}
@@ -161,7 +163,7 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (t: T
           </View>
           {bleFound ? (
             <FoundList
-              empty="Nessun ricevitore Bluetooth nelle vicinanze"
+              empty={t('form.bleEmpty')}
               items={bleFound.map((r) => ({ key: r.id, title: r.name, subtitle: r.rssi != null ? `${r.rssi} dBm` : r.id }))}
               onPick={(id) => {
                 patch({ bleDeviceId: id });

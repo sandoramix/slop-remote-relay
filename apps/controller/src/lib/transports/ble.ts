@@ -2,6 +2,7 @@ import type { Transport, TransportEvents } from '@relay/protocol';
 import { utf8Decode, utf8Encode } from '@relay/transports';
 import { PermissionsAndroid, Platform } from 'react-native';
 import type { BleManager, Device } from 'react-native-ble-plx';
+import { t } from '../i18n';
 
 /** Must match BleGattTransport.kt on the receiver. */
 export const RELAY_SERVICE_UUID = '0000a17e-0000-1000-8000-00805f9b34fb';
@@ -47,7 +48,7 @@ export interface ScannedReceiver {
 
 /** Finds receivers advertising the relay service, for the device editor. */
 export async function scanReceivers(timeoutMs = 6000): Promise<ScannedReceiver[]> {
-  if (!(await ensureBlePermissions())) throw new Error('Permessi Bluetooth negati');
+  if (!(await ensureBlePermissions())) throw new Error(t('transport.bleDenied'));
   const ble = await manager();
   const found = new Map<string, ScannedReceiver>();
   return new Promise((resolve, reject) => {
@@ -110,7 +111,7 @@ export class BleTransport implements Transport {
   }
 
   async connect(events: TransportEvents): Promise<void> {
-    if (!(await ensureBlePermissions())) throw new Error('Permessi Bluetooth negati');
+    if (!(await ensureBlePermissions())) throw new Error(t('transport.bleDenied'));
     const ble = await manager();
     const device = await ble.connectToDevice(this.deviceId, { requestMTU: 247, timeout: 8000 });
     await device.discoverAllServicesAndCharacteristics();

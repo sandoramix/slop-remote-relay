@@ -2,6 +2,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { uuid } from '../lib/crypto';
+import { t } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { TargetSchema, useSettings } from '../state/settings';
 
@@ -29,7 +30,7 @@ export default function Pair() {
     const existing = state.targets.find((t) => t.pairCode === params.code);
     const candidate = TargetSchema.safeParse({
       id: existing?.id ?? uuid(),
-      name: params.name || existing?.name || (params.kind === 'browser' ? 'Browser' : 'Telefono'),
+      name: params.name || existing?.name || (params.kind === 'browser' ? t('device.defaultBrowser') : t('device.defaultPhone')),
       kind: params.kind === 'browser' ? 'browser' : 'android',
       pairCode: params.code ?? '',
       lanHost: params.lan || existing?.lanHost || null,

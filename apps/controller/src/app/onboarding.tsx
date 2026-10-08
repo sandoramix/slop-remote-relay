@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from '../components/SafeArea';
 import { DeviceForm, emptyTarget } from '../components/DeviceForm';
 import { Field, PrimaryButton, Section } from '../components/form';
+import { useT } from '../lib/i18n';
 import { TargetSchema, useSettings } from '../state/settings';
 
 /**
@@ -13,6 +14,7 @@ import { TargetSchema, useSettings } from '../state/settings';
  * nothing else to configure before the remote is useful.
  */
 export default function Onboarding() {
+  const t = useT();
   const [target, setTarget] = useState(() => emptyTarget());
   const relayUrl = useSettings((s) => s.relayUrl);
   const [relay, setRelay] = useState(relayUrl ?? '');
@@ -28,23 +30,22 @@ export default function Onboarding() {
           <View className="gap-2">
             <Text className="text-4xl font-bold tracking-tight text-foreground">Relay</Text>
             <Text className="text-base leading-6 text-muted-foreground">
-              Il telecomando per il video che stai guardando su un altro schermo. Associa il primo
-              dispositivo per iniziare.
+              {t('onboarding.intro')}
             </Text>
           </View>
 
           <DeviceForm value={target} onChange={setTarget} />
 
           <Section
-            title="Da remoto"
+            title={t('onboarding.remote')}
             footer={
               target.kind === 'browser'
-                ? "Il browser si raggiunge solo via internet: serve l'indirizzo del tuo relay."
-                : 'Facoltativo. Senza relay restano Wi-Fi locale, Bluetooth e MQTT.'
+                ? t('onboarding.footerBrowser')
+                : t('onboarding.footerAndroid')
             }
           >
             <Field
-              label="Server relay"
+              label={t('onboarding.relayServer')}
               value={relay}
               onChangeText={setRelay}
               placeholder="wss://relay.esempio.it"
@@ -53,7 +54,7 @@ export default function Onboarding() {
           </Section>
 
           <PrimaryButton
-            label="Inizia"
+            label={t('onboarding.start')}
             disabled={!valid || needsRelay}
             onPress={() => {
               if (relay.trim()) set({ relayUrl: relay.trim() });
