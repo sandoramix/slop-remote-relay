@@ -163,6 +163,38 @@ export const VECTORS: Array<{ name: string; input: Envelope }> = [
       },
     },
   },
+  {
+    name: 'nav goto with an awkward label',
+    input: {
+      v: PROTOCOL_VERSION,
+      id: '88888888-8888-4888-8888-888888888888',
+      ts: 1757030400000,
+      type: 'cmd',
+      cmd: { op: 'nav.goto', index: 11, label: 'OVA \\ 12 / "è"' },
+    },
+  },
+  {
+    name: 'status with a nav block',
+    input: {
+      v: PROTOCOL_VERSION,
+      id: '99999999-9999-4999-8999-999999999999',
+      ts: 1757030400000,
+      type: 'event',
+      event: 'status',
+      status: {
+        foregroundPackage: 'https://www.animeworld.ac/play/x',
+        hasMediaSession: true,
+        positionMs: 0,
+        durationMs: 1440000,
+        isPlaying: false,
+        executors: ['dom'],
+        recipeKnown: true,
+        batteryPercent: null,
+        kind: 'browser',
+        nav: { current: '11', hasPrev: true, hasNext: false, items: ['1', '2', '11'], index: 2 },
+      },
+    },
+  },
 ];
 
 /** The pairing code the derivation vectors below are computed from. */

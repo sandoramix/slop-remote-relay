@@ -51,6 +51,31 @@ export interface PlayPauseCommand {
 /** Ask the receiver what it can see and do right now. Used by the dashboard. */
 export interface StatusCommand {
   op: 'device.status';
+  /**
+   * Include `nav.items`. Off by default: a long series has hundreds of
+   * entries, and status is polled every few seconds.
+   */
+  includeNavItems?: boolean;
+}
+
+/**
+ * Move through the episodes (or tracks, or videos) of whatever is playing.
+ * The receiver knows how for the sites and apps it has a plan for; anywhere else
+ * it answers that navigation is unavailable.
+ */
+export interface NavStepCommand {
+  op: 'nav.step';
+  /** +1 next, -1 previous. */
+  delta: 1 | -1;
+}
+
+/** Jump to an entry of `DeviceStatus.nav.items`. */
+export interface NavGotoCommand {
+  op: 'nav.goto';
+  /** Index into the list the controller last saw. */
+  index: number;
+  /** That entry's label at the time, so a list that changed in between is refused, not guessed at. */
+  label: string;
 }
 
 export type Command =
@@ -59,7 +84,9 @@ export type Command =
   | SeekCommand
   | SeekToCommand
   | PlayPauseCommand
-  | StatusCommand;
+  | StatusCommand
+  | NavStepCommand
+  | NavGotoCommand;
 
 export type CommandOp = Command['op'];
 
@@ -128,6 +155,20 @@ export interface AckEnvelope extends BaseEnvelope {
   tookMs?: number;
 }
 
+/** Where the playing thing sits in its series, when the receiver has a plan for the site. */
+export interface NavStatus {
+  /** Label of the current entry ("11"), when it can be told. */
+  current: string | null;
+  hasPrev: boolean;
+  hasNext: boolean;
+  /** Labels of every entry, in order. Only sent when the status request asked for them. */
+  items?: string[];
+  /** Position of the current entry in `items`. */
+  index?: number | null;
+  /** How many entries there are, whether or not `items` came along. */
+  count?: number;
+}
+
 export interface DeviceStatus {
   foregroundPackage: string | null;
   /** True when a media session exists and reports a duration. */
@@ -146,6 +187,8 @@ export interface DeviceStatus {
   title?: string | null;
   /** Whether the foreground player is fullscreen, when the receiver can tell. */
   fullscreen?: boolean | null;
+  /** Present only while the receiver can navigate what is playing. */
+  nav?: NavStatus;
 }
 
 export interface EventEnvelope extends BaseEnvelope {

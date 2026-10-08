@@ -53,6 +53,12 @@ class CodecTest {
 
         "browser status with title and fullscreen" to
             """{"event":"status","id":"77777777-7777-4777-8777-777777777777","status":{"batteryPercent":null,"durationMs":3600000,"executors":["dom","cdp"],"foregroundPackage":"https://www.youtube.com/watch?v=x","fullscreen":false,"hasMediaSession":true,"isPlaying":true,"kind":"browser","positionMs":61000,"recipeKnown":true,"title":"Un \"titolo\" / con — accenti è"},"ts":1757030400000,"type":"event","v":1}""",
+
+        "nav goto with an awkward label" to
+            """{"cmd":{"index":11,"label":"OVA \\ 12 / \"è\"","op":"nav.goto"},"id":"88888888-8888-4888-8888-888888888888","ts":1757030400000,"type":"cmd","v":1}""",
+
+        "status with a nav block" to
+            """{"event":"status","id":"99999999-9999-4999-8999-999999999999","status":{"batteryPercent":null,"durationMs":1440000,"executors":["dom"],"foregroundPackage":"https://www.animeworld.ac/play/x","hasMediaSession":true,"isPlaying":false,"kind":"browser","nav":{"current":"11","hasNext":false,"hasPrev":true,"index":2,"items":["1","2","11"]},"positionMs":0,"recipeKnown":true},"ts":1757030400000,"type":"event","v":1}""",
     )
 
 
