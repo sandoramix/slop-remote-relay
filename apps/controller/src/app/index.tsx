@@ -4,6 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from '../components/SafeArea';
 import { ActionRow } from '../components/remote/ActionRow';
 import { ConnectionChip } from '../components/remote/ConnectionChip';
+import { EpisodeNav } from '../components/remote/EpisodeNav';
 import { FeedbackToast } from '../components/remote/FeedbackToast';
 import { NowPlaying } from '../components/remote/NowPlaying';
 import { SeekPad } from '../components/remote/SeekPad';
@@ -33,6 +34,7 @@ export default function Remote() {
         <ConnectionChip />
         <NowPlaying />
         <SeekPad />
+        <EpisodeNav />
         <ActionRow />
       </ScrollView>
       <FeedbackToast />

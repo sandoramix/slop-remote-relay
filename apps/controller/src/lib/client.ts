@@ -123,6 +123,8 @@ export class RelayClient {
   seek = (deltaMs: number) => this.send({ op: 'playback.seek', deltaMs: Math.round(deltaMs) });
   seekTo = (positionMs: number) =>
     this.send({ op: 'playback.seekTo', positionMs: Math.max(0, Math.round(positionMs)) });
+  navStep = (delta: 1 | -1) => this.send({ op: 'nav.step', delta });
+  navGoto = (index: number, label: string) => this.send({ op: 'nav.goto', index, label });
   fullscreen = (toggle = true) => this.send({ op: 'fullscreen.enter', toggle });
   exitFullscreen = () => this.send({ op: 'fullscreen.exit' });
   playPause = (play?: boolean) =>
@@ -132,6 +134,9 @@ export class RelayClient {
    * device.status is answered with a status event, not an ack, so this sends
    * and forgets: the event arrives through onStatus.
    */
+  /** Ask for the episode list too in every status request; the remote sets this while its list is open. */
+  includeNavItems = false;
+
   async refreshStatus(): Promise<void> {
     if (!this.manager) return;
     const envelope: CommandEnvelope = {
@@ -139,7 +144,7 @@ export class RelayClient {
       id: uuid(),
       ts: Date.now(),
       type: 'cmd',
-      cmd: { op: 'device.status' },
+      cmd: this.includeNavItems ? { op: 'device.status', includeNavItems: true } : { op: 'device.status' },
     };
     const signed = await sign(envelope, this.signer);
     await this.manager.send(JSON.stringify(signed));

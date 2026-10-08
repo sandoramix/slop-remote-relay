@@ -136,6 +136,28 @@ list (`apps/controller/src/lib/transports/registry.ts`,
 applies to browsers). Commands, UI and the execution chain must not change —
 if they have to, the abstraction has been broken.
 
+## Navigating a series (browser)
+
+`nav.step` and `nav.goto` move through episodes; the status carries a `nav`
+block (current, prev/next available, and the full list when the controller asks
+for it with `includeNavItems`). Which sites support it is data: a `nav` plan per
+site in `apps/browser-extension/src/sites.json` (schema in `src/nav.ts`):
+
+```json
+"animeworld.ac": { "nav": {
+  "paths": "^/play/",
+  "items": ".server.active ul.episodes li.episode a",
+  "label": "data-episode-num",
+  "current": ".active"
+} }
+```
+
+`items` selects *every* entry in order, including those a "1 - 50" range tab
+hides, so long series need nothing special. A site with no list to read can name
+its own buttons instead (`"next": "...", "prev": "..."`). Read the selectors off
+the real page, never guess them. The Android receiver has no navigation yet: it
+answers these ops as unsupported and the controller hides the controls.
+
 ## Adding a command
 
 1. A case in `Command` in `messages.ts` and in `core/Protocol.kt`.

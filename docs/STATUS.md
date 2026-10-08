@@ -18,6 +18,8 @@ verified, how to reproduce it, and what is still open.
 | Fullscreen in Chrome (Android) | yes, emulator | HTML5 `<video>`: six toggles in a row, enter via the page's button, state detected, exit via Back |
 | Shizuku executor | yes, emulator | Shizuku 13.6 started over adb, accessibility off: exit fullscreen via `KEYCODE_ESCAPE` |
 | Browser extension | yes, Chrome for Testing | `smoke:extension` over relay WS, HTTP, WebRTC — status, seekTo, pause, fullscreen in (CDP) and out; a tab already open when the extension is (re)installed is still found and driven — 18/18 |
+| Episode navigation (browser) | yes, Chrome for Testing | `smoke:extension`: next, previous, goto into a hidden range, stale list refused, last episode, on markup shaped like AnimeWorld's (the plan was read from the live site, the test page imitates it) |
+| Episode navigation (controller UI) | typechecked only | not yet run on a device or emulator |
 | Release pipeline pieces | partly | receiver signed via injected properties with tag version (verified locally); extension zip; relay build as in the Dockerfile. The workflow itself has not run on GitHub yet |
 
 ## Bugs found and fixed along the way
