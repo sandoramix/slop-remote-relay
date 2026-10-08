@@ -4,6 +4,7 @@ import { Activity, Check, FastForward, Plus, Route, Server } from 'lucide-react-
 import { Fragment } from 'react';
 import { Pressable, ScrollView, Text } from 'react-native';
 import { Divider, LinkRow, Section, ToggleRow } from '../../components/form';
+import { UpdatesSection } from '../../components/UpdatesSection';
 import { KindIcon } from '../../components/remote/TargetSwitcher';
 import { jumpLabel } from '../../lib/format';
 import { LANGUAGE_NAMES, useT } from '../../lib/i18n';
@@ -105,6 +106,9 @@ export default function SettingsScreen() {
           </Fragment>
         ))}
       </Section>
+
+      <UpdatesSection />
+
 
       <Text className="text-center text-xs text-muted-foreground">{t('settings.appName')}</Text>
     </ScrollView>

@@ -49,6 +49,8 @@ const config: ExpoConfig = {
       'android.permission.ACCESS_WIFI_STATE',
       'android.permission.CHANGE_WIFI_MULTICAST_STATE',
       'android.permission.VIBRATE',
+      // In-app updates: hands the downloaded APK to the system installer.
+      'android.permission.REQUEST_INSTALL_PACKAGES',
     ],
   },
   plugins: [

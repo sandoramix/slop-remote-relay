@@ -10,6 +10,7 @@ import { useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { useRelayConnection } from '../state/session';
 import { useSettings } from '../state/settings';
+import { checkForUpdate } from '../lib/updater';
 
 // Keep the splash up until settings are loaded, so the first frame already
 // knows whether to show onboarding or the remote.
@@ -33,6 +34,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (hydrated) void SplashScreen.hideAsync();
+  }, [hydrated]);
+
+  // One quiet update check per launch (throttled to every 12 h inside, errors swallowed).
+  useEffect(() => {
+    if (hydrated) void checkForUpdate({ silent: true });
   }, [hydrated]);
 
   if (!hydrated) return null;

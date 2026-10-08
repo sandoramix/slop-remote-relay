@@ -23,6 +23,27 @@ export const it: Record<keyof typeof en, string> = {
   'settings.keepAwakeHint': 'Utile se tieni il telefono in mano mentre guardi.',
   'settings.appName': 'Relay controller',
 
+  // Updates (Android)
+  'updates.title': 'Aggiornamenti',
+  'updates.current': 'Versione installata',
+  'updates.check': 'Cerca aggiornamenti',
+  'updates.checking': 'Controllo in corso...',
+  'updates.upToDate': 'Hai già l\'ultima versione.',
+  'updates.available': 'Versione {version} disponibile',
+  'updates.download': 'Scarica e installa',
+  'updates.downloading': 'Download in corso {percent}%',
+  'updates.install': 'Installa',
+  'updates.readyHint': 'Il download è pronto. Conferma l\'installazione nella finestra di sistema.',
+  'updates.releasePage': 'Pagina della release',
+  'updates.blockedHint':
+    'Se l\'installazione non è partita, Android potrebbe non permettere ancora a questa app di installare aggiornamenti. Consentilo nelle impostazioni di sistema, poi torna qui e tocca Installa.',
+  'updates.openSettings': 'Apri impostazioni di installazione',
+  'updates.checkFailed': 'Impossibile cercare aggiornamenti: {reason}',
+  'updates.downloadFailed': 'Download non riuscito: {reason}',
+  'updates.installFailed': 'Impossibile avviare l\'installazione: {reason}',
+  'updates.noChecksum': 'i checksum della release non elencano questo file',
+  'updates.badChecksum': 'il file non corrisponde al checksum, non installato',
+
   // Screen titles
   'nav.diagnostics': 'Diagnostica',
   'nav.settings': 'Impostazioni',

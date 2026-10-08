@@ -25,6 +25,27 @@ export const en = {
   'settings.keepAwakeHint': 'Handy if you hold the phone while watching.',
   'settings.appName': 'Relay controller',
 
+  // Updates (Android)
+  'updates.title': 'Updates',
+  'updates.current': 'Installed version',
+  'updates.check': 'Check for updates',
+  'updates.checking': 'Checking...',
+  'updates.upToDate': 'You are on the latest version.',
+  'updates.available': 'Version {version} available',
+  'updates.download': 'Download and install',
+  'updates.downloading': 'Downloading {percent}%',
+  'updates.install': 'Install',
+  'updates.readyHint': 'The download is ready. Confirm the installation in the system dialog.',
+  'updates.releasePage': 'Release page',
+  'updates.blockedHint':
+    'If the installer did not start, Android may not allow this app to install updates yet. Allow it in the system settings, come back and tap Install.',
+  'updates.openSettings': 'Open install settings',
+  'updates.checkFailed': 'Could not check for updates: {reason}',
+  'updates.downloadFailed': 'Download failed: {reason}',
+  'updates.installFailed': 'Could not start the installer: {reason}',
+  'updates.noChecksum': 'the release checksums do not list this file',
+  'updates.badChecksum': 'the file does not match its checksum, not installed',
+
   // Screen titles
   'nav.diagnostics': 'Diagnostics',
   'nav.settings': 'Settings',

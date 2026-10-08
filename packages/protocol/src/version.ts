@@ -98,3 +98,29 @@ export function releaseSummary(notes: string, maxLines = 4): string[] {
     )
     .slice(0, maxLines);
 }
+
+/** The Android controller APK in a release. The `-unsigned.ipa` never matches. */
+export const CONTROLLER_APK_PATTERN = /^relay-controller-.+\.apk$/;
+
+/** First asset whose name matches, or null. */
+export function findAsset(assets: readonly ReleaseAsset[], pattern: RegExp): ReleaseAsset | null {
+  return assets.find((a) => pattern.test(a.name)) ?? null;
+}
+
+/**
+ * The expected SHA-256 (lowercase hex) of `fileName` in a `sha256sum`-style
+ * listing ("<hash>  <name>", optionally "<hash> *<name>"), or null when the
+ * listing doesn't mention it.
+ */
+export function checksumFor(sums: string, fileName: string): string | null {
+  for (const line of sums.split(/\r?\n/)) {
+    const m = /^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$/.exec(line);
+    if (m && m[2]!.replace(/^\.\//, '') === fileName) return m[1]!.toLowerCase();
+  }
+  return null;
+}
+
+/** Whether a periodic update check is due: never run, or older than `intervalMs`. */
+export function isCheckDue(lastCheckedAt: number, now: number, intervalMs: number): boolean {
+  return !(lastCheckedAt > 0 && lastCheckedAt <= now && now - lastCheckedAt < intervalMs);
+}
