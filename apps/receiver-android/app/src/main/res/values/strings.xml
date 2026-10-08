@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Relay</string>
-    <string name="accessibility_label">Relay — remote control</string>
+    <string name="app_name">Skipper Screen</string>
+    <string name="accessibility_label">Skipper Screen: fullscreen</string>
     <string name="accessibility_description">Lets the paired phone switch the app in the foreground to fullscreen. It does not read or transmit the screen content.</string>
     <string name="subtitle">Receiver — this phone is the one being controlled</string>
     <string name="language_label">Language</string>
@@ -49,7 +49,7 @@
     <string name="notif_waiting_pairing">Waiting for pairing</string>
     <string name="notif_listening">Listening, no controller connected</string>
     <string name="notif_connected">Connected via %1$s</string>
-    <string name="notif_channel">Relay active</string>
+    <string name="notif_channel">Skipper active</string>
     <string name="unknown_app">unknown app</string>
     <string name="err_no_strategy">No strategy worked on %1$s</string>
     <string name="err_already_windowed">already out of fullscreen</string>
@@ -83,14 +83,14 @@
     <string name="update_ready">Download complete.</string>
     <string name="update_installing">Installing… confirm in the system dialog if it appears.</string>
     <string name="update_btn_release_page">Release page</string>
-    <string name="update_needs_permission">To update from inside the app, allow Relay to install apps on the screen that just opened, then come back here. This is needed only once.</string>
+    <string name="update_needs_permission">To update from inside the app, allow Skipper Screen to install apps on the screen that just opened, then come back here. This is needed only once.</string>
     <string name="update_err_network">Could not reach GitHub (%1$s).</string>
     <string name="update_err_generic">Update failed (%1$s).</string>
     <string name="update_err_no_apk">This release has no APK for the receiver.</string>
     <string name="update_err_download">The download failed (%1$s).</string>
     <string name="update_err_size">The download is incomplete or corrupted.</string>
     <string name="update_err_checksum">The download does not match the published checksum, so it was discarded.</string>
-    <string name="update_err_package">The downloaded file is not the Relay receiver.</string>
+    <string name="update_err_package">The downloaded file is not Skipper Screen.</string>
     <string name="update_err_install">Installation failed: %1$s</string>
     <string name="update_inst_aborted">installation cancelled.</string>
     <string name="update_inst_blocked">Android blocked the installation.</string>

@@ -10,6 +10,7 @@ import { RTCPeerConnection } from 'react-native-webrtc';
 import type { Settings, Target } from '../../state/settings';
 import { t } from '../i18n';
 import { isEnabled, normalizeOrder } from '../../state/settings';
+import { bleTagFromRoom } from '../crypto';
 import { BleTransport } from './ble';
 import { LanWebSocketTransport } from './lan';
 
@@ -127,8 +128,8 @@ export const TRANSPORTS: Record<TransportId, TransportMeta> = {
       return t('transport.ble.summary');
     },
     kinds: ['android'],
-    missing: ({ target }) => (target.bleDeviceId ? null : t('transport.ble.missing')),
-    build: ({ target, priority }) => new BleTransport(target.bleDeviceId!, priority),
+    missing: () => null,
+    build: ({ room, priority }) => new BleTransport(bleTagFromRoom(room), priority),
   },
 };
 

@@ -85,10 +85,20 @@ export function releaseSummary(notes: string, maxLines = 4): string[] {
     return end >= 0 ? rest.slice(0, end) : rest;
   };
   const body = section('## Highlights') ?? section("## What's changed") ?? '';
-  return body
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith('- '))
+  // A bullet wraps onto indented lines; join them back into one item.
+  const items: string[] = [];
+  let open = false;
+  for (const line of body.split('\n')) {
+    if (line.startsWith('- ')) {
+      items.push(line.trim());
+      open = true;
+    } else if (open && /^\s+\S/.test(line)) {
+      items[items.length - 1] += ` ${line.trim()}`;
+    } else {
+      open = false;
+    }
+  }
+  return items
     .map((l) =>
       l
         .slice(2)

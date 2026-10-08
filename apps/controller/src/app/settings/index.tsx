@@ -1,16 +1,21 @@
 import type { TransportId } from '@relay/protocol';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { Activity, Check, FastForward, Plus, Route, Server } from 'lucide-react-native';
+import { Activity, Check, Download, FastForward, Info, Plus, Route, Server } from 'lucide-react-native';
 import { Fragment } from 'react';
-import { Pressable, ScrollView, Text } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Divider, LinkRow, Section, ToggleRow } from '../../components/form';
-import { UpdatesSection } from '../../components/UpdatesSection';
 import { KindIcon } from '../../components/remote/TargetSwitcher';
+import { InstallProgress, useUpdateActionLabel } from '../../components/UpdateBanner';
 import { jumpLabel } from '../../lib/format';
 import { LANGUAGE_NAMES, useT } from '../../lib/i18n';
 import { palette } from '../../lib/palette';
 import { TRANSPORTS } from '../../lib/transports/registry';
+import { startUpdate } from '../../lib/updater';
 import { isEnabled, LANGUAGES, normalizeOrder, useSettings } from '../../state/settings';
+import { currentVersion, useNewerRelease, useUpdate } from '../../state/update';
+
+const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
 
 /** Host of a ws/wss/http URL, without throwing on a half-typed one. */
 const hostOf = (raw: string) => raw.replace(/^[a-z]+:\/\//i, '').split('/')[0] || raw;
@@ -20,6 +25,18 @@ export default function SettingsScreen() {
   const s = useSettings();
   const order = normalizeOrder(s.transportOrder).filter((id) => isEnabled(s, id));
   const first = order[0] ? TRANSPORTS[order[0] as TransportId].label : t('settings.none');
+  const update = useUpdate();
+  const newer = useNewerRelease();
+  const actionLabel = useUpdateActionLabel(newer);
+  const updateStatus = update.checking
+    ? t('about.checking')
+    : newer
+      ? t('about.available', { version: newer.version })
+      : update.failed
+        ? t('about.failed')
+        : update.checkedAt
+          ? t('about.upToDate')
+          : t('about.checkNow');
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 px-4 pb-12 pt-2">
@@ -107,10 +124,36 @@ export default function SettingsScreen() {
         ))}
       </Section>
 
-      <UpdatesSection />
+      <Section title={t('about.title')} footer={t('about.footer')}>
+        <LinkRow
+          icon={<Info size={18} color={palette.muted} />}
+          label={t('about.version')}
+          value={currentVersion()}
+          onPress={() => void Linking.openURL(SITE)}
+        />
+        <Divider />
+        <LinkRow
+          icon={<Download size={18} color={newer ? palette.primary : palette.muted} />}
+          label={t('about.updates')}
+          value={updateStatus}
+          onPress={() => (newer ? startUpdate(newer) : void update.check(true))}
+        />
+        {newer ? (
+          <View className="gap-3 px-4 pb-3.5">
+            {newer.summary.map((line) => (
+              <Text key={line} className="text-sm leading-5 text-muted-foreground">
+                • {line}
+              </Text>
+            ))}
+            <InstallProgress version={newer.version} />
+            <Text className="text-sm text-primary" accessibilityRole="button" onPress={() => startUpdate(newer)}>
+              {actionLabel}
+            </Text>
+          </View>
+        ) : null}
+      </Section>
 
-
-      <Text className="text-center text-xs text-muted-foreground">{t('settings.appName')}</Text>
+      <Text className="text-center text-xs text-muted-foreground">{t('settings.appName', { version: currentVersion() })}</Text>
     </ScrollView>
   );
 }

@@ -76,6 +76,7 @@ out.push(
   '| `relay-controller-*.apk` | Install on the phone you hold as the remote |',
   '| `relay-controller-*-unsigned.ipa` | iOS remote, unsigned: re-sign with your own Apple ID to install |',
   '| `relay-extension-*.zip` | Chrome/Brave: unzip, open `chrome://extensions`, enable Developer mode, *Load unpacked* |',
+  '| `skipper-chrome-web-store-*.zip` | The extension without its fixed id, for uploading to the Chrome Web Store (not for loading unpacked) |',
   '| `relay-server-*.tgz` | Relay server (Node 22): `npm install --omit=dev && node dist/server.js` |',
   '| `SHA256SUMS.txt` | Checksums of every file above |',
   '',

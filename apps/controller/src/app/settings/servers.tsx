@@ -36,7 +36,7 @@ export default function ServersScreen() {
             label={t('servers.address')}
             value={relay}
             onChangeText={setRelay}
-            placeholder="wss://relay.esempio.it"
+            placeholder="wss://relay.example.com"
             keyboardType="url"
             error={relayError}
           />
@@ -68,7 +68,7 @@ export default function ServersScreen() {
             hint={t('servers.stunHint')}
           />
           <Divider />
-          <Field label={t('servers.turn')} value={turnUrl} onChangeText={setTurnUrl} placeholder="turn:turn.esempio.it:3478" />
+          <Field label={t('servers.turn')} value={turnUrl} onChangeText={setTurnUrl} placeholder="turn:turn.example.com:3478" />
           <Field label={t('servers.turnUser')} value={turnUser} onChangeText={setTurnUser} />
           <Field label={t('servers.turnPass')} value={turnPass} onChangeText={setTurnPass} secureTextEntry />
         </Section>

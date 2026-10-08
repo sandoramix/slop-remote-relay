@@ -3,13 +3,14 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Relay receiver for desktop Chrome and Brave: drive the video in any tab from the phone",
+  "description": "Skipper receiver for desktop Chrome and Brave: drive the video in any tab from the phone",
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/*.test.ts",
-    "zip": "node build.mjs --zip"
+    "zip": "node build.mjs --zip",
+    "zip:store": "node build.mjs --store"
   },
   "dependencies": {
     "@relay/protocol": "*",

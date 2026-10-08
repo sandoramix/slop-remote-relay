@@ -22,7 +22,7 @@ verified, how to reproduce it, and what is still open.
 | Episode navigation (Android, Chrome) | yes, emulator | Nexus10_34, Chrome on the live animeworld.ac, via `npm run send` over LAN: status `nav` on Chainsmoker Cat ep 11 (current 11, index 10, count 11, items only with `includeNavItems`); `nav.step -1` → 10 and `+1` → 11 (address and status confirmed); `+1` at 11 refused "Already at the last episode"; `goto` with a wrong label and an out-of-range index refused; `goto` 851 on One Piece; One Piece range crossing both ways through the site's button (901 → 900 → 901, address confirmed), then a link step 900 → 899; ad popup tab closed by Back after each click; with accessibility off the step answers "needs the accessibility service" and `nav` disappears from status. 10 unit tests in `NavigationTest` |
 | Episode navigation (controller UI) | typechecked only | not yet run on a device or emulator; the Android receiver now reports `nav`, so the controls should appear |
 | In-app update, receiver | yes, emulator | against a local fake release server: silent check, unknown-sources hand-off, redirect, checksum match, system installer, in-place update 0.1.0 → 9.0.0; a wrong checksum is refused. Not seen: real GitHub release, release-build behaviour, Italian strings on screen, signing-key mismatch |
-| In-app update, controller | typechecked, manifest only | permission lands in the generated manifest; download and install never run on a device |
+| In-app update, controller | typechecked, manifest only | permission lands in the generated manifest. Since the merge with the Skipper line there is one checker (`state/update.ts`, banner + Settings → About); its Download button runs the in-app download, SHA-256 check and system installer on Android. That path has never run on a device |
 | Release pipeline pieces | partly | receiver signed via injected properties with tag version (verified locally); extension zip; relay build as in the Dockerfile. The workflow itself has not run on GitHub yet |
 
 ## Bugs found and fixed along the way
@@ -49,6 +49,12 @@ In order of how well hidden they were.
    without a window-state event; now read from the active window first.
 8. **Shizuku key steps always "succeeded"** — injection has exit code 0 whether
    or not the page reacts. Now judged by the fullscreen markers.
+9. **Browsers never connected in 0.3.0 and 0.3.1.** `shared.ts` called
+   `chrome.runtime.getManifest()` at load to detect a Web Store install; the
+   offscreen document imports it and has no `getManifest`, so its script threw
+   and no transport started. Found by `smoke:extension` (18/18 at v0.2.6, 1/14
+   at v0.3.1); after the fix the popup screenshot tool showed a phone connected
+   and a seek executed. The smoke test itself was not rerun.
 
 Earlier, from the first build-out: canonicalisation divergence on `/`,
 `AccessibilityExecutor` ignoring seeks, the NSD port bug, the background
@@ -77,7 +83,18 @@ npm run send -- cielo-lento-42 device.status
   labels, but that is inference until dumped on a device).
 - A web player whose control bar is below the fold: Chromium prunes those nodes,
   so the recipe falls through to rotation. Seen with an oversized test video.
-- Bluetooth: both sides are implemented, neither can run on the emulator.
+- Bluetooth: both sides are implemented, neither can run on the emulator. On
+  real phones the controller never found the receiver. Fixed without hardware
+  to test on: the controller's `BLUETOOTH_SCAN` lacked `neverForLocation`, so
+  Android 12+ returned no scan results (checked in the introspected manifest);
+  the receiver lacked the pre-Android-12 `BLUETOOTH`/`BLUETOOTH_ADMIN`
+  permissions; and a receiver started with Bluetooth off never advertised until
+  restarted. The controller also used to save the receiver's BLE address, which
+  goes stale because Android advertises from a rotating private address. Now
+  the receiver puts an 8-byte tag (`bleTagFromRoom`, pinned by a vector in
+  `CodecTest.kt` and checked against the TypeScript side) in its service data,
+  and the controller scans for it on every connect; there is nothing to set up
+  in the device form. None of this has run on two real phones yet.
 - Episode navigation on a phone-sized Chrome (the emulator is a tablet layout)
   and in Brave (no nav plan: its tree has never been dumped). Italian error
   strings never seen on screen. A popup that opens *behind* the page is left
@@ -92,6 +109,33 @@ npm run send -- cielo-lento-42 device.status
 
 - iOS controller: prebuilt and built only in CI on macOS, never run.
 - Release workflow: has to run once on GitHub; the iOS job is allowed to fail.
+- Skipper rename and store build: the store zip was checked to contain no
+  `key`; a store install (the `update_url` check) has not been tried because the
+  extension isn't in the store yet. The renamed receiver and controller ran on
+  the emulator (Pixel 6 Pro, API 34): paired over local Wi-Fi from the
+  `relay://pair` link.
+- Controller update check: verified on an x86_64 release build of 0.3.0 on the
+  emulator — banner offering 0.3.1, "Più tardi" hides it, Settings shows the
+  version and "0.3.1 disponibile". The APK download itself was not installed.
+  Since then the banner's strings went through i18n (English default) and its
+  Download button installs in-app instead of opening the browser: not rerun.
+- Receiver tablet layout: two columns at ≥ 600 dp and a 240 dp QR, checked on
+  the phone emulator in portrait and with the display forced to 2560×1600 at
+  320 dpi; not on a real tablet.
+  After the merge with the language row and the Updates card (debug build on the
+  Nexus10-sized emulator): two columns at 2560×1600, one column at 1080×2400,
+  Updates card offering 0.3.2 from the real GitHub release, QR rendered beside
+  the fields; no crash. Italian not looked at.
+- Package ids are now `dev.sandoramix.skipper` (controller) and
+  `dev.sandoramix.skipper.screen` (receiver, Kotlin packages moved to match).
+  The receiver compiles and its unit tests pass; the controller's introspected
+  config shows the new ids. They install as new apps: old `com.relay.*`
+  installs must be removed and paired again.
+- Pages site (`pages/`, `.github/workflows/pages.yml`): deployed; guide images
+  checked locally at 1100 px and 390 px. The pairing page `pages/pair/` is part
+  of the same site now: one Pages workflow copies all of `pages/` and keeps the
+  live `altstore.json`, and the release's AltStore job copies all of `pages/`
+  too. Not yet deployed in this form.
 
 **Known, not done**
 
@@ -100,7 +144,8 @@ npm run send -- cielo-lento-42 device.status
 - The controller cannot yet scan a QR code in-app. Receiver and extension QR codes
   now encode `https://sandoramix.github.io/slop-remote-relay/pair/#…` (camera apps
   show a bare `relay://` as plain text); that page, `pages/pair/index.html`, opens
-  `relay://pair?…`. **Not verified**: it needs the Pages workflow to run once on
+  `relay://pair?…` (an `intent://` naming `dev.sandoramix.skipper` on Android; English,
+  or Italian when the browser is). **Not verified**: it needs the Pages workflow to run once on
   GitHub, and a real phone camera to scan it. Pairing by `relay://` link itself is
   verified (see above).
 - The receiver has no learning mode for recording a tap coordinate on unknown

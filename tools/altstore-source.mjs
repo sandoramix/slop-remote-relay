@@ -8,7 +8,7 @@
 // ios-info.json comes from the macOS build (minimum iOS, privacy strings,
 // entitlements), because AltStore requires a source to declare every
 // permission the app uses. Format: https://faq.altstore.io/developers/make-a-source
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const [outDir = 'site', infoPath] = process.argv.slice(2);
@@ -57,11 +57,6 @@ function whatsNew(body = '') {
   return text.length > 3000 ? `${text.slice(0, 2990)}…` : text;
 }
 
-// The pairing landing page that receivers' QR codes point to; published with
-// the source because both live on the same Pages site.
-mkdirSync(path.join(outDir, 'pair'), { recursive: true });
-copyFileSync('pages/pair/index.html', path.join(outDir, 'pair', 'index.html'));
-
 const versions = (await releases())
   .map((r) => {
     const ipa = r.assets.find((a) => /^relay-controller-.+-unsigned\.ipa$/.test(a.name));
@@ -91,22 +86,22 @@ if (versions.length === 0) {
 function publish() {
 
 const source = {
-  name: 'Relay',
-  subtitle: 'Remote control for the video on another screen',
+  name: 'Skipper',
+  subtitle: 'Skip the intro from the sofa',
   description:
-    'Relay turns your iPhone into a remote for a video playing on an Android phone or in a desktop browser: jump by any amount, scrub, play/pause and fullscreen, over Wi-Fi, WebRTC, your relay server, MQTT or Bluetooth.',
+    'Skipper turns your iPhone into the remote for a video playing on an Android phone or in a desktop browser: jump by any amount, scrub, play/pause and go fullscreen, over Wi-Fi, WebRTC, your relay server, MQTT or Bluetooth.',
   iconURL: `${pagesBase}/icon.png`,
-  website: `https://github.com/${repo}`,
+  website: `${pagesBase}/`,
   tintColor: '#E8B04B',
   apps: [
     {
-      name: 'Relay',
-      bundleIdentifier: 'com.relay.controller',
+      name: 'Skipper',
+      bundleIdentifier: 'dev.sandoramix.skipper',
       developerName: owner,
       subtitle: 'The remote',
       localizedDescription:
-        'The remote for Relay. Pair it with the Relay receiver on an Android phone or with the Relay browser extension, then skip, scrub, pause and go fullscreen from your hand. Setup guide: ' +
-        `https://github.com/${repo}#getting-started`,
+        'The remote. Pair it with Skipper Screen on an Android phone or with Skipper for Chrome, then skip, scrub, pause and go fullscreen from the sofa. Setup guide: ' +
+        `${pagesBase}/`,
       iconURL: `${pagesBase}/icon.png`,
       tintColor: '#E8B04B',
       category: 'utilities',
@@ -121,15 +116,10 @@ const source = {
 };
 
 mkdirSync(outDir, { recursive: true });
+// The project site lives in pages/ (pairing landing page in pages/pair/ included);
+// a Pages deploy replaces everything, so it ships alongside the source.
+cpSync('pages', outDir, { recursive: true });
 writeFileSync(path.join(outDir, 'altstore.json'), JSON.stringify(source, null, 2));
 copyFileSync('apps/controller/assets/images/icon.png', path.join(outDir, 'icon.png'));
-writeFileSync(
-  path.join(outDir, 'index.html'),
-  `<!doctype html><meta charset="utf-8"><title>Relay for AltStore</title>
-<body style="font:16px system-ui;background:#14181e;color:#ede9e3;max-width:40rem;margin:3rem auto;padding:0 1rem">
-<h1>Relay</h1><p>Add this source in AltStore or SideStore (Browse → Sources → +):</p>
-<pre style="background:#1d232b;padding:1rem;border-radius:12px;overflow:auto">${pagesBase}/altstore.json</pre>
-<p><a style="color:#e8b04b" href="https://github.com/${repo}">Project on GitHub</a></p></body>`,
-);
 console.log(`altstore.json: ${versions.length} version(s), latest ${versions[0].version}`);
 }

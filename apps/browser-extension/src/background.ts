@@ -12,6 +12,7 @@ import {
   PRESENCE_WINDOW_MS,
   type ReceiverState,
   type RuntimeMessage,
+  isStoreInstall,
   type TargetInfo,
   type UpdateInfo,
 } from './shared';
@@ -401,17 +402,20 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
     };
     await chrome.storage.local.set({ update: info });
     const newer = compareVersions(info.version, chrome.runtime.getManifest().version) > 0;
-    void chrome.action.setTitle({ title: newer ? `Relay — ${info.version} available` : 'Relay' });
+    void chrome.action.setTitle({ title: newer ? `Skipper — ${info.version} available` : 'Skipper' });
     return info;
   } catch {
     return null;
   }
 }
 
-chrome.alarms.create('update-check', { periodInMinutes: 12 * 60, delayInMinutes: 1 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'update-check') void checkForUpdate();
-});
+// The store build has no alarms permission: the store updates it.
+if (!isStoreInstall()) {
+  chrome.alarms.create('update-check', { periodInMinutes: 12 * 60, delayInMinutes: 1 });
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'update-check') void checkForUpdate();
+  });
+}
 
 // ----------------------------------------------------------------- wiring
 

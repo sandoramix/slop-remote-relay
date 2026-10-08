@@ -12,7 +12,7 @@ export MSYS_NO_PATHCONV=1
 PAIR="${1:-cielo-lento-42}"
 RELAY="${2:-ws://10.0.2.2:8080}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PKG=com.relay.receiver
+PKG=dev.sandoramix.skipper.screen
 
 adb wait-for-device
 until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 2; done

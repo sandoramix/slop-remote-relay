@@ -1,12 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
-import { Bluetooth, Copy, Globe, RefreshCw, Search, Smartphone, Wand2 } from 'lucide-react-native';
+import { Copy, Globe, Search, Smartphone, Wand2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { generatePairCode, pairCodeIsWeak, uuid } from '../lib/crypto';
 import { t, useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { discoverReceivers, type DiscoveredReceiver } from '../lib/transports/discovery';
-import { scanReceivers, type ScannedReceiver } from '../lib/transports/ble';
 import { type Target, TargetSchema } from '../state/settings';
 import { Divider, Field, Section, SmallButton } from './form';
 
@@ -17,7 +16,6 @@ export function emptyTarget(kind: Target['kind'] = 'android'): Target {
     kind,
     pairCode: generatePairCode(),
     lanHost: null,
-    bleDeviceId: null,
   };
 }
 
@@ -28,9 +26,8 @@ export function emptyTarget(kind: Target['kind'] = 'android'): Target {
  */
 export function DeviceForm({ value, onChange }: { value: Target; onChange: (target: Target) => void }) {
   const t = useT();
-  const [scanning, setScanning] = useState<'lan' | 'ble' | null>(null);
+  const [scanning, setScanning] = useState<'lan' | null>(null);
   const [lanFound, setLanFound] = useState<DiscoveredReceiver[] | null>(null);
-  const [bleFound, setBleFound] = useState<ScannedReceiver[] | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const patch = (p: Partial<Target>) => onChange({ ...value, ...p });
   const valid = TargetSchema.safeParse(value);
@@ -41,18 +38,6 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (targ
     setScanError(null);
     try {
       setLanFound(await discoverReceivers());
-    } catch (e) {
-      setScanError((e as Error).message);
-    } finally {
-      setScanning(null);
-    }
-  };
-
-  const scanBle = async () => {
-    setScanning('ble');
-    setScanError(null);
-    try {
-      setBleFound(await scanReceivers());
     } catch (e) {
       setScanError((e as Error).message);
     } finally {
@@ -142,32 +127,6 @@ export function DeviceForm({ value, onChange }: { value: Target; onChange: (targ
               onPick={(host) => {
                 patch({ lanHost: host });
                 setLanFound(null);
-              }}
-            />
-          ) : null}
-          <Divider />
-          <View className="flex-row items-center gap-3 px-4 py-3">
-            <Bluetooth size={18} color={palette.muted} />
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-foreground">{t('form.bluetooth')}</Text>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {value.bleDeviceId ?? t('form.bleNone')}
-              </Text>
-            </View>
-            <SmallButton
-              label={scanning === 'ble' ? t('form.bleSearching') : t('form.bleSearch')}
-              icon={<RefreshCw size={14} color={palette.foreground} />}
-              onPress={scanBle}
-              disabled={scanning !== null}
-            />
-          </View>
-          {bleFound ? (
-            <FoundList
-              empty={t('form.bleEmpty')}
-              items={bleFound.map((r) => ({ key: r.id, title: r.name, subtitle: r.rssi != null ? `${r.rssi} dBm` : r.id }))}
-              onPick={(id) => {
-                patch({ bleDeviceId: id });
-                setBleFound(null);
               }}
             />
           ) : null}

@@ -55,7 +55,7 @@ Notes from getting it to build:
 - `react-native-ble-plx`, `react-native-zeroconf` and `react-native-webrtc` are
   legacy modules; they run under the New Architecture's interop layer.
 - A pairing link opens the app preconfigured, handy on an emulator:
-  `adb shell am start -a android.intent.action.VIEW -d "relay://pair?code=…&kind=android&relay=ws://10.0.2.2:8080&lan=127.0.0.1" com.relay.controller`
+  `adb shell am start -a android.intent.action.VIEW -d "relay://pair?code=…&kind=android&relay=ws://10.0.2.2:8080&lan=127.0.0.1" dev.sandoramix.skipper`
 
 ## Receiver (Kotlin)
 

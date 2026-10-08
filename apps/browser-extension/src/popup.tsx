@@ -10,6 +10,7 @@ import {
   PRESENCE_WINDOW_MS,
   type ReceiverState,
   type RuntimeMessage,
+  isStoreInstall,
   type TargetInfo,
   type UpdateInfo,
 } from './shared';
@@ -128,12 +129,15 @@ function useNow(): number {
 
 // ------------------------------------------------------------------ views
 
+const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
+const LATEST_RELEASE = 'https://github.com/sandoramix/slop-remote-relay/releases/latest';
+
 function Header() {
   return (
     <header class="header">
       <img src="icon-48.png" alt="" width={32} height={32} />
       <div>
-        <h1>Relay</h1>
+        <h1>Skipper</h1>
         <p class="muted small">{t('subtitle')}</p>
       </div>
     </header>
@@ -150,6 +154,12 @@ function Setup({ initial, onDone }: { initial: ExtensionSettings; onDone: (s: Ex
       <div>
         <h2>{t('setupTitle')}</h2>
         <p class="muted">{t('setupIntro')}</p>
+        <p class="muted small">
+          {t('setupNoApp')}{' '}
+          <a href={`${SITE}#install`} target="_blank" rel="noreferrer">
+            {t('getIt')}
+          </a>
+        </p>
       </div>
       <label class="step">
         <span class="step-num">1</span>
@@ -280,6 +290,31 @@ function LastCommandRow({ cmd, now }: { cmd: LastCommand | null; now: number }) 
   );
 }
 
+/** What the extension does and where to get the remote: for first-time users and store reviewers. */
+function AboutSection() {
+  return (
+    <>
+      <p class="small">{t('aboutRemote')}</p>
+      <p class="small muted">{t('aboutPaths')}</p>
+      <p class="small muted">{t('aboutFullscreen')}</p>
+      <div class="stack tight">
+        <strong class="small">{t('getAppTitle')}</strong>
+        <ul class="links small">
+          <li>
+            <a href={LATEST_RELEASE} target="_blank" rel="noreferrer">{t('getAndroid')}</a>
+          </li>
+          <li>
+            <a href={`${SITE}#install`} target="_blank" rel="noreferrer">{t('getIphone')}</a>
+          </li>
+          <li>
+            <a href={SITE} target="_blank" rel="noreferrer">{t('installGuide')}</a>
+          </li>
+        </ul>
+      </div>
+    </>
+  );
+}
+
 function Collapsible({ title, children, open }: { title: string; children: preact.ComponentChildren; open?: boolean }) {
   return (
     <details class="card collapsible" open={open}>
@@ -295,7 +330,7 @@ function PairSection({ settings, onChange }: { settings: ExtensionSettings; onCh
   if (settings.relayUrl) params.set('relay', settings.relayUrl);
   const qr = qrcode(0, 'M');
   // An https link, so a phone camera opens it; the landing page hands off to relay://pair.
-  qr.addData(`https://sandoramix.github.io/slop-remote-relay/pair/#${params}`);
+  qr.addData(`${SITE}pair/#${params}`);
   qr.make();
 
   return (
@@ -407,7 +442,7 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         <input type="url" value={mqtt} spellcheck={false} onInput={(e) => setMqtt((e.target as HTMLInputElement).value)} />
         {!mqttOk ? <span class="error small">{t('invalidRelay')}</span> : null}
       </label>
-      <UpdateSetting />
+      {isStoreInstall() ? null : <UpdateSetting />}
       <button
         type="button"
         class="primary"
@@ -564,7 +599,7 @@ function App() {
   return (
     <main class="stack">
       <Header />
-      <UpdateBanner />
+      {isStoreInstall() ? null : <UpdateBanner />}
       {!paired ? (
         <Setup
           initial={settings}
@@ -590,11 +625,19 @@ function App() {
           </Collapsible>
         </>
       )}
+      <Collapsible title={t('aboutSection')} open={!paired}>
+        <AboutSection />
+      </Collapsible>
       <footer class="footer muted small">
         <span>{t('version', { version: chrome.runtime.getManifest().version })}</span>
-        <a href="https://github.com/sandoramix/slop-remote-relay" target="_blank" rel="noreferrer">
-          {t('project')}
-        </a>
+        <span class="row">
+          <a href={SITE} target="_blank" rel="noreferrer">
+            {t('guide')}
+          </a>
+          <a href="https://github.com/sandoramix/slop-remote-relay" target="_blank" rel="noreferrer">
+            {t('project')}
+          </a>
+        </span>
       </footer>
     </main>
   );

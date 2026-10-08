@@ -20,8 +20,6 @@ export const TargetSchema = z.object({
   pairCode: z.string().min(1),
   /** LAN address of an Android receiver; discovered over mDNS or typed. */
   lanHost: z.string().nullable().default(null),
-  /** BLE device id of an Android receiver, from a scan. */
-  bleDeviceId: z.string().nullable().default(null),
 });
 export type Target = z.infer<typeof TargetSchema>;
 
@@ -64,11 +62,6 @@ export const SettingsSchema = z.object({
   /** UI language. Never taken from the device: English unless the user picks otherwise. */
   language: z.enum(LANGUAGES).catch('en'),
   keepAwake: z.boolean().catch(false),
-
-  /** Android in-app updates: when the last successful check ran (ms since epoch, 0 = never)... */
-  lastUpdateCheck: z.number().catch(0),
-  /** ...and the newer version it found, if any, so the badge survives a restart. */
-  knownUpdateVersion: z.string().nullable().catch(null),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

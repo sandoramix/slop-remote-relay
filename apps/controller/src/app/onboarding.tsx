@@ -28,7 +28,7 @@ export default function Onboarding() {
       <KeyboardSafe>
         <ScrollView contentContainerClassName="gap-8 px-4 pb-10 pt-8" keyboardShouldPersistTaps="handled">
           <View className="gap-2">
-            <Text className="text-4xl font-bold tracking-tight text-foreground">Relay</Text>
+            <Text className="text-4xl font-bold tracking-tight text-foreground">Skipper</Text>
             <Text className="text-base leading-6 text-muted-foreground">
               {t('onboarding.intro')}
             </Text>
@@ -48,7 +48,7 @@ export default function Onboarding() {
               label={t('onboarding.relayServer')}
               value={relay}
               onChangeText={setRelay}
-              placeholder="wss://relay.esempio.it"
+              placeholder="wss://relay.example.com"
               keyboardType="url"
             />
           </Section>

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Associa Relay</title>
+<title>Pair Skipper</title>
 <style>
   body { font: 16px system-ui, sans-serif; background: #14181e; color: #ede9e3; max-width: 28rem; margin: 3rem auto; padding: 0 1rem; text-align: center; }
   a.btn { display: block; background: #e8b04b; color: #14181e; padding: 1rem; border-radius: 12px; font-weight: 600; text-decoration: none; margin: 1.5rem 0 1rem; }
@@ -14,26 +14,58 @@
 </style>
 </head>
 <body>
-<h1>Associa Relay</h1>
-<p id="msg">Apro Relay…</p>
-<a class="btn" id="open" href="#">Apri in Relay</a>
-<p class="muted">Non hai l'app? <a class="sub" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Scarica il controller</a>, poi torna qui e tocca il pulsante.</p>
-<p class="muted" id="manual" hidden>Oppure inserisci questo codice a mano: <code id="code"></code></p>
+<h1 id="title">Pair Skipper</h1>
+<p id="msg">Opening Skipper…</p>
+<a class="btn" id="open" href="#">Open in Skipper</a>
+<p class="muted"><span id="noapp">Don't have the app?</span> <a class="sub" id="get" href="../#install">Get the remote</a><span id="then">, then come back here and tap the button.</span></p>
+<p class="muted" id="manual" hidden><span id="manualText">Or enter this code by hand:</span> <code id="code"></code></p>
 <script>
+  // English first, Italian when the browser asks for it.
+  var STRINGS = {
+    en: {
+      title: 'Pair Skipper',
+      msg: 'Opening Skipper…',
+      open: 'Open in Skipper',
+      noapp: "Don't have the app?",
+      get: 'Get the remote',
+      then: ', then come back here and tap the button.',
+      manualText: 'Or enter this code by hand:',
+      invalid: 'Invalid pairing link.',
+    },
+    it: {
+      title: 'Associa Skipper',
+      msg: 'Apro Skipper…',
+      open: 'Apri in Skipper',
+      noapp: "Non hai l'app?",
+      get: 'Scarica il telecomando',
+      then: ', poi torna qui e tocca il pulsante.',
+      manualText: 'Oppure inserisci questo codice a mano:',
+      invalid: 'Link di associazione non valido.',
+    },
+  };
+  var lang = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
+  var s = STRINGS[lang];
+  document.documentElement.lang = lang;
+  document.title = s.title;
+  ['title', 'msg', 'open', 'noapp', 'get', 'then', 'manualText'].forEach(function (id) {
+    document.getElementById(id).textContent = s[id];
+  });
+
   // The QR carries the pairing data in the fragment, so it never reaches the
   // server: #code=…&name=…&kind=…&relay=…&lan=…
   var query = location.hash.replace(/^#/, '');
   var params = new URLSearchParams(query);
   var code = params.get('code');
   if (!code) {
-    document.getElementById('msg').textContent = 'Link di associazione non valido.';
+    document.getElementById('msg').textContent = s.invalid;
     document.getElementById('open').hidden = true;
   } else {
     var link = 'relay://pair?' + query;
     var ua = navigator.userAgent;
-    // Chrome on Android is more reliable with an explicit intent than with a bare custom scheme.
+    // Chrome on Android is more reliable with an explicit intent than with a
+    // bare custom scheme. The package is the controller's (app.config.ts).
     var href = /Android/i.test(ua)
-      ? 'intent://pair?' + query + '#Intent;scheme=relay;package=com.relay.controller;end'
+      ? 'intent://pair?' + query + '#Intent;scheme=relay;package=dev.sandoramix.skipper;end'
       : link;
     document.getElementById('open').href = href;
     document.getElementById('code').textContent = code;

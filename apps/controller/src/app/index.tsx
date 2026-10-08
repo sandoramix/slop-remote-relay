@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { Settings2 } from 'lucide-react-native';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from '../components/SafeArea';
-import { UpdateDot } from '../components/UpdatesSection';
 import { ActionRow } from '../components/remote/ActionRow';
 import { ConnectionChip } from '../components/remote/ConnectionChip';
 import { EpisodeNav } from '../components/remote/EpisodeNav';
@@ -10,9 +9,10 @@ import { FeedbackToast } from '../components/remote/FeedbackToast';
 import { NowPlaying } from '../components/remote/NowPlaying';
 import { SeekPad } from '../components/remote/SeekPad';
 import { TargetSwitcher } from '../components/remote/TargetSwitcher';
+import { UpdateBanner, UpdateDot } from '../components/UpdateBanner';
 import { useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
-import { useUpdateAvailable } from '../lib/updater';
+import { useNewerRelease } from '../state/update';
 
 /**
  * The remote. Built for a dark room and one thumb: what is playing up top,
@@ -20,7 +20,7 @@ import { useUpdateAvailable } from '../lib/updater';
  */
 export default function Remote() {
   const t = useT();
-  const updateAvailable = useUpdateAvailable();
+  const updateAvailable = useNewerRelease() !== null;
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
       <ScrollView contentContainerClassName="gap-5 px-4 pb-28 pt-2">
@@ -37,6 +37,7 @@ export default function Remote() {
             {updateAvailable ? <UpdateDot className="absolute right-1 top-1" /> : null}
           </Pressable>
         </View>
+        <UpdateBanner />
         <ConnectionChip />
         <NowPlaying />
         <SeekPad />

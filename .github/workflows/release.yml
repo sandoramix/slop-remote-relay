@@ -5,7 +5,8 @@ name: Release
 #   relay-receiver-<v>.apk     Android receiver (Kotlin)
 #   relay-controller-<v>.apk   Android controller (Expo, prebuilt in CI)
 #   relay-controller-<v>-unsigned.ipa   iOS controller, unsigned (re-sign to install)
-#   relay-extension-<v>.zip    Chrome/Brave extension (load unpacked, or upload to a store)
+#   relay-extension-<v>.zip    Chrome/Brave extension, load unpacked
+#   skipper-chrome-web-store-<v>.zip  the same, for a Chrome Web Store upload
 #   relay-server-<v>.tgz       relay server, built JS
 #   ghcr.io/<owner>/slop-remote-relay-server:<v> and :latest   relay server image
 #
@@ -206,21 +207,26 @@ jobs:
         id: archive
         working-directory: apps/controller/ios
         run: |
-          xcodebuild -workspace Relay.xcworkspace -scheme Relay -configuration Release \
+          # Prebuild names the project after the app (app.config.ts `name`).
+          WS=$(ls -d *.xcworkspace | head -n 1)
+          NAME="${WS%.xcworkspace}"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          xcodebuild -workspace "$WS" -scheme "$NAME" -configuration Release \
             -sdk iphoneos -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/Relay.xcarchive" \
+            -archivePath "$RUNNER_TEMP/Controller.xcarchive" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
           mkdir -p "$RUNNER_TEMP/Payload" "$GITHUB_WORKSPACE/out"
-          cp -R "$RUNNER_TEMP/Relay.xcarchive/Products/Applications/Relay.app" "$RUNNER_TEMP/Payload/"
+          cp -R "$RUNNER_TEMP/Controller.xcarchive/Products/Applications/$NAME.app" "$RUNNER_TEMP/Payload/"
           (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/out/relay-controller-${RELAY_VERSION}-unsigned.ipa" Payload)
           ccache --show-stats
       - name: App info for the AltStore source
         # AltStore requires a source to list every privacy string and
         # entitlement; read them from the built app so they cannot drift.
         run: |
-          APP="$RUNNER_TEMP/Relay.xcarchive/Products/Applications/Relay.app"
+          NAME="${{ steps.archive.outputs.name }}"
+          APP="$RUNNER_TEMP/Controller.xcarchive/Products/Applications/$NAME.app"
           plutil -convert json -o "$RUNNER_TEMP/info.json" "$APP/Info.plist"
-          ENT=apps/controller/ios/Relay/Relay.entitlements
+          ENT="apps/controller/ios/$NAME/$NAME.entitlements"
           if [ -f "$ENT" ]; then plutil -convert json -o "$RUNNER_TEMP/ent.json" "$ENT"; else echo "{}" > "$RUNNER_TEMP/ent.json"; fi
           node -e "
             const info = require(process.env.RUNNER_TEMP + '/info.json');
@@ -259,6 +265,8 @@ jobs:
           node build.mjs --zip
           mkdir -p "$GITHUB_WORKSPACE/out"
           mv relay-extension-*.zip "$GITHUB_WORKSPACE/out/relay-extension-${RELAY_VERSION}.zip"
+          node build.mjs --store
+          mv skipper-chrome-web-store-*.zip "$GITHUB_WORKSPACE/out/skipper-chrome-web-store-${RELAY_VERSION}.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: extension
@@ -333,9 +341,9 @@ jobs:
       - name: Create or update the release
         run: |
           if gh release view "$RELAY_VERSION" >/dev/null 2>&1; then
-            gh release edit "$RELAY_VERSION" --title "Relay $RELAY_VERSION" --notes-file notes.md
+            gh release edit "$RELAY_VERSION" --title "Skipper $RELAY_VERSION" --notes-file notes.md
           else
-            gh release create "$RELAY_VERSION" --verify-tag --title "Relay $RELAY_VERSION" --notes-file notes.md
+            gh release create "$RELAY_VERSION" --verify-tag --title "Skipper $RELAY_VERSION" --notes-file notes.md
           fi
 
   publish-extension:
@@ -392,7 +400,7 @@ jobs:
       - name: SHA256SUMS of everything published
         run: |
           mkdir files && cd files
-          gh release download "$RELAY_VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'relay-*'
+          gh release download "$RELAY_VERSION" --repo "$GITHUB_REPOSITORY" --pattern 'relay-*' --pattern 'skipper-*'
           sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
           gh release upload "$RELAY_VERSION" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 

@@ -10,7 +10,7 @@ import { useT } from '../lib/i18n';
 import { palette } from '../lib/palette';
 import { useRelayConnection } from '../state/session';
 import { useSettings } from '../state/settings';
-import { checkForUpdate } from '../lib/updater';
+import { useUpdate } from '../state/update';
 
 // Keep the splash up until settings are loaded, so the first frame already
 // knows whether to show onboarding or the remote.
@@ -26,6 +26,15 @@ function Connection() {
   return null;
 }
 
+/** Asks GitHub for a newer release at start, at most every 12 hours. */
+function UpdateCheck() {
+  const check = useUpdate((s) => s.check);
+  useEffect(() => {
+    void check();
+  }, [check]);
+  return null;
+}
+
 export default function RootLayout() {
   const t = useT();
   const keepAwake = useSettings((s) => s.keepAwake);
@@ -36,11 +45,6 @@ export default function RootLayout() {
     if (hydrated) void SplashScreen.hideAsync();
   }, [hydrated]);
 
-  // One quiet update check per launch (throttled to every 12 h inside, errors swallowed).
-  useEffect(() => {
-    if (hydrated) void checkForUpdate({ silent: true });
-  }, [hydrated]);
-
   if (!hydrated) return null;
 
   return (
@@ -48,6 +52,7 @@ export default function RootLayout() {
       <GluestackUIProvider mode="dark">
         <StatusBar style="light" />
         <Connection />
+        <UpdateCheck />
         {keepAwake ? <KeepAwake /> : null}
         <Stack
           screenOptions={{
