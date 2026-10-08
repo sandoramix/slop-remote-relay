@@ -1,6 +1,8 @@
 package com.relay.receiver.actions
 
 import android.accessibilityservice.AccessibilityService
+import com.relay.receiver.R
+import com.relay.receiver.core.str
 import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.graphics.Path
@@ -105,7 +107,7 @@ class AccessibilityExecutor(
             Log.d(TAG, "step $index ${step::class.simpleName} -> $done")
             if (done) return ExecResult.ok(id, "${step::class.simpleName} on ${pkg ?: "?"}")
         }
-        return ExecResult.fail(id, "Nessuna strategia ha funzionato su ${pkg ?: "app sconosciuta"}")
+        return ExecResult.fail(id, context.str(R.string.err_no_strategy, pkg ?: context.str(R.string.unknown_app)))
     }
 
     private suspend fun exitFullscreen(): ExecResult {
@@ -113,7 +115,7 @@ class AccessibilityExecutor(
         val pkg = svc.foregroundPackage
         // Back outside fullscreen would navigate away from the video, so only
         // press it when the markers say there is something to leave.
-        if (isFullscreen() == false) return ExecResult.ok(id, "già fuori dallo schermo intero")
+        if (isFullscreen() == false) return ExecResult.ok(id, context.str(R.string.err_already_windowed))
 
         val steps = recipes.forPackage(pkg)?.exitFullscreen?.takeIf { it.isNotEmpty() }
             ?: recipes.fallbackExitFullscreen()
@@ -123,7 +125,7 @@ class AccessibilityExecutor(
             Log.d(TAG, "exit step $index ${step::class.simpleName} -> $done")
             if (done) return ExecResult.ok(id, "exit ${step::class.simpleName} on ${pkg ?: "?"}")
         }
-        return ExecResult.fail(id, "Impossibile uscire dallo schermo intero su ${pkg ?: "app sconosciuta"}")
+        return ExecResult.fail(id, context.str(R.string.err_cannot_exit, pkg ?: context.str(R.string.unknown_app)))
     }
 
     private suspend fun runStep(svc: RelayAccessibilityService, step: Step): Boolean =
@@ -353,7 +355,7 @@ class AccessibilityExecutor(
                 is Step.Rotate, is Step.Back, is Step.Key -> Unit
             }
         }
-        return ExecResult.fail(id, "Nessuna strategia di seek su ${pkg ?: "app sconosciuta"}")
+        return ExecResult.fail(id, context.str(R.string.err_no_seek_strategy, pkg ?: context.str(R.string.unknown_app)))
     }
 
     private companion object {

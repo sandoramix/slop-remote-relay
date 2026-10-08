@@ -33,7 +33,11 @@ interface ActionExecutor {
  * fragile, Shizuku last (when enabled) because it is the most powerful and the
  * most demanding to set up.
  */
-class ExecutorChain(private val executors: List<ActionExecutor>) {
+class ExecutorChain(
+    private val executors: List<ActionExecutor>,
+    /** Resolved per call so the receiver language applies live. */
+    private val noExecutorDetail: () -> String,
+) {
 
     suspend fun run(command: Command): ExecResult {
         var lastFailure: ExecResult? = null
@@ -49,7 +53,7 @@ class ExecutorChain(private val executors: List<ActionExecutor>) {
             handled = false,
             ok = false,
             executor = null,
-            detail = "Nessun esecutore disponibile per questo comando",
+            detail = noExecutorDetail(),
         )
     }
 

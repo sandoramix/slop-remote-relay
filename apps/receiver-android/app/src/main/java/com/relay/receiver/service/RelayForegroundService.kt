@@ -1,6 +1,7 @@
 package com.relay.receiver.service
 
 import android.app.Notification
+import com.relay.receiver.core.str
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -56,7 +57,7 @@ class RelayForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification("Avvio…"))
+        startForeground(NOTIFICATION_ID, buildNotification(str(R.string.notif_starting)))
         bootstrap()
     }
 
@@ -69,7 +70,7 @@ class RelayForegroundService : Service() {
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val pairCode = prefs.getString(KEY_PAIR_CODE, null)
         if (pairCode.isNullOrBlank()) {
-            updateNotification("In attesa dell'accoppiamento")
+            updateNotification(str(R.string.notif_waiting_pairing))
             return
         }
 
@@ -88,7 +89,7 @@ class RelayForegroundService : Service() {
                 accessibility,
                 ShizukuExecutor(this, recipes) { accessibility.isFullscreen() },
             ),
-        )
+        ) { str(R.string.err_no_executor) }
 
         val commandRouter = CommandRouter(this, secret, chain, mediaSession, recipes) {
             accessibility.isFullscreen()
@@ -147,8 +148,8 @@ class RelayForegroundService : Service() {
     }
 
     private fun describe(live: List<String>): String = when {
-        live.isEmpty() -> "In ascolto, nessun controller collegato"
-        else -> "Collegato via ${live.joinToString(", ")}"
+        live.isEmpty() -> str(R.string.notif_listening)
+        else -> str(R.string.notif_connected, live.joinToString(", "))
     }
 
     override fun onDestroy() {
@@ -167,7 +168,7 @@ class RelayForegroundService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    "Relay attivo",
+                    str(R.string.notif_channel),
                     // MIN so the persistent notification stays out of the way.
                     NotificationManager.IMPORTANCE_MIN,
                 ),
@@ -220,6 +221,7 @@ class RelayForegroundService : Service() {
         }
 
         const val PREFS = "relay.config"
+        const val KEY_LANGUAGE = "language"
         const val KEY_PAIR_CODE = "pairCode"
         const val KEY_RELAY_URL = "relayUrl"
         const val KEY_MQTT_URL = "mqttUrl"

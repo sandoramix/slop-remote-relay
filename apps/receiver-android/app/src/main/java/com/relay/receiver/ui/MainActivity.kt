@@ -2,6 +2,7 @@ package com.relay.receiver.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -25,6 +26,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import com.relay.receiver.R
+import com.relay.receiver.core.SUPPORTED_LANGUAGES
+import com.relay.receiver.core.chosenLanguage
+import com.relay.receiver.core.localized
 import com.relay.receiver.service.RelayForegroundService
 import com.relay.receiver.shizuku.ShizukuBridge
 import com.relay.receiver.transport.MqttTransport
@@ -52,6 +57,10 @@ class MainActivity : Activity() {
 
     private val prefs by lazy { getSharedPreferences(RelayForegroundService.PREFS, MODE_PRIVATE) }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.localized())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = BG
@@ -63,17 +72,18 @@ class MainActivity : Activity() {
         }
 
         root.addView(text("Relay", 30f, FG, bold = true))
-        root.addView(text("Ricevitore — questo telefono viene comandato", 14f, MUTED).apply {
+        root.addView(text(getString(R.string.subtitle), 14f, MUTED).apply {
             setPadding(0, 0, 0, dp(16))
         })
+        root.addView(languageRow())
 
         statusView = text("", 15f, FG).apply { setLineSpacing(0f, 1.3f) }
         root.addView(card(statusView))
 
         // ------------------------------------------------------------ pairing
-        root.addView(header("Accoppiamento"))
-        pairInput = input("Codice di accoppiamento", prefs.getString(RelayForegroundService.KEY_PAIR_CODE, ""))
-        relayInput = input("wss://relay.esempio.it (facoltativo)", prefs.getString(RelayForegroundService.KEY_RELAY_URL, ""))
+        root.addView(header(getString(R.string.header_pairing)))
+        pairInput = input(getString(R.string.hint_pair_code), prefs.getString(RelayForegroundService.KEY_PAIR_CODE, ""))
+        relayInput = input(getString(R.string.hint_relay_url), prefs.getString(RelayForegroundService.KEY_RELAY_URL, ""))
         mqttInput = input(MqttTransport.DEFAULT_URL, prefs.getString(RelayForegroundService.KEY_MQTT_URL, ""))
         qrView = ImageView(this).apply {
             adjustViewBounds = true
@@ -82,24 +92,24 @@ class MainActivity : Activity() {
         }
         root.addView(
             card(
-                label("Codice"), pairInput,
-                button("Genera un codice nuovo", secondary = true) { pairInput.setText(generatePairCode()) },
-                label("Server relay"), relayInput,
-                label("Broker MQTT"), mqttInput,
-                label("Inquadra dal controller per associarlo"), qrView,
+                label(getString(R.string.label_code)), pairInput,
+                button(getString(R.string.btn_generate_code), secondary = true) { pairInput.setText(generatePairCode()) },
+                label(getString(R.string.label_relay_server)), relayInput,
+                label(getString(R.string.label_mqtt_broker)), mqttInput,
+                label(getString(R.string.label_scan_qr)), qrView,
             ),
         )
 
         // ------------------------------------------------------------ paths
-        root.addView(header("Percorsi attivi"))
+        root.addView(header(getString(R.string.header_paths)))
         val disabled = prefs.getString(RelayForegroundService.KEY_DISABLED, "").orEmpty().split(",").toSet()
         val paths = listOf(
-            "lan" to "Wi-Fi locale",
-            "webrtc" to "WebRTC P2P (serve il relay)",
-            "relay" to "Relay WebSocket",
-            "http" to "Relay HTTP",
-            "mqtt" to "MQTT",
-            "ble" to "Bluetooth",
+            "lan" to getString(R.string.path_lan),
+            "webrtc" to getString(R.string.path_webrtc),
+            "relay" to getString(R.string.path_relay),
+            "http" to getString(R.string.path_http),
+            "mqtt" to getString(R.string.path_mqtt),
+            "ble" to getString(R.string.path_ble),
         )
         val boxes = paths.map { (id, name) ->
             CheckBox(this).apply {
@@ -111,36 +121,35 @@ class MainActivity : Activity() {
         }
         root.addView(card(*boxes.toTypedArray()))
 
-        root.addView(button("Salva e riavvia") { save() })
+        root.addView(button(getString(R.string.btn_save_restart)) { save() })
 
         // ------------------------------------------------------------ grants
-        root.addView(header("Permessi"))
-        shizukuButton = button("Shizuku", secondary = true) {
+        root.addView(header(getString(R.string.header_permissions)))
+        shizukuButton = button(getString(R.string.btn_shizuku), secondary = true) {
             if (ShizukuBridge.running()) ShizukuBridge.requestPermission()
             else openUrl("https://shizuku.rikka.app/guide/setup/")
         }
         root.addView(
             card(
-                button("1. Accesso alle notifiche — salti esatti", secondary = true) {
+                button(getString(R.string.perm_notifications), secondary = true) {
                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 },
-                button("2. Accessibilità — schermo intero", secondary = true) {
+                button(getString(R.string.perm_accessibility), secondary = true) {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 },
-                button("3. Bluetooth e notifiche", secondary = true) { requestRuntimePermissions() },
-                button("4. Modifica impostazioni — rotazione", secondary = true) {
+                button(getString(R.string.perm_bluetooth), secondary = true) { requestRuntimePermissions() },
+                button(getString(R.string.perm_write_settings), secondary = true) {
                     startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
                 },
-                button("5. Escludi dall'ottimizzazione batteria", secondary = true) {
+                button(getString(R.string.perm_battery), secondary = true) {
                     startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 },
-                button("6. Autostart del produttore (Xiaomi, Oppo, Samsung…)", secondary = true) {
+                button(getString(R.string.perm_autostart), secondary = true) {
                     startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
                 },
                 shizukuButton,
                 text(
-                    "Shizuku è facoltativo: sblocca tasti e tocchi anche senza accessibilità, " +
-                        "ma va riavviato dopo ogni riavvio del telefono.",
+                    getString(R.string.shizuku_note),
                     12f,
                     MUTED,
                 ),
@@ -179,15 +188,15 @@ class MainActivity : Activity() {
         val accessibility = isAccessibilityEnabled()
         val ok = "●"
         statusView.text = buildString {
-            appendLine("$ok Salti esatti: ${if (notifications) "pronti" else "manca l'accesso alle notifiche"}")
-            appendLine("$ok Schermo intero: ${if (accessibility) "pronto" else "manca l'accessibilità"}")
-            appendLine("$ok Rotazione: ${if (Settings.System.canWrite(this@MainActivity)) "pronta" else "non concessa"}")
+            appendLine("$ok ${getString(if (notifications) R.string.status_seek_ready else R.string.status_seek_missing)}")
+            appendLine("$ok ${getString(if (accessibility) R.string.status_fullscreen_ready else R.string.status_fullscreen_missing)}")
+            appendLine("$ok ${getString(if (Settings.System.canWrite(this@MainActivity)) R.string.status_rotation_ready else R.string.status_rotation_missing)}")
             append("$ok ${ShizukuBridge.state(this@MainActivity)}")
         }
         shizukuButton.text = when {
-            ShizukuBridge.granted() -> "Shizuku: pronto"
-            ShizukuBridge.running() -> "Shizuku: concedi il permesso"
-            else -> "Shizuku: come si attiva"
+            ShizukuBridge.granted() -> getString(R.string.shizuku_btn_ready)
+            ShizukuBridge.running() -> getString(R.string.shizuku_btn_grant)
+            else -> getString(R.string.shizuku_btn_howto)
         }
         renderQr()
     }
@@ -218,6 +227,42 @@ class MainActivity : Activity() {
         }
         qrView.setImageBitmap(bmp)
         qrView.visibility = View.VISIBLE
+    }
+
+    /** "Language" label with one button per language, each named in its own language. */
+    private fun languageRow() = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, 0, 0, dp(8))
+        addView(text(getString(R.string.language_label), 13f, MUTED).apply { setPadding(0, 0, dp(12), 0) })
+        val current = chosenLanguage()
+        SUPPORTED_LANGUAGES.forEach { code ->
+            val selected = code == current
+            addView(Button(this@MainActivity).apply {
+                text = getString(if (code == "it") R.string.language_it else R.string.language_en)
+                isAllCaps = false
+                textSize = 13f
+                minHeight = 0
+                minimumHeight = 0
+                setTextColor(if (selected) PRIMARY_INK else FG)
+                background = rounded(if (selected) PRIMARY else SECONDARY, 14)
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { marginEnd = dp(8) }
+                setOnClickListener { if (!selected) setLanguage(code) }
+            })
+        }
+    }
+
+    private fun setLanguage(code: String) {
+        prefs.edit().putString(RelayForegroundService.KEY_LANGUAGE, code).apply()
+        // The service resolves strings per call, but its notification only
+        // refreshes on the next status tick; restart it so the new language shows now.
+        stopService(Intent(this, RelayForegroundService::class.java))
+        RelayForegroundService.ensureRunning(this)
+        recreate()
     }
 
     private fun lanAddress(): String? = runCatching {

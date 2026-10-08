@@ -1,6 +1,8 @@
 package com.relay.receiver.shizuku
 
 import android.content.ComponentName
+import com.relay.receiver.R
+import com.relay.receiver.core.str
 import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
@@ -60,10 +62,10 @@ object ShizukuBridge {
     }
 
     fun state(context: Context): String = when {
-        !isInstalled(context) -> "Shizuku non installato"
-        !running() -> "Shizuku installato ma non avviato"
-        !granted() -> "Shizuku avviato, permesso non concesso"
-        else -> "Shizuku pronto"
+        !isInstalled(context) -> context.str(R.string.shizuku_not_installed)
+        !running() -> context.str(R.string.shizuku_not_running)
+        !granted() -> context.str(R.string.shizuku_not_granted)
+        else -> context.str(R.string.shizuku_ready)
     }
 
     private fun isInstalled(context: Context): Boolean = runCatching {

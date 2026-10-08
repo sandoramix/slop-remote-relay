@@ -1,6 +1,8 @@
 package com.relay.receiver.actions
 
 import android.content.ComponentName
+import com.relay.receiver.R
+import com.relay.receiver.core.str
 import android.content.Context
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -119,7 +121,7 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
         val controller = activeController() ?: return ExecResult.notHandled(id)
         val state = controller.playbackState ?: return ExecResult.notHandled(id)
         if (state.actions and PlaybackState.ACTION_SEEK_TO == 0L) {
-            return ExecResult.fail(id, "${controller.packageName} non supporta il salto a una posizione")
+            return ExecResult.fail(id, context.str(R.string.err_no_seek_to, controller.packageName))
         }
         val duration = controller.metadata
             ?.getLong(android.media.MediaMetadata.METADATA_KEY_DURATION)

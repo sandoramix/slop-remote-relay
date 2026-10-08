@@ -1,6 +1,8 @@
 package com.relay.receiver.actions
 
 import android.content.Context
+import com.relay.receiver.R
+import com.relay.receiver.core.str
 import android.util.Log
 import com.relay.receiver.core.Command
 import com.relay.receiver.core.ExecResult
@@ -54,7 +56,7 @@ class ShizukuExecutor(
         is Command.FullscreenExit -> runSteps(exitSteps(), "exit", want = false)
         is Command.PlayPause -> key("KEYCODE_MEDIA_PLAY_PAUSE")
             ?.let { ExecResult.ok(id, "media key") }
-            ?: ExecResult.fail(id, "Shizuku non risponde")
+            ?: ExecResult.fail(id, context.str(R.string.err_shizuku_silent))
         is Command.Seek -> seekByTapping(command.deltaMs)
         else -> ExecResult.notHandled(id)
     }
@@ -71,7 +73,7 @@ class ShizukuExecutor(
 
     private suspend fun runSteps(steps: List<Step>, what: String, want: Boolean): ExecResult {
         val target = pkg()
-        if (fullscreenState() == want) return ExecResult.ok(id, "già nello stato richiesto")
+        if (fullscreenState() == want) return ExecResult.ok(id, context.str(R.string.ok_already_state))
         for (step in steps) {
             val done = when (step) {
                 is Step.Key -> key(step.code) != null
@@ -93,12 +95,12 @@ class ShizukuExecutor(
                 want -> return ExecResult.ok(id, "$what ${step::class.simpleName} on ${target ?: "?"}")
                 null -> return ExecResult.ok(
                     id,
-                    "$what ${step::class.simpleName} inviato su ${target ?: "?"} (non verificato)",
+                    context.str(R.string.ok_sent_unverified, what, step::class.simpleName ?: "?", target ?: "?"),
                 )
                 else -> Unit // injected, no effect: try the next step
             }
         }
-        return ExecResult.fail(id, "Nessun passo Shizuku applicabile su ${target ?: "app sconosciuta"}")
+        return ExecResult.fail(id, context.str(R.string.err_no_shizuku_step, target ?: context.str(R.string.unknown_app)))
     }
 
     private suspend fun seekByTapping(deltaMs: Long): ExecResult {
