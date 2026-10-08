@@ -44,7 +44,9 @@ anything. `docs/DEVELOPMENT.md` covers building and testing each app.
 - **Shizuku commands are fixed argv templates.** Recipes may name a key code,
   never a command. Nothing goes through `sh -c`.
 - Code comments in English. Documentation (all Markdown) in English. User-facing
-  strings in the apps stay in Italian.
+  strings in the apps are English first (the default, whatever the device
+  language) with Italian as the second language, chosen in-app; every new
+  string needs both.
 
 ## How to work
 
