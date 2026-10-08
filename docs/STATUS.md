@@ -86,7 +86,11 @@ npm run send -- cielo-lento-42 device.status
 
 - `Codec.verify` accepts unsigned `hello` for symmetry with `codec.ts`; the
   router ignores it, so no impact.
-- The controller cannot yet scan a QR code in-app; it relies on the system camera
-  opening the `relay://pair` link.
+- The controller cannot yet scan a QR code in-app. Receiver and extension QR codes
+  now encode `https://sandoramix.github.io/slop-remote-relay/pair/#…` (camera apps
+  show a bare `relay://` as plain text); that page, `pages/pair/index.html`, opens
+  `relay://pair?…`. **Not verified**: it needs the Pages workflow to run once on
+  GitHub, and a real phone camera to scan it. Pairing by `relay://` link itself is
+  verified (see above).
 - The receiver has no learning mode for recording a tap coordinate on unknown
   apps, though `RecipeEngine` already reads learned recipes.

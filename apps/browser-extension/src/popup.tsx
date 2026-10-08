@@ -294,7 +294,8 @@ function PairSection({ settings, onChange }: { settings: ExtensionSettings; onCh
   const params = new URLSearchParams({ code: settings.pairCode, name: 'Browser', kind: 'browser' });
   if (settings.relayUrl) params.set('relay', settings.relayUrl);
   const qr = qrcode(0, 'M');
-  qr.addData(`relay://pair?${params}`);
+  // An https link, so a phone camera opens it; the landing page hands off to relay://pair.
+  qr.addData(`https://sandoramix.github.io/slop-remote-relay/pair/#${params}`);
   qr.make();
 
   return (

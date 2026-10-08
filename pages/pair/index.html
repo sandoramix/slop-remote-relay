@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Associa Relay</title>
+<style>
+  body { font: 16px system-ui, sans-serif; background: #14181e; color: #ede9e3; max-width: 28rem; margin: 3rem auto; padding: 0 1rem; text-align: center; }
+  a.btn { display: block; background: #e8b04b; color: #14181e; padding: 1rem; border-radius: 12px; font-weight: 600; text-decoration: none; margin: 1.5rem 0 1rem; }
+  a.sub { color: #e8b04b; }
+  code { background: #1d232b; padding: .2rem .5rem; border-radius: 6px; }
+  .muted { color: #9aa0a8; font-size: .9rem; }
+</style>
+</head>
+<body>
+<h1>Associa Relay</h1>
+<p id="msg">Apro Relay…</p>
+<a class="btn" id="open" href="#">Apri in Relay</a>
+<p class="muted">Non hai l'app? <a class="sub" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Scarica il controller</a>, poi torna qui e tocca il pulsante.</p>
+<p class="muted" id="manual" hidden>Oppure inserisci questo codice a mano: <code id="code"></code></p>
+<script>
+  // The QR carries the pairing data in the fragment, so it never reaches the
+  // server: #code=…&name=…&kind=…&relay=…&lan=…
+  var query = location.hash.replace(/^#/, '');
+  var params = new URLSearchParams(query);
+  var code = params.get('code');
+  if (!code) {
+    document.getElementById('msg').textContent = 'Link di associazione non valido.';
+    document.getElementById('open').hidden = true;
+  } else {
+    var link = 'relay://pair?' + query;
+    var ua = navigator.userAgent;
+    // Chrome on Android is more reliable with an explicit intent than with a bare custom scheme.
+    var href = /Android/i.test(ua)
+      ? 'intent://pair?' + query + '#Intent;scheme=relay;package=com.relay.controller;end'
+      : link;
+    document.getElementById('open').href = href;
+    document.getElementById('code').textContent = code;
+    document.getElementById('manual').hidden = false;
+    setTimeout(function () { location.href = href; }, 300);
+  }
+</script>
+</body>
+</html>

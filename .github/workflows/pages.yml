@@ -1,0 +1,42 @@
+name: Pages
+
+# Publishes the pairing landing page (the target of every receiver's QR code)
+# without waiting for a release. The release workflow's altstore job publishes
+# the same site, so neither deploy drops the other's files.
+on:
+  push:
+    branches: [master]
+    paths: ['pages/**', 'tools/altstore-source.mjs']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}pair/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Exit code 3 only means no release has an iOS build yet; the pairing
+        # page is already copied by then.
+        run: node tools/altstore-source.mjs site || [ $? -eq 3 ]
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

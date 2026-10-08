@@ -57,6 +57,11 @@ function whatsNew(body = '') {
   return text.length > 3000 ? `${text.slice(0, 2990)}…` : text;
 }
 
+// The pairing landing page that receivers' QR codes point to; published with
+// the source because both live on the same Pages site.
+mkdirSync(path.join(outDir, 'pair'), { recursive: true });
+copyFileSync('pages/pair/index.html', path.join(outDir, 'pair', 'index.html'));
+
 const versions = (await releases())
   .map((r) => {
     const ipa = r.assets.find((a) => /^relay-controller-.+-unsigned\.ipa$/.test(a.name));

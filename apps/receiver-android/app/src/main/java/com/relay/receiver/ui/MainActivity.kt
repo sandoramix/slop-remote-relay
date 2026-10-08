@@ -192,7 +192,10 @@ class MainActivity : Activity() {
         renderQr()
     }
 
-    /** relay://pair?… — the controller's pairing deep link, as a QR code. */
+    /**
+     * The pairing link as a QR code. It is an https landing page, not relay://… directly:
+     * camera apps show unknown schemes as plain text. The page opens relay://pair?…
+     */
     private fun renderQr() {
         val code = prefs.getString(RelayForegroundService.KEY_PAIR_CODE, null)
         if (code.isNullOrBlank()) {
@@ -206,7 +209,7 @@ class MainActivity : Activity() {
             prefs.getString(RelayForegroundService.KEY_RELAY_URL, null)?.takeIf { it.isNotBlank() }?.let { add("relay" to it) }
             lanAddress()?.let { add("lan" to it) }
         }
-        val link = "relay://pair?" + params.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+        val link = "https://sandoramix.github.io/slop-remote-relay/pair/#" + params.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
         val size = dp(220)
         val matrix = QRCodeWriter().encode(link, BarcodeFormat.QR_CODE, size, size)
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
