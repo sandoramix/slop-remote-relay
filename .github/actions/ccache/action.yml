@@ -46,8 +46,7 @@ runs:
         # directory, which nobody saved, and the saved one stayed empty. The
         # system config file is read whatever the environment says.
         if [ "$RUNNER_OS" = macOS ]; then
-          CONF="$(ccache --show-config | sed -n 's/^.*secondary_config_path = //p' | head -n 1)"
-          mkdir -p "$(dirname "$CONF")"
+          CONF="$(brew --prefix)/etc/ccache.conf"
           {
             echo "cache_dir = $RUNNER_TEMP/ccache"
             echo "base_dir = $GITHUB_WORKSPACE"
@@ -55,6 +54,8 @@ runs:
             echo "max_size = 1500M"
           } > "$CONF"
           echo "ccache system config: $CONF"; cat "$CONF"
+          # Shows whether the settings are picked up (look for cache_dir below).
+          ccache --show-config | grep -E "cache_dir|base_dir|max_size|compiler_check" 
         fi
         echo "key=ccache-${{ inputs.name }}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v4
