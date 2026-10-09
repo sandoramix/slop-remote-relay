@@ -38,6 +38,9 @@ export interface CommandResult extends AckEnvelope {
   via: string | null;
 }
 
+/** Commands that may start a player or turn a page get this long to be acknowledged. */
+const SLOW_ACK_TIMEOUT_MS = 20_000;
+
 /**
  * Everything the UI talks to. Signs outgoing envelopes, verifies incoming ones,
  * and turns the ack round-trip into a promise so a button press can show
@@ -121,15 +124,23 @@ export class RelayClient {
     return { ...result, rttMs: Date.now() - started, via };
   }
 
-  seek = (deltaMs: number) => this.send({ op: 'playback.seek', deltaMs: Math.round(deltaMs) });
+  // A receiver may first have to start a player kept behind a cover (tap, then
+  // wait for the video: 12 s seen on a slow emulator), and a page-turn click is
+  // confirmed by watching the page change. These get longer to answer.
+  seek = (deltaMs: number) =>
+    this.send({ op: 'playback.seek', deltaMs: Math.round(deltaMs) }, SLOW_ACK_TIMEOUT_MS);
   seekTo = (positionMs: number) =>
-    this.send({ op: 'playback.seekTo', positionMs: Math.max(0, Math.round(positionMs)) });
-  navStep = (delta: 1 | -1) => this.send({ op: 'nav.step', delta });
-  navGoto = (index: number, label: string) => this.send({ op: 'nav.goto', index, label });
-  fullscreen = (toggle = true) => this.send({ op: 'fullscreen.enter', toggle });
+    this.send({ op: 'playback.seekTo', positionMs: Math.max(0, Math.round(positionMs)) }, SLOW_ACK_TIMEOUT_MS);
+  navStep = (delta: 1 | -1) => this.send({ op: 'nav.step', delta }, SLOW_ACK_TIMEOUT_MS);
+  navGoto = (index: number, label: string) =>
+    this.send({ op: 'nav.goto', index, label }, SLOW_ACK_TIMEOUT_MS);
+  fullscreen = (toggle = true) => this.send({ op: 'fullscreen.enter', toggle }, SLOW_ACK_TIMEOUT_MS);
   exitFullscreen = () => this.send({ op: 'fullscreen.exit' });
   playPause = (play?: boolean) =>
-    this.send(play === undefined ? { op: 'playback.playPause' } : { op: 'playback.playPause', play });
+    this.send(
+      play === undefined ? { op: 'playback.playPause' } : { op: 'playback.playPause', play },
+      SLOW_ACK_TIMEOUT_MS,
+    );
 
   /**
    * device.status is answered with a status event, not an ack, so this sends
