@@ -69,6 +69,12 @@
     <string name="err_nav_other_range">Quell\'episodio è in un altro intervallo della lista, che la pagina non espone</string>
     <string name="err_nav_list_changed">La lista degli episodi è cambiata; aggiorna e scegli di nuovo</string>
     <string name="err_nav_click">Impossibile aprire l\'episodio %1$s</string>
+    <string name="start_started">Player avviato su %1$s</string>
+    <string name="start_started_playing">Player e riproduzione avviati su %1$s</string>
+    <string name="start_playback">Riproduzione avviata su %1$s</string>
+    <string name="err_start_no_control">Il player su %1$s non è stato avviato e il pulsante per avviarlo non è stato trovato</string>
+    <string name="err_start_click">Impossibile premere il pulsante di avvio del player su %1$s</string>
+    <string name="err_start_timeout">Premuto il pulsante di avvio su %1$s, ma il player non è comparso</string>
     <string name="update_header">Aggiornamenti</string>
     <string name="update_current">Versione installata: %1$s</string>
     <string name="update_btn_check">Cerca aggiornamenti</string>

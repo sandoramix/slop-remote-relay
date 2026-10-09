@@ -16,7 +16,11 @@ import dev.sandoramix.skipper.screen.core.ExecResult
 import dev.sandoramix.skipper.screen.core.ExecutorId
 import dev.sandoramix.skipper.screen.core.NavStatus
 import dev.sandoramix.skipper.screen.recipes.BrowserNav
-import dev.sandoramix.skipper.screen.recipes.NavPlan
+import dev.sandoramix.skipper.screen.recipes.BrowserStart
+import dev.sandoramix.skipper.screen.recipes.PlayerStart
+import dev.sandoramix.skipper.screen.recipes.PlayerState
+import dev.sandoramix.skipper.screen.recipes.StartPlan
+import dev.sandoramix.skipper.screen.recipes.StartStep
 import dev.sandoramix.skipper.screen.recipes.NavAction
 import dev.sandoramix.skipper.screen.recipes.NavPage
 import dev.sandoramix.skipper.screen.recipes.NavRefusal
@@ -25,11 +29,7 @@ import dev.sandoramix.skipper.screen.recipes.NodeSnap
 import dev.sandoramix.skipper.screen.recipes.RecipeEngine
 import dev.sandoramix.skipper.screen.recipes.Step
 import dev.sandoramix.skipper.screen.service.RelayAccessibilityService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -51,9 +51,6 @@ class AccessibilityExecutor(
         get() = RelayAccessibilityService.instance
 
     override fun isAvailable(): Boolean = service != null
-
-    /** For work that outlives a command's ack (closing a popup after a navigation). */
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
      * Seek is included on purpose. MediaSession sits ahead of this executor in
@@ -130,43 +127,31 @@ class AccessibilityExecutor(
 
     private suspend fun navigate(decide: (NavPage) -> NavAction): ExecResult {
         val svc = service ?: return ExecResult.notHandled(id)
-        val pkg = svc.foregroundPackage
-        val nav = recipes.navFor(pkg)
+        val pkg = svc.foregroundPackage ?: return ExecResult.notHandled(id)
+        val nav = recipes.navFor(pkg) ?: return ExecResult.fail(id, context.str(R.string.err_nav_unavailable))
         val (page, snap) = readNav() ?: return ExecResult.fail(id, context.str(R.string.err_nav_unavailable))
         return when (val action = decide(page)) {
             is NavAction.Refuse -> ExecResult.fail(id, context.str(refusalText(action.reason)))
             is NavAction.Click -> {
                 val failed = ExecResult.fail(id, context.str(R.string.err_nav_click, action.label ?: "?"))
-                val how = clickNode(svc, snap.nodes[action.node]) ?: return failed
-                val done = ExecResult.ok(id, "${page.plan.site}: ${action.label ?: "?"} ($how)")
-                if (nav == null || pkg == null) return done
-
-                if (!action.viaButton) {
-                    // A link navigates on its own, popup or not: answer now, while
-                    // the page reloads, and tidy up the popup behind the answer.
-                    background.launch { watch(svc, nav, page.plan, pkg, before = null, forMs = POPUP_WATCH_MS) }
-                    return done
+                // Believed only once the page shows another episode or another
+                // address (a link loads a new page; the site's own buttons switch
+                // in-page and rewrite the address). Both within the controller's 6 s.
+                val beforeUrl = Navigation.url(nav, snap.snaps)
+                var landed: String? = null
+                val moved: (Snapshot) -> Boolean = { s ->
+                    val now = Navigation.read(nav, s.snaps)
+                    val url = Navigation.url(nav, s.snaps)
+                    landed = now?.current
+                    (now?.current != null && now.current != page.current) ||
+                        (url != null && beforeUrl != null && url != beforeUrl)
                 }
-                // The site's button can be swallowed by its ad popup: believe it
-                // only once the episode changes, and press it once more after a
-                // popup has been closed. All inside the controller's 6 s.
-                var retried = false
-                val moved = watch(svc, nav, page.plan, pkg, before = page.current, forMs = BUTTON_WATCH_MS) {
-                    if (!retried) {
-                        retried = true
-                        delay(POPUP_SETTLE_MS)
-                        readNav()?.takeIf { it.first.current == page.current }?.let { (again, snapAgain) ->
-                            (decide(again) as? NavAction.Click)?.let { clickNode(svc, snapAgain.nodes[it.node]) }
-                        }
-                    }
-                }
-                when {
-                    moved -> done
-                    // The page is still loading, or the second press was swallowed
-                    // too; the status will tell within seconds.
-                    retried -> ExecResult.ok(id, "${page.plan.site}: ? ($how, unverified)")
-                    else -> failed
-                }
+                val watch = PageWatch(svc, pkg) { Navigation.foreign(nav, page.plan, it) }
+                val how = press(
+                    svc, snap.nodes[action.node], climb = 0, watch,
+                    until = System.currentTimeMillis() + NAV_WATCH_MS, effect = moved, order = recipes.pressOrderFor(pkg),
+                ) ?: return failed
+                ExecResult.ok(id, "${page.plan.site}: ${action.label ?: landed ?: "?"} ($how)")
             }
         }
     }
@@ -179,73 +164,251 @@ class AccessibilityExecutor(
         NavRefusal.LIST_CHANGED -> R.string.err_nav_list_changed
     }
 
+    // ---------------------------------------------------------- verified press
+
     /**
-     * ACTION_CLICK first. Chromium runs a web element's default action whether
-     * or not the element is on screen or marked clickable: an episode link with
-     * bounds [0,0][0,0] and the site's non-clickable "Precedente" text both took
-     * it on the emulator. Only a refused click falls back to scrolling the node
-     * into view and tapping it.
+     * Watches the browser after a press. A tab the site's ad script opened in
+     * front ([foreign]: an address the plan does not cover) or another app
+     * brought forward is closed with Back, at most [MAX_BACKS] times per
+     * command: Chrome closes a popup tab on Back and returns to its opener.
      */
-    private suspend fun clickNode(svc: RelayAccessibilityService, node: AccessibilityNodeInfo): String? {
-        if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return "click"
-        node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
-        delay(SCROLL_SETTLE_MS)
-        node.refresh()
-        val bounds = Rect().also { node.getBoundsInScreen(it) }
-        if (bounds.isEmpty || !tapAt(svc, bounds.exactCenterX(), bounds.exactCenterY(), double = false)) {
-            Log.d(TAG, "nav: node neither clickable nor tappable ($bounds)")
-            return null
+    private inner class PageWatch(
+        val svc: RelayAccessibilityService,
+        val pkg: String,
+        val foreign: (List<NodeSnap>) -> Boolean,
+    ) {
+        /** A popup showed up since [reset]: the page took the press, whatever came of it. */
+        var popupSeen = false
+        private var backs = 0
+
+        fun reset() { popupSeen = false }
+
+        /** Polls until [effect] holds on our page (true) or [until] passes (false). */
+        suspend fun await(until: Long, effect: (Snapshot) -> Boolean): Boolean {
+            while (System.currentTimeMillis() < until) {
+                delay(POLL_MS)
+                try {
+                    val front = svc.foregroundPackage
+                    val snap = snapshot(svc.rootInActiveWindow ?: continue)
+                    if ((front != null && front != pkg) || foreign(snap.snaps)) {
+                        popupSeen = true
+                        if (backs < MAX_BACKS) {
+                            Log.d(TAG, "press: popup in front (${front ?: "?"}), pressing Back")
+                            svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                            backs++
+                            delay(POPUP_SETTLE_MS)
+                        }
+                        continue
+                    }
+                    if (effect(snap)) return true
+                } catch (e: Exception) {
+                    Log.d(TAG, "press: tree changed while watching", e) // a page loading
+                }
+            }
+            return false
         }
-        return "tap"
     }
 
     /**
-     * Watches the browser for [forMs] after a click. A tab the site's ad script
-     * opened in front (an address the plan does not cover) or another app
-     * brought forward is closed with Back, once: Chrome closes a popup tab on
-     * Back and returns to the page that opened it. [onPopupClosed] runs after.
+     * Presses a web element and believes it only when [effect] shows on the page.
      *
-     * With [before] set, returns true as soon as the page shows an episode other
-     * than [before]. Without it, returns once a popup has been closed, or at the
-     * deadline.
+     * The methods are tried in [order] (recipes.json `press`, per browser;
+     * default click then tap). Chrome runs a web element's default action on
+     * ACTION_CLICK, on screen or not. Brave 1.97 accepts the same action and
+     * does nothing (links, buttons, a player cover and its play button), while
+     * a real tap on the element works; so a method whose effect does not show
+     * within [PRESS_VERIFY_MS] is followed by the next.
+     *
+     * A popup after a press means the page took it and its ad script may have
+     * swallowed it (seen on Chrome with the site's own button): the same method
+     * is repeated once before moving on, so a slow but real press is less
+     * likely to be doubled by the next method. Still nothing, and the next
+     * method is tried: on Chrome a click on AnimeWorld's player cover opens the
+     * popup every time and never the player, which only a tap starts.
+     *
+     * Returns the method that worked ("click", "tap", "click again"...), or
+     * null when nothing showed by [until].
      */
-    private suspend fun watch(
+    private suspend fun press(
         svc: RelayAccessibilityService,
-        nav: BrowserNav,
-        plan: NavPlan,
-        pkg: String,
-        before: String?,
-        forMs: Long,
-        onPopupClosed: suspend () -> Unit = {},
-    ): Boolean {
-        var closed = false
-        val deadline = System.currentTimeMillis() + forMs
-        while (System.currentTimeMillis() < deadline) {
-            delay(POLL_MS)
-            try {
-                val root = svc.rootInActiveWindow ?: continue
-                val front = svc.foregroundPackage
-                val snaps = snapshot(root).snaps
-                val popup = (front != null && front != pkg) || Navigation.foreign(nav, plan, snaps)
-                if (popup && !closed) {
-                    Log.d(TAG, "nav: popup in front (${front ?: "?"}, ${Navigation.url(nav, snaps)?.take(80)}), pressing Back")
-                    svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-                    closed = true
-                    onPopupClosed()
-                    if (before == null) return false
-                    continue
-                }
-                if (before != null) {
-                    val now = Navigation.read(nav, snaps)?.current
-                    if (now != null && now != before) return true
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "nav: tree changed while watching", e) // a page loading
+        node: AccessibilityNodeInfo,
+        climb: Int,
+        watch: PageWatch,
+        until: Long,
+        effect: (Snapshot) -> Boolean,
+        order: List<String>,
+    ): String? {
+        for ((i, method) in order.withIndex()) {
+            if (System.currentTimeMillis() >= until) break
+            watch.reset()
+            if (!performPress(svc, node, climb, method)) {
+                Log.d(TAG, "press: $method not possible")
+                continue
             }
+            val last = i == order.lastIndex
+            val wait = if (last) until else minOf(until, System.currentTimeMillis() + PRESS_VERIFY_MS)
+            if (watch.await(wait, effect)) return method
+            if (watch.popupSeen) {
+                Log.d(TAG, "press: $method opened a popup and nothing else, once more")
+                val again = if (last) until else minOf(until, System.currentTimeMillis() + PRESS_VERIFY_MS)
+                if (node.refresh() && performPress(svc, node, climb, method) && watch.await(again, effect)) {
+                    return "$method again"
+                }
+            }
+            Log.d(TAG, "press: $method showed no effect")
         }
-        if (before != null) Log.d(TAG, "nav: the page did not move from $before")
+        return null
+    }
+
+    private suspend fun performPress(
+        svc: RelayAccessibilityService,
+        node: AccessibilityNodeInfo,
+        climb: Int,
+        method: String,
+    ): Boolean = when (method) {
+        "click" -> accessibilityClick(node, climb)
+        "tap" -> tapNode(svc, node)
+        else -> false
+    }
+
+    /** ACTION_CLICK on the node, then on up to [climb] ancestors. */
+    private fun accessibilityClick(node: AccessibilityNodeInfo, climb: Int): Boolean {
+        if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+        var up = node.parent
+        for (level in 1..climb) {
+            val n = up ?: break
+            if (n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            up = n.parent
+        }
         return false
     }
+
+    /**
+     * A real tap at the node's centre, a user gesture beyond doubt. A node off
+     * screen (episode links outside the visible list have bounds [0,0][0,0]) is
+     * scrolled into view first; one that stays off screen cannot be tapped.
+     */
+    private suspend fun tapNode(svc: RelayAccessibilityService, node: AccessibilityNodeInfo): Boolean {
+        if (!node.refresh()) return false
+        val screen = Rect().also { svc.rootInActiveWindow?.getBoundsInScreen(it) }
+        fun bounds() = Rect().also { node.getBoundsInScreen(it) }
+        fun onScreen(r: Rect) = !r.isEmpty && (screen.isEmpty || screen.contains(r.centerX(), r.centerY()))
+        var r = bounds()
+        if (!onScreen(r) || !node.isVisibleToUser) {
+            node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+            delay(SCROLL_SETTLE_MS)
+            node.refresh()
+            r = bounds()
+        }
+        if (!onScreen(r)) {
+            Log.d(TAG, "press: node not on screen ($r)")
+            return false
+        }
+        return tapAt(svc, r.exactCenterX(), r.exactCenterY(), double = false)
+    }
+
+    // ------------------------------------------------------------ player start
+
+    /**
+     * Before a command that needs a player (play, seek, fullscreen.enter): when
+     * the browser in front shows a page whose `start` plan says the player is
+     * not loaded yet, press the page's start control and wait, bounded, for the
+     * player to appear. A play command is then answered here, after pressing the
+     * loaded player's own play button when the plan names one, because running
+     * a toggle on top of that would pause it again. Every other command runs
+     * after, with a note in its ack.
+     *
+     * Judged on the page's tree only, never on media sessions (see
+     * PlayerStart.decide); costs one tree walk, only on a browser with a plan.
+     */
+    suspend fun ensurePlayer(command: Command): Prepared {
+        if (!PlayerStart.wantsPlayer(command)) return Prepared.Ready
+        val svc = service ?: return Prepared.Ready
+        val pkg = svc.foregroundPackage ?: return Prepared.Ready
+        val start = recipes.startFor(pkg) ?: return Prepared.Ready
+        val bar = recipes.urlBarFor(pkg)
+        val snap = try {
+            snapshot(svc.rootInActiveWindow ?: return Prepared.Ready)
+        } catch (e: Exception) {
+            Log.d(TAG, "start: tree unreadable", e)
+            return Prepared.Ready
+        }
+
+        return when (val step = PlayerStart.decide(command, start, bar, snap.snaps)) {
+            StartStep.Proceed -> Prepared.Ready
+            is StartStep.ControlMissing ->
+                Prepared.Answer(ExecResult.fail(id, context.str(R.string.err_start_no_control, step.plan.site)))
+            is StartStep.ClickPlay -> {
+                val plan = step.plan
+                val watch = PageWatch(svc, pkg) { PlayerStart.foreign(bar, plan, it) }
+                val how = pressPlay(svc, start, bar, plan, watch, snap.nodes[step.node], pkg)
+                    ?: return Prepared.Answer(ExecResult.fail(id, context.str(R.string.err_start_click, plan.site)))
+                Prepared.Answer(ExecResult.ok(id, context.str(R.string.start_playback, plan.site) + " ($how)"))
+            }
+            is StartStep.ClickControl -> startPlayer(svc, command, start, bar, pkg, step, snap)
+        }
+    }
+
+    private suspend fun startPlayer(
+        svc: RelayAccessibilityService,
+        command: Command,
+        start: BrowserStart,
+        bar: List<String>,
+        pkg: String,
+        step: StartStep.ClickControl,
+        snap: Snapshot,
+    ): Prepared {
+        val plan = step.plan
+        val pressed = System.currentTimeMillis()
+        val watch = PageWatch(svc, pkg) { PlayerStart.foreign(bar, plan, it) }
+        // Judge only a window the plan applies to: our page, not a popup over it.
+        val started: (Snapshot) -> Boolean = { s ->
+            PlayerStart.plan(start, bar, s.snaps) == plan && PlayerStart.state(plan, s.snaps) == PlayerState.STARTED
+        }
+        val how = press(
+            svc, snap.nodes[step.node], plan.climb, watch,
+            until = pressed + plan.waitMs, effect = started, order = plan.press ?: recipes.pressOrderFor(pkg),
+        )
+        Log.d(TAG, "start: ${plan.site} control -> ${how ?: "no player"} in ${System.currentTimeMillis() - pressed} ms")
+        if (how == null) return Prepared.Answer(ExecResult.fail(id, context.str(R.string.err_start_timeout, plan.site)))
+
+        // A popup opens a moment after the press; give it that moment (and
+        // close it) before handing the page to a command, unless it came already.
+        if (!watch.popupSeen) watch.await(pressed + POPUP_GRACE_MS) { false }
+
+        if (!PlayerStart.wantsPlayback(command) || plan.play == null) {
+            return if (PlayerStart.wantsPlayback(command)) {
+                Prepared.Answer(ExecResult.ok(id, context.str(R.string.start_started, plan.site) + " ($how)"))
+            } else {
+                Prepared.Started(context.str(R.string.start_started, plan.site) + " ($how)")
+            }
+        }
+        // The player's frame may still be loading: wait for its play button.
+        var playNode: AccessibilityNodeInfo? = null
+        watch.await(System.currentTimeMillis() + PLAY_APPEAR_MS) { s ->
+            PlayerStart.find(plan.play, s.snaps)?.let { playNode = s.nodes[it] } != null
+        }
+        val played = playNode?.let { pressPlay(svc, start, bar, plan, watch, it, pkg) }
+        Log.d(TAG, "start: play button -> ${played ?: "not pressed"}")
+        val text = if (played != null) R.string.start_started_playing else R.string.start_started
+        return Prepared.Answer(ExecResult.ok(id, context.str(text, plan.site) + " ($how${played?.let { ", $it" } ?: ""})"))
+    }
+
+    /** Presses the loaded player's play button; believed once the button no longer says play. */
+    private suspend fun pressPlay(
+        svc: RelayAccessibilityService,
+        start: BrowserStart,
+        bar: List<String>,
+        plan: StartPlan,
+        watch: PageWatch,
+        node: AccessibilityNodeInfo,
+        pkg: String,
+    ): String? = press(
+        svc, node, climb = 0, watch,
+        until = System.currentTimeMillis() + PLAY_WAIT_MS,
+        effect = { s -> PlayerStart.plan(start, bar, s.snaps) == plan && PlayerStart.find(plan.play, s.snaps) == null },
+        order = recipes.pressOrderFor(pkg),
+    )
 
     // --------------------------------------------------------------- fullscreen
 
@@ -562,15 +725,27 @@ class AccessibilityExecutor(
 
         const val SCROLL_SETTLE_MS = 400L
 
-        /** How long after a link click a popup is watched for. */
-        const val POPUP_WATCH_MS = 6_000L
+        /** How long a navigation press gets to move the page; the controller gives up on an ack at 6 s. */
+        const val NAV_WATCH_MS = 4_500L
 
-        /** How long a site button gets to move the page; the controller gives up on an ack at 6 s. */
-        const val BUTTON_WATCH_MS = 4_500L
+        /** How long one press method gets to show its effect before the next method is tried. */
+        const val PRESS_VERIFY_MS = 2_000L
+
+        /** Popups closed with Back per command, at most. */
+        const val MAX_BACKS = 2
+
+        /** After the player appeared, how long its play button gets to appear (its frame loading). */
+        const val PLAY_APPEAR_MS = 1_500L
+
+        /** How long a press on the player's play button gets to show. */
+        const val PLAY_WAIT_MS = 3_000L
 
         /** After Back closes a popup, before the page underneath is read again. */
         const val POPUP_SETTLE_MS = 500L
 
         const val POLL_MS = 300L
+
+        /** After a start click, how long a popup is waited for before the page is handed to a command. */
+        const val POPUP_GRACE_MS = 1_200L
     }
 }

@@ -90,12 +90,15 @@ class RelayForegroundService : Service() {
                 accessibility,
                 ShizukuExecutor(this, recipes) { accessibility.isFullscreen() },
             ),
-        ) { command ->
-            when (command) {
-                is Command.NavStep, is Command.NavGoto -> str(R.string.err_nav_needs_accessibility)
-                else -> str(R.string.err_no_executor)
-            }
-        }
+            noExecutorDetail = { command ->
+                when (command) {
+                    is Command.NavStep, is Command.NavGoto -> str(R.string.err_nav_needs_accessibility)
+                    else -> str(R.string.err_no_executor)
+                }
+            },
+            // A web player that waits for a click is started before the command needs it.
+            prepare = { command -> accessibility.ensurePlayer(command) },
+        )
 
         val commandRouter = CommandRouter(
             this, secret, chain, mediaSession, recipes,

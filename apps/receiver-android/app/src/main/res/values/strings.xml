@@ -69,6 +69,12 @@
     <string name="err_nav_other_range">That episode is in another range of the list, which the page does not expose</string>
     <string name="err_nav_list_changed">The episode list changed; refresh and pick again</string>
     <string name="err_nav_click">Could not open episode %1$s</string>
+    <string name="start_started">Started the player on %1$s</string>
+    <string name="start_started_playing">Started the player and playback on %1$s</string>
+    <string name="start_playback">Started playback on %1$s</string>
+    <string name="err_start_no_control">The player on %1$s has not been started and its start button was not found</string>
+    <string name="err_start_click">Could not press the start button of the player on %1$s</string>
+    <string name="err_start_timeout">Pressed the start button on %1$s, but the player did not appear</string>
     <string name="update_header">Updates</string>
     <string name="update_current">Installed version: %1$s</string>
     <string name="update_btn_check">Check for updates</string>

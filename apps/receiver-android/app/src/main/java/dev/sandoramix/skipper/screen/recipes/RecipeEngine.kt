@@ -77,6 +77,13 @@ data class Recipe(
     val markers: FullscreenMarkers? = null,
     /** Episode navigation plans, for browsers (see Navigation.kt). */
     val nav: BrowserNav? = null,
+    /** How to start a player that waits for a click, for browsers (see PlayerStart.kt). */
+    val start: BrowserStart? = null,
+    /**
+     * How a web element is pressed, in order, each verified before the next:
+     * "click" (ACTION_CLICK) and/or "tap" (a real gesture at its centre).
+     */
+    val press: List<String> = RecipeEngine.DEFAULT_PRESS,
 )
 
 class RecipeEngine(context: Context) {
@@ -89,6 +96,17 @@ class RecipeEngine(context: Context) {
     fun knows(packageName: String?): Boolean = forPackage(packageName) != null
 
     fun navFor(packageName: String?): BrowserNav? = forPackage(packageName)?.nav
+
+    fun startFor(packageName: String?): BrowserStart? = forPackage(packageName)?.start
+
+    fun pressOrderFor(packageName: String?): List<String> = forPackage(packageName)?.press ?: DEFAULT_PRESS
+
+    /** The start section's own address bar ids, else the nav section's. */
+    fun urlBarFor(packageName: String?): List<String> {
+        val recipe = forPackage(packageName) ?: return emptyList()
+        return recipe.start?.urlBarViewIds?.takeIf { it.isNotEmpty() }
+            ?: recipe.nav?.urlBarViewIds.orEmpty()
+    }
 
     /** Every app gets these when it has no recipe of its own. */
     fun fallbackFullscreen(): List<Step> = listOf(
@@ -163,6 +181,8 @@ class RecipeEngine(context: Context) {
                         )
                     },
                     nav = entry.optJSONObject("nav")?.let(::parseNav),
+                    start = entry.optJSONObject("start")?.let(::parseStart),
+                    press = parsePress(entry.optJSONArray("press")) ?: DEFAULT_PRESS,
                 ),
             )
         }
@@ -196,6 +216,46 @@ class RecipeEngine(context: Context) {
             },
         )
     }
+
+    /** Same rule as nav: a broken site entry is skipped on its own. */
+    private fun parseStart(o: JSONObject): BrowserStart {
+        val sites = o.optJSONArray("sites")
+        return BrowserStart(
+            urlBarViewIds = o.optJSONArray("urlBarViewIds").toStringList(),
+            sites = (0 until (sites?.length() ?: 0)).mapNotNull { i ->
+                runCatching {
+                    val s = sites!!.getJSONObject(i)
+                    fun rx(key: String) = s.optString(key).takeIf { it.isNotEmpty() }?.let(::Regex)
+                    val control = parseMatcher(s.getJSONObject("control"))
+                    require(!control.isEmpty) { "start.control matches nothing" }
+                    StartPlan(
+                        site = s.getString("site"),
+                        url = rx("url"),
+                        title = rx("title"),
+                        control = control,
+                        climb = s.getJSONObject("control").optInt("climb", 2),
+                        notStarted = s.optJSONObject("notStarted")?.let(::parseMatcher) ?: control,
+                        started = s.optJSONObject("started")?.let(::parseMatcher),
+                        play = s.optJSONObject("play")?.let(::parseMatcher),
+                        press = parsePress(s.optJSONArray("press")),
+                        waitMs = s.optLong("waitMs", 6_000),
+                        pollMs = s.optLong("pollMs", 300).coerceAtLeast(50),
+                    )
+                }.getOrNull()
+            },
+        )
+    }
+
+    /** Known methods only, in order; null when none is given. */
+    private fun parsePress(array: JSONArray?): List<String>? =
+        array.toStringList().filter { it == "click" || it == "tap" }.distinct().ifEmpty { null }
+
+    private fun parseMatcher(o: JSONObject) = NodeMatcher(
+        viewIds = o.optJSONArray("viewIds").toStringList(),
+        labels = o.optJSONArray("labels").toStringList(),
+        contains = o.optJSONArray("contains").toStringList(),
+        within = o.optString("within").takeIf { it.isNotEmpty() },
+    )
 
     private fun parseSteps(array: JSONArray?): List<Step> {
         if (array == null) return emptyList()
@@ -232,6 +292,8 @@ class RecipeEngine(context: Context) {
     }
 
     companion object {
+        /** Chrome honours ACTION_CLICK on web elements, on screen or not; a tap needs the element in view. */
+        val DEFAULT_PRESS = listOf("click", "tap")
         private const val ASSET = "recipes.json"
         const val PREFS = "relay.recipes"
         const val KEY_LEARNED = "learned"

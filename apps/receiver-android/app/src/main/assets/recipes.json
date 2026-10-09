@@ -107,6 +107,9 @@
       "present": [
         "esci da schermo intero",
         "exit full screen"
+      ],
+      "absentViewIds": [
+        ":id/url_bar"
       ]
     },
     "seek": [
@@ -119,6 +122,62 @@
         "y": 0.5,
         "double": true
       }
+    ],
+    "nav": {
+      "urlBarViewIds": [
+        ":id/url_bar"
+      ],
+      "sites": [
+        {
+          "site": "animeworld",
+          "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+          "current": "Episodio (\\S+)",
+          "currentNode": "episode-comment",
+          "list": "animeId",
+          "ranges": "^(\\d+) - (?:.* - )?(\\d+)$",
+          "prev": "Precedente$",
+          "next": "Successivo$"
+        }
+      ]
+    },
+    "start": {
+      "urlBarViewIds": [
+        ":id/url_bar"
+      ],
+      "sites": [
+        {
+          "site": "animeworld",
+          "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+          "control": {
+            "viewIds": [
+              "player-cover"
+            ],
+            "climb": 2
+          },
+          "notStarted": {
+            "viewIds": [
+              "player-cover"
+            ]
+          },
+          "started": {
+            "viewIds": [
+              "player-iframe"
+            ]
+          },
+          "play": {
+            "labels": [
+              "play"
+            ],
+            "within": "player-iframe"
+          },
+          "waitMs": 5000,
+          "pollMs": 300
+        }
+      ]
+    },
+    "press": [
+      "tap",
+      "click"
     ]
   },
   "com.android.chrome": {
@@ -194,6 +253,46 @@
           "ranges": "^(\\d+) - (?:.* - )?(\\d+)$",
           "prev": "Precedente$",
           "next": "Successivo$"
+        }
+      ]
+    },
+    "start": {
+      "urlBarViewIds": [
+        ":id/url_bar"
+      ],
+      "sites": [
+        {
+          "site": "animeworld",
+          "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+          "title": " - AnimeWorld$",
+          "control": {
+            "viewIds": [
+              "player-cover"
+            ],
+            "climb": 2
+          },
+          "press": [
+            "tap",
+            "click"
+          ],
+          "notStarted": {
+            "viewIds": [
+              "player-cover"
+            ]
+          },
+          "started": {
+            "viewIds": [
+              "player-iframe"
+            ]
+          },
+          "play": {
+            "labels": [
+              "play"
+            ],
+            "within": "player-iframe"
+          },
+          "waitMs": 5000,
+          "pollMs": 300
         }
       ]
     }

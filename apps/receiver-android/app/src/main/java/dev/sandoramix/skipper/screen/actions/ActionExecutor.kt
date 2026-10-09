@@ -40,9 +40,26 @@ class ExecutorChain(
      * so it can say what is missing (navigation only exists through accessibility).
      */
     private val noExecutorDetail: (Command) -> String,
+    /**
+     * Runs before every command; a web player that waits for a click is started
+     * here (AccessibilityExecutor.ensurePlayer). Not an executor of its own: it
+     * does not complete the command, it makes it possible.
+     */
+    private val prepare: suspend (Command) -> Prepared = { Prepared.Ready },
 ) {
 
     suspend fun run(command: Command): ExecResult {
+        val note = when (val prepared = prepare(command)) {
+            is Prepared.Answer -> return prepared.result
+            is Prepared.Started -> prepared.note
+            Prepared.Ready -> null
+        }
+        val result = runChain(command)
+        if (note == null) return result
+        return result.copy(detail = listOfNotNull(note, result.detail).joinToString(" · "))
+    }
+
+    private suspend fun runChain(command: Command): ExecResult {
         var lastFailure: ExecResult? = null
 
         for (executor in executors) {
@@ -62,4 +79,16 @@ class ExecutorChain(
 
     fun available(): List<ExecutorId> =
         executors.filter { it.isAvailable() }.map { it.id }
+}
+
+/** What [ExecutorChain]'s prepare step decided before a command. */
+sealed interface Prepared {
+    /** Nothing to do: run the command. */
+    data object Ready : Prepared
+
+    /** A player was started; run the command, and say so in its ack ([note]). */
+    data class Started(val note: String) : Prepared
+
+    /** Answered here, without running the command: "play" that started the player, or a failure. */
+    data class Answer(val result: ExecResult) : Prepared
 }

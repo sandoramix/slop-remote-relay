@@ -61,7 +61,7 @@ Notes from getting it to build:
 
 ```bash
 cd apps/receiver-android
-./gradlew test assembleDebug          # 33 unit tests: codec vectors, MQTT codec, commands, navigation, updates
+./gradlew test assembleDebug          # 42 unit tests: codec vectors, MQTT codec, commands, navigation, player start, updates
 ./gradlew installDebug
 ```
 
@@ -129,10 +129,34 @@ The same holds for the MQTT codec (`mqttCodec.ts` ↔ `MqttCodec.kt`, pinned by
 Fullscreen strategies are data in
 `apps/receiver-android/app/src/main/assets/recipes.json` — never code. Step kinds:
 `node`, `reveal`, `tap`, `rotate`, `back`, `key` (Shizuku only), `mediasession`;
-plus `exitFullscreen` and `fullscreenMarkers` per app, and a `nav` section per
-browser for episode navigation (see ARCHITECTURE.md). View ids and labels must
+plus `exitFullscreen` and `fullscreenMarkers` per app, and per browser a `nav`
+section (episode navigation), a `start` section (players behind a cover) and a
+`press` order for web elements (see ARCHITECTURE.md). View ids and labels must
 come from the real device (`adb shell uiautomator dump`), never from memory.
 Note that uiautomator can't dump while a video is animating; pause it first.
+
+### Dumping Brave on the emulator
+
+The Play Store isn't needed: Brave publishes x86_64 APKs on its GitHub
+releases.
+
+```bash
+gh release download <tag> -R brave/brave-browser -p BraveMonox64.apk -D <empty dir>
+adb -s emulator-5554 install -r <empty dir>/BraveMonox64.apk
+tools/bench.sh            # receiver installed, paired, accessibility on
+adb -s emulator-5554 shell am start -a android.intent.action.VIEW \
+  -d "https://www.animeworld.ac/play/…" com.brave.browser
+MSYS_NO_PATHCONV=1 adb -s emulator-5554 shell uiautomator dump /sdcard/d.xml
+MSYS_NO_PATHCONV=1 adb -s emulator-5554 pull /sdcard/d.xml .
+```
+
+The accessibility service must be on before the page loads, or Chromium leaves
+the web content out of the tree. 1.97.56 showed no first-run screens, only a
+"Translate page?" banner and a "command-line file" snackbar, both harmless.
+Things that differ from Chrome: the `WebView` node has no title text, and
+`ACTION_CLICK` on the site's links, buttons and player cover is accepted but
+has no effect (see STATUS.md). Check what a click really did by dumping again
+(`url_bar` text, `episode-comment`, `player-cover`), not by the ack.
 
 ## Conventions
 

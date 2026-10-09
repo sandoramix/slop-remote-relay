@@ -157,6 +157,38 @@ hides, so long series need nothing special. A site with no list to read can name
 its own buttons instead (`"next": "...", "prev": "..."`). Read the selectors off
 the real page, never guess them.
 
+### Starting a player kept behind a cover (browser)
+
+Some sites show only a poster until a person clicks it: on AnimeWorld the page
+has `#player-cover` inside `#player`, and clicking it (a plain DOM click is
+enough) swaps in `#player-iframe`, a same-origin frame
+(`/api/episode/serverPlayerAnimeWorld?id=…`) with the `<video>`. Until then
+there is nothing to play, seek or put in fullscreen. A `start` plan per site
+(schema and pure logic in `src/start.ts`) names the control and the player frame:
+
+```json
+"animeworld.ac": { "start": {
+  "paths": "^/play/",
+  "click": "#player-cover",
+  "player": "^https?://(www\\.)?animeworld\\.[a-z]+(:\\d+)?/api/episode/"
+} }
+```
+
+Before `playback.*` and `fullscreen.enter` (never before `nav.*`, status or
+`fullscreen.exit`), the worker looks at the tab the command would go to (the
+focused one if no tab has a video). If that page has a start plan and the site's
+player is not the target, it clicks the control in the top frame, waits up to
+`waitMs` (6 s by default) for a video in a frame that had none before or that
+matches `player`, and runs the command there. `playPause` with no `play` then
+means play, and the ack says the player was started. Tabs the page opened during
+the click (ad popups, by `openerTabId`) are closed and focus goes back to the
+page. `player` matters beyond starting: ad banners on the same page play videos
+of their own, so in a tab where the player frame has a video, that is the only
+candidate. Without a control, a command fails with a clear message instead of
+driving the ad. A player in an iframe means the top document holds the
+fullscreen element, so fullscreen state and `fullscreen.exit` go to the top
+frame.
+
 ## Navigating a series (Android)
 
 Same ops, same `nav` status block, read through the accessibility tree of the
@@ -213,28 +245,81 @@ web content only while an accessibility service is on, which ours is):
 button (`prev`/`next`, matched on node text, e.g. "? Precedente") only when the
 neighbour is in a hidden range. Measured, not assumed:
 
-- `ACTION_CLICK` works on an entry with zero bounds and on the site's
-  "Precedente"/"Successivo" TextViews although they are not marked clickable;
-  no scrolling into view is needed. (A refused click falls back to
-  `ACTION_SHOW_ON_SCREEN` and a real tap at the node's centre.)
+- In Chrome, `ACTION_CLICK` works on an entry with zero bounds and on the
+  site's "Precedente"/"Successivo" TextViews although they are not marked
+  clickable; no scrolling into view is needed. In Brave 1.97 the same action is
+  accepted and does nothing; a real tap at the node's centre works. So every
+  press is *verified*: the methods in the package's `press` list (default
+  `["click", "tap"]`, Brave `["tap", "click"]`) are tried in order, each given
+  2 s to show its effect (another episode or another address in the bar) before
+  the next. A tap scrolls the node into view first (`ACTION_SHOW_ON_SCREEN`);
+  a node that stays off screen cannot be tapped. The ack names the method that
+  worked; a press with no visible effect answers "Could not open episode".
 - AnimeWorld opens an ad popup tab on **every** click. A link click navigates
   the page underneath anyway; a button click was swallowed by the popup (page
   unchanged) at least once. So after any click the receiver watches for a tab
   whose address the plan does not cover (or another app in front) and presses
   Back once, which closes Chrome's popup tab and returns to the opener.
-- A link step answers at once (tens of ms) and closes the popup in the
-  background. A button step waits until the page shows a different episode,
-  presses again once after closing a popup, and answers within 4.5 s (the
-  controller gives up at 6 s); if the page has not settled by then it answers
-  ok with "unverified".
+- Every step waits for its effect, closing popups on the way, and answers
+  within 4.5 s (the controller gives up at 6 s). A press that brought only a
+  popup is repeated once with the same method before the next method is tried,
+  so a slow but real click is unlikely to be doubled by a tap.
 - At either end, and on a `goto` whose label no longer matches `items[index]`,
   the receiver refuses before clicking anything.
 
-Limits: Chrome only. Brave has no nav plan because its tree has not been dumped
-on a device; add one from a dump, never by analogy with Chrome. A popup that
+Limits: Chrome and Brave (both from dumps on the emulator; Brave's WebView node
+has no title text, so its plans match on the address bar only). A popup that
 opens *behind* the page (seen once, a "Loading…" tab) is not closed. The status
 loop walks the browser's tree every 3 s while a plan applies (~1000 nodes,
 ~25 ms on the emulator).
+
+### Starting a player kept behind a cover (Android)
+
+Same problem as in the extension (AnimeWorld shows only `#player-cover` until a
+person presses it; then `#player-iframe` holds a native `<video controls>`,
+paused), solved through the accessibility tree. Data: a `start` section next to
+`nav` under the browser's package in `recipes.json`; logic in
+`recipes/PlayerStart.kt`, unit-tested in `PlayerStartTest`:
+
+```json
+"start": { "urlBarViewIds": [":id/url_bar"], "sites": [{
+  "site": "animeworld",
+  "url": "^(https?://)?(www\\.)?animeworld\\.[a-z]+/play/",
+  "title": " - AnimeWorld$",
+  "control": { "viewIds": ["player-cover"], "climb": 2 },
+  "press": ["tap", "click"],
+  "notStarted": { "viewIds": ["player-cover"] },
+  "started": { "viewIds": ["player-iframe"] },
+  "play": { "labels": ["play"], "within": "player-iframe" },
+  "waitMs": 5000
+}] }
+```
+
+Pages are matched like nav plans. A matcher takes `viewIds` (a bare HTML id is
+exact, one with `:` a suffix), `labels` (whole text or description, any case),
+`contains` (substring) and `within` (an ancestor's HTML id), and only looks
+inside the WebView. From the dump: before, a `TextView` with id `player-cover`;
+after, `player-iframe` > `player` > `video-player` > Buttons `play`, `mute`,
+`enter full screen` (the frame's document is not a WebView node of its own).
+
+`ExecutorChain` runs a prepare step, `AccessibilityExecutor.ensurePlayer`,
+before `playback.*` and `fullscreen.enter` (not `nav.*`, status,
+`fullscreen.exit`, or an explicit pause). When the page in front has a plan and
+`notStarted` matches (and `started` does not), it presses `control` (verified
+press as for navigation, popups closed; the plan's own `press` overrides the
+package's: in Chrome an `ACTION_CLICK` on the cover opens the ad popup but never
+the player), waits up to `waitMs` for `started`, and then:
+
+- `playPause` (play unset or true): presses the player's `play` button too,
+  believed once that button stops saying "play", and answers "Started the player
+  and playback" without running the command (a toggle would pause it again).
+- anything else: runs the command, its ack prefixed with "Started the player".
+- On a started page whose `play` button is visible, `playPause` presses it.
+
+Media sessions are deliberately not consulted: on the emulator Chrome held one
+(from another tab) while the page in front still showed its cover. The cost is
+one tree walk per such command, only on a browser with a plan. Nothing is
+started after `nav.*`.
 
 ## Adding a command
 
