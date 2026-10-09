@@ -49,7 +49,23 @@ unaffected). GitHub lets a tag run read only caches written on its own ref or on
 `master`, so the release never writes them: `.github/workflows/controller.yml`
 builds the controller on every `master` push that touches it and fills them.
 That workflow is also the only check that the native builds still work before
-a tag. Each build ends with `ccache --show-stats` to show the hit rate.
+a tag.
+
+Three things keep that working, each learnt from a slow release:
+
+- **Caches expire after 7 days unused.** Releases come less often than that, so
+  `controller.yml` also runs on a schedule (Monday and Thursday) to keep them
+  read. A release that finds nothing to restore compiles everything, ~20 min.
+- **Lint is switched off for release builds** (`.github/gradle/skip-lint.init.gradle`):
+  `lintVital` re-analysed every native module for ~200 s and reported nothing.
+- **ccache on macOS reads its settings from the system config**, written by
+  `.github/actions/ccache`. Xcode does not pass the shell's environment to its
+  compile tasks, so `CCACHE_DIR` never arrived and the saved cache stayed empty.
+  Linux needs `CCACHE_SLOPPINESS`: after a fresh `npm ci` every header is newer
+  than ccache's rules allow, and it refuses to cache the compile.
+
+Read the `ccache --show-stats` at the end of each build: a release whose hit
+rate is near 0 % means the caches were missing. Each build ends with `ccache --show-stats` to show the hit rate.
 
 ## AltStore source (iOS)
 

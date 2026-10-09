@@ -37,7 +37,25 @@ runs:
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE"
           echo "CCACHE_COMPILERCHECK=content"
           echo "CCACHE_MAXSIZE=1500M"
+          # A fresh checkout and `npm ci` leave every header "too new" for
+          # ccache's default rules, which then refuses to cache the compile.
+          echo "CCACHE_SLOPPINESS=include_file_mtime,include_file_ctime,time_macros,pch_defines,file_stat_matches"
         } >> "$GITHUB_ENV"
+        # Xcode does not hand the shell's environment to its compile tasks, so
+        # on macOS CCACHE_DIR never reached ccache: it filled its default
+        # directory, which nobody saved, and the saved one stayed empty. The
+        # system config file is read whatever the environment says.
+        if [ "$RUNNER_OS" = macOS ]; then
+          CONF="$(ccache --show-config | sed -n 's/^.*secondary_config_path = //p' | head -n 1)"
+          mkdir -p "$(dirname "$CONF")"
+          {
+            echo "cache_dir = $RUNNER_TEMP/ccache"
+            echo "base_dir = $GITHUB_WORKSPACE"
+            echo "compiler_check = content"
+            echo "max_size = 1500M"
+          } > "$CONF"
+          echo "ccache system config: $CONF"; cat "$CONF"
+        fi
         echo "key=ccache-${{ inputs.name }}-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
     - uses: actions/cache/restore@v4
       with:

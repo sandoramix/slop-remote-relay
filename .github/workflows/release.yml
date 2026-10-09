@@ -157,6 +157,8 @@ jobs:
         # Phones only: leaving out the x86 ABIs roughly halves the APK.
         run: |
           ./gradlew --no-daemon --build-cache assembleRelease \
+            --init-script "$GITHUB_WORKSPACE/.github/gradle/skip-lint.init.gradle" \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
             -Pandroid.injected.signing.store.file="${{ runner.temp }}/release.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \

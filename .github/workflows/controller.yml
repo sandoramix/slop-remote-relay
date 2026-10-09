@@ -16,6 +16,11 @@ on:
       - package-lock.json
       - .github/actions/ccache/**
       - .github/workflows/controller.yml
+  # GitHub deletes a cache nobody has read for 7 days, and releases come less
+  # often than that: without this the release finds nothing to restore and
+  # compiles everything (about 20 minutes). A run twice a week keeps them warm.
+  schedule:
+    - cron: '0 3 * * 1,4'
   workflow_dispatch:
 
 concurrency:
@@ -58,6 +63,8 @@ jobs:
         # Same flags as the release, so the cached outputs match.
         run: |
           ./gradlew --no-daemon --build-cache assembleRelease \
+            --init-script "$GITHUB_WORKSPACE/.github/gradle/skip-lint.init.gradle" \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
           ccache --show-stats
       - uses: actions/cache/save@v4
