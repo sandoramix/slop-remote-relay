@@ -31,7 +31,7 @@ export interface NavEntry {
   current: boolean;
 }
 
-export const planApplies = (plan: NavPlan, pathname: string): boolean => {
+export const planApplies = (plan: { paths?: string }, pathname: string): boolean => {
   if (!plan.paths) return true;
   try {
     return new RegExp(plan.paths).test(pathname);

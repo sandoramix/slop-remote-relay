@@ -79,6 +79,8 @@ class Controller {
     return this.wait((e) => e.type === 'ack' && e.ref === id, 12_000);
   }
   async status(includeNavItems = false) {
+    // Status replies carry no ref; drop pushes queued earlier so the answer is to this request.
+    this.inbox = this.inbox.filter((e) => !(e.type === 'event' && e.event === 'status'));
     await this.transport.send(sign({ type: 'cmd', cmd: { op: 'device.status', ...(includeNavItems ? { includeNavItems } : {}) } }));
     const e = await this.wait((x) => x.type === 'event' && x.event === 'status');
     return (e?.status ?? null) as Record<string, unknown> | null;
@@ -96,6 +98,47 @@ async function main(): Promise<void> {
     s.writeHead(200, { 'content-type': 'text/html' });
     // /play/<series>/<n>: markup shaped like AnimeWorld's, with the episodes
     // in hidden ranges of 50, which is what a long series looks like there.
+    const VIDEO = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+    // The player AnimeWorld puts in an iframe once its cover is clicked: not autoplaying.
+    if ((q.url ?? '').startsWith('/api/episode/')) {
+      s.end(`<!doctype html><body style="margin:0"><video controls style="width:100%;height:100%" src="${VIDEO}"></video>`);
+      return;
+    }
+    // An ad banner from another origin, playing a video of its own.
+    if (q.url === '/ad') {
+      s.end(`<!doctype html><body style="margin:0"><video muted loop autoplay style="width:300px;height:250px" src="${VIDEO}"></video>`);
+      return;
+    }
+    // /play/cold.x/<n>[?noad]: the player is a cover until clicked, like AnimeWorld's
+    // (#player.player-box > #player-cover.cover; the click swaps in #player-iframe).
+    // /play/broken.x/<n>: no cover, no video.
+    const cold = /^\/play\/(cold|broken)\.x\/(\d+)(\?noad)?$/.exec(q.url ?? '');
+    if (cold) {
+      const ad = cold[3] ? '' : `<iframe src="http://127.0.0.1:${PAGE_PORT}/ad" style="width:300px;height:250px;border:0"></iframe>`;
+      const player = cold[1] === 'broken' ? '<div id="player" class="player-box"></div>' : `
+        <div id="player" class="player-box" style="width:640px;height:360px">
+          <div class="cover" id="player-cover" style="width:100%;height:100%;background:#333;cursor:pointer"></div>
+        </div>
+        <script>
+          document.getElementById('player-cover').addEventListener('click', () => {
+            window.open('/ad', '_blank');
+            setTimeout(() => {
+              document.getElementById('player-cover').remove();
+              const f = document.createElement('iframe');
+              f.id = 'player-iframe';
+              f.src = '/api/episode/serverPlayerAnimeWorld?id=${cold[2]}';
+              f.allow = 'autoplay;fullscreen';
+              f.allowFullscreen = true;
+              f.style.cssText = 'width:100%;height:100%;border:0';
+              document.getElementById('player').appendChild(f);
+            }, 800);
+          });
+        </script>`;
+      s.end(`<!doctype html><title>Cold episode ${cold[2]}</title><body>
+        <div class="server active"><ul class="episodes"><li class="episode"><a data-episode-num="${cold[2]}" class="active" href="/play/${cold[1]}.x/${cold[2]}">${cold[2]}</a></li></ul></div>
+        ${player}${ad}`);
+      return;
+    }
     const ep = /^\/play\/[^/]+\/(\d+)$/.exec(q.url ?? '');
     if (ep) {
       const lis = Array.from({ length: 120 }, (_, i) => i + 1).map((n) =>
@@ -231,6 +274,70 @@ async function main(): Promise<void> {
   check('no next after the last episode', end?.ok === false && String(end.detail).includes('last'), `${end?.detail}`);
   await nc.transport.close();
   await navTab.close();
+
+  // 2c -- a player kept behind a cover, started by the shipped start plan for animeworld.ac
+  console.log('\n[cold player]');
+  const cc = new Controller(new RelayWsTransport({ url: `ws://127.0.0.1:${RELAY_PORT}`, room, role: 'controller' }));
+  await cc.connect();
+  const coldTab = await browser.newPage();
+  const coldUrl = (n: number, ad = true) => `http://animeworld.ac:${PAGE_PORT}/play/cold.x/${n}${ad ? '' : '?noad'}`;
+  const openCold = async (url: string) => {
+    await coldTab.goto(url);
+    await coldTab.bringToFront();
+    await sleep(1500);
+  };
+  const frameVideo = async (part: string) =>
+    coldTab.frames().find((f) => f.url().includes(part))
+      ?.evaluate(() => { const v = document.querySelector('video')!; return { paused: v.paused, t: v.currentTime }; })
+      .catch(() => null) ?? null;
+  const hasPlayer = async () => !!(await coldTab.$('#player-iframe'));
+
+  await openCold(coldUrl(1));
+  const cs = (await cc.status()) as { nav?: { current: string } } | null;
+  check('status works before the player is started, and does not start it', cs?.nav?.current === '1' && !(await hasPlayer()), JSON.stringify(cs?.nav));
+  const pagesBefore = (await browser.pages()).length;
+  const start = await cc.cmd({ op: 'playback.playPause' });
+  await sleep(500);
+  const started = await frameVideo('/api/episode/');
+  check('playPause on a cold page starts the player and plays it', !!start?.ok && String(start.detail).includes('started the player') && started?.paused === false,
+    `${start?.detail}`);
+  const pagesAfter = (await browser.pages()).length;
+  check('no popup tab left open by the start click', pagesAfter === pagesBefore, `${pagesBefore} → ${pagesAfter} pages`);
+  const coldPause = await cc.cmd({ op: 'playback.playPause', play: false });
+  await sleep(300);
+  const [player, ad] = [await frameVideo('/api/episode/'), await frameVideo('/ad')];
+  check('pause reaches the player, not the ad playing beside it', !!coldPause?.ok && player?.paused === true && ad?.paused === false,
+    `player paused=${player?.paused} ad paused=${ad?.paused} — ${coldPause?.detail}`);
+
+  await openCold(coldUrl(2, false));
+  const coldSeek = await cc.cmd({ op: 'playback.seekTo', positionMs: 3000 });
+  let seekedTo = -1;
+  for (let i = 0; i < 20 && Math.abs(seekedTo - 3) >= 0.8; i++) {
+    await sleep(250);
+    seekedTo = (await frameVideo('/api/episode/'))?.t ?? -1;
+  }
+  check('seekTo on a cold page starts the player and seeks', !!coldSeek?.ok && Math.abs(seekedTo - 3) < 0.8, `${seekedTo.toFixed(1)}s — ${coldSeek?.detail}`);
+
+  await openCold(coldUrl(3, false));
+  const coldFs = await cc.cmd({ op: 'fullscreen.enter', toggle: true });
+  const fsEl = await coldTab.evaluate(() => document.fullscreenElement?.id ?? null);
+  check('fullscreen on a cold page starts the player and enters', !!coldFs?.ok && fsEl === 'player-iframe', `${fsEl} — ${coldFs?.executedBy} ${coldFs?.detail}`);
+  const fsStatus = await cc.status();
+  check('status reports fullscreen when the player is an iframe', fsStatus?.fullscreen === true, `${fsStatus?.fullscreen}`);
+  const fsOut = await cc.cmd({ op: 'fullscreen.enter', toggle: true });
+  await sleep(300);
+  check('toggling leaves fullscreen of a player iframe', !!fsOut?.ok && !(await coldTab.evaluate(() => !!document.fullscreenElement)), `${fsOut?.detail}`);
+
+  await openCold(coldUrl(4));
+  const coldNav = await cc.cmd({ op: 'nav.step', delta: 1 });
+  const coldExit = await cc.cmd({ op: 'fullscreen.exit' });
+  check('nav and fullscreen.exit never start the player', !!coldNav && !!coldExit && !(await hasPlayer()), `${coldNav?.detail} / ${coldExit?.detail}`);
+
+  await openCold(`http://animeworld.ac:${PAGE_PORT}/play/broken.x/1`);
+  const broken = await cc.cmd({ op: 'playback.playPause' });
+  check('no start control: a clear failure, not the ad beside it', broken?.ok === false && String(broken.detail).includes('no start control'), `${broken?.detail}`);
+  await cc.transport.close();
+  await coldTab.close();
   await tab.bringToFront();
 
   // 3 -- a tab that was already open when the extension was installed: the

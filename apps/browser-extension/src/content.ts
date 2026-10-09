@@ -125,6 +125,13 @@ async function perform(action: FrameAction): Promise<ActionResult | MediaReport 
   if (action.kind === 'navRead') return navRead(action.plan, action.withItems);
   if (action.kind === 'navStep') return navStep(action.plan, action.delta);
   if (action.kind === 'navGoto') return navGoto(action.plan, action.index, action.label);
+  if (action.kind === 'startPlayer') {
+    const control = usable(action.selector);
+    if (!control) return { ok: false, detail: `no start control (${action.selector}) on this page` };
+    // Answer first, as for navigation: a click may open popups or replace the frame.
+    setTimeout(() => control.click(), 50);
+    return { ok: true, detail: `clicked ${action.selector}` };
+  }
   if (action.kind === 'exitFullscreen') {
     if (!document.fullscreenElement) return { ok: true, detail: 'already out of fullscreen' };
     await document.exitFullscreen();

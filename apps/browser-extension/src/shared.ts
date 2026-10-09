@@ -63,6 +63,8 @@ export type FrameAction =
   | { kind: 'seekTo'; positionMs: number }
   | { kind: 'playPause'; play?: boolean }
   | { kind: 'exitFullscreen' }
+  // Top frame: click the control that starts a player kept behind a cover.
+  | { kind: 'startPlayer'; selector: string }
   // Navigation runs in the top frame, where the page's episode list lives.
   | { kind: 'navRead'; plan: NavPlan; withItems: boolean }
   | { kind: 'navStep'; plan: NavPlan; delta: 1 | -1 }

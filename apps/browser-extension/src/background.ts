@@ -1,6 +1,7 @@
 import type { Command, DeviceStatus, ExecutorId, NavStatus } from '@relay/protocol';
 import { compareVersions, LATEST_RELEASE_API, parseRelease, releaseSummary } from '@relay/protocol';
 import { type NavPlan } from './nav';
+import { isPlayerFrame, needsPlayer, popupTabs, type StartPlan, startedFrames, startPlanFor, startWaitMs } from './start';
 import sites from './sites.json';
 import {
   type ActionResult,
@@ -29,7 +30,7 @@ import {
  * the price of the one action a page will only take from a person.
  */
 
-type SiteRecipe = { fullscreenKey?: string; exitKey?: string; seekApi?: string; nav?: NavPlan };
+type SiteRecipe = { fullscreenKey?: string; exitKey?: string; seekApi?: string; nav?: NavPlan; start?: StartPlan };
 const SITES = sites as unknown as Record<string, SiteRecipe>;
 
 function siteFor(url: string): SiteRecipe | null {
@@ -77,6 +78,8 @@ interface Target {
   tabId: number;
   frameId: number;
   windowId: number;
+  /** The address of the tab (the frame's own is in the report). */
+  tabUrl: string;
   report: MediaReport;
 }
 
@@ -114,7 +117,7 @@ async function frameReports(tab: chrome.tabs.Tab): Promise<Target[]> {
     }
     return results
       .filter((r) => r.result)
-      .map((r) => ({ tabId: tab.id!, frameId: r.frameId, windowId: tab.windowId, report: r.result as MediaReport }));
+      .map((r) => ({ tabId: tab.id!, frameId: r.frameId, windowId: tab.windowId, tabUrl: tab.url!, report: r.result as MediaReport }));
   } catch {
     return [];
   }
@@ -157,10 +160,17 @@ async function pickTarget(): Promise<Target | null> {
     const any = focused ? await frameReports(focused) : [];
     return any.find((t) => t.frameId === 0) ?? any[0] ?? null;
   }
+  // In a tab where the site's own player frame (named by its start plan) has a
+  // video, that is the only candidate: ad banners on the same page play videos
+  // too, and a playing ad must not win over a paused episode.
+  const withPlayer = new Set(reports.filter(isPlayer).map((t) => t.tabId));
+  const candidates = reports.filter((t) => !withPlayer.has(t.tabId) || isPlayer(t));
   const score = (t: Target) =>
     (t.report.playing ? 1e12 : 0) + (audible.some((a) => a.id === t.tabId) ? 1e11 : 0) + t.report.area;
-  return reports.sort((a, b) => score(b) - score(a))[0]!;
+  return candidates.sort((a, b) => score(b) - score(a))[0]!;
 }
+
+const isPlayer = (t: Target): boolean => isPlayerFrame(startPlanFor(siteFor(t.tabUrl)?.start, t.tabUrl), t.report.url);
 
 const toFrame = <T>(t: Target, action: FrameAction) =>
   chrome.tabs.sendMessage(t.tabId, { relay: action }, { frameId: t.frameId }) as Promise<T>;
@@ -235,13 +245,26 @@ async function enterFullscreen(t: Target): Promise<ActionResult & { executedBy?:
   });
 
   await sleep(600);
-  const after = await pickTarget();
-  const ok = !!after?.report.fullscreen;
+  // Any frame of the tab: when the player is an iframe, the top document is the
+  // fullscreen one and the player's own document does not report it.
+  const tab = await chrome.tabs.get(t.tabId).catch(() => null);
+  const ok = !!tab && (await frameReports(tab)).some((f) => f.report.fullscreen);
   return { ok, executedBy: 'cdp', detail: ok ? how : `${how}: the page did not go fullscreen` };
 }
 
+/**
+ * Whether the tab is in fullscreen. The top document knows, whichever frame
+ * asked for it; a player iframe's own document does not report it.
+ */
+async function topFullscreen(t: Target): Promise<boolean> {
+  if (t.frameId === 0) return t.report.fullscreen;
+  const top = await toFrame<MediaReport>({ ...t, frameId: 0 }, { kind: 'report' }).catch(() => null);
+  return !!(top?.fullscreen || t.report.fullscreen);
+}
+
 async function exitFullscreen(t: Target): Promise<ActionResult & { executedBy?: ExecutorId }> {
-  const res = await toFrame<ActionResult>(t, { kind: 'exitFullscreen' });
+  // The top frame: leaving fullscreen there leaves it for every frame.
+  const res = await toFrame<ActionResult>({ ...t, frameId: 0 }, { kind: 'exitFullscreen' });
   return { ...res, executedBy: 'dom' };
 }
 
@@ -279,10 +302,71 @@ async function navStatus(t: Target | null, withItems: boolean): Promise<NavStatu
   return res ?? undefined;
 }
 
-async function execute(cmd: Command): Promise<ActionResult & { executedBy?: ExecutorId }> {
-  const t = await pickTarget();
-  if (!t) return { ok: false, detail: 'No tab with a video' };
+/**
+ * Some sites keep the player behind a cover until a person clicks it, so there
+ * is no <video> to drive. When the tab commands would go to (the focused one,
+ * if no tab has a video) has a start plan for its page and the plan's control is
+ * there, click it in the top frame, wait (bounded) for the video to appear in
+ * any frame, and hand back that frame. Ad tabs the click opened are closed.
+ */
+async function ensurePlayer(t: Target | null): Promise<{ t: Target | null; note?: string; error?: string }> {
+  const tab = t
+    ? await chrome.tabs.get(t.tabId).catch(() => null)
+    : (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
+  if (!tab?.id || !tab.url || !scriptable(tab)) return { t };
+  const plan = startPlanFor(siteFor(tab.url)?.start, tab.url);
+  // No plan, or the site's player is already the target.
+  if (!plan || (t?.report.hasMedia && (!plan.player || isPlayerFrame(plan, t.report.url)))) return { t };
 
+  const before = new Set((await frameReports(tab)).filter((f) => f.report.hasMedia).map((f) => f.frameId));
+  const tabsBefore = new Set((await chrome.tabs.query({})).map((x) => x.id!));
+  const click = (await chrome.tabs
+    .sendMessage(tab.id, { relay: { kind: 'startPlayer', selector: plan.click } satisfies FrameAction }, { frameId: 0 })
+    .catch((e: Error) => ({ ok: false, detail: e.message }))) as ActionResult;
+  // No control. Without a player frame to tell them apart, whatever video is
+  // there is the one to drive; with one, that video is not the site's player
+  // (an ad, typically) and driving it is not what was asked.
+  if (!click.ok) {
+    if (t?.report.hasMedia && !plan.player) return { t };
+    return { t, error: `${t?.report.hasMedia ? "The site's player is not on this page" : 'No tab with a video'}, and ${click.detail}` };
+  }
+
+  const waitMs = startWaitMs(plan);
+  const deadline = Date.now() + waitMs;
+  let found: Target | undefined;
+  while (!found && Date.now() < deadline) {
+    await sleep(250);
+    const frames = (await frameReports(tab)).map((f) => ({ ...f, url: f.report.url, hasMedia: f.report.hasMedia }));
+    found = startedFrames(plan, before, frames).sort((a, b) => b.report.area - a.report.area)[0];
+  }
+
+  // Ad popups: new tabs opened by this page while it was being started.
+  const popups = popupTabs(tabsBefore, await chrome.tabs.query({}) as Array<{ id: number; openerTabId?: number }>, tab.id);
+  let closed = '';
+  if (popups.length > 0) {
+    await chrome.tabs.remove(popups).catch(() => undefined);
+    await chrome.tabs.update(tab.id, { active: true }).catch(() => undefined);
+    await chrome.windows.update(tab.windowId, { focused: true }).catch(() => undefined);
+    closed = `, closed ${popups.length} popup tab${popups.length > 1 ? 's' : ''} it opened`;
+  }
+  if (!found) return { t, error: `clicked ${plan.click}${closed}, but no video appeared within ${Math.round(waitMs / 1000)} s` };
+  return { t: found, note: `started the player (clicked ${plan.click}${closed})` };
+}
+
+async function execute(cmd: Command): Promise<ActionResult & { executedBy?: ExecutorId }> {
+  let t = await pickTarget();
+  let note: string | undefined;
+  if (needsPlayer(cmd.op)) {
+    const started = await ensurePlayer(t);
+    if (started.error) return { ok: false, detail: started.error };
+    ({ t, note } = started);
+  }
+  if (!t) return { ok: false, detail: 'No tab with a video' };
+  const res = await run(cmd, t, !!note);
+  return note ? { ...res, detail: res.detail ? `${note}; ${res.detail}` : note } : res;
+}
+
+async function run(cmd: Command, t: Target, started: boolean): Promise<ActionResult & { executedBy?: ExecutorId }> {
   switch (cmd.op) {
     case 'playback.seek':
     case 'playback.seekTo': {
@@ -306,11 +390,13 @@ async function execute(cmd: Command): Promise<ActionResult & { executedBy?: Exec
       return { ...res, executedBy: 'dom' };
     }
     case 'playback.playPause': {
-      const res = await toFrame<ActionResult>(t, { kind: 'playPause', play: cmd.play });
+      // Starting the player is a request to watch: a toggle means play.
+      const play = started ? (cmd.play ?? true) : cmd.play;
+      const res = await toFrame<ActionResult>(t, { kind: 'playPause', play });
       return { ...res, executedBy: 'dom' };
     }
     case 'fullscreen.enter':
-      return cmd.toggle && t.report.fullscreen ? exitFullscreen(t) : enterFullscreen(t);
+      return cmd.toggle && (await topFullscreen(t)) ? exitFullscreen(t) : enterFullscreen(t);
     case 'fullscreen.exit':
       return exitFullscreen(t);
     case 'nav.step':
@@ -340,7 +426,7 @@ async function status(includeNavItems = false): Promise<DeviceStatus> {
     recipeKnown: !!(t && siteFor(t.report.url)),
     batteryPercent: battery ? Math.round(battery.level * 100) : null,
     title: t?.report.title ?? null,
-    fullscreen: t?.report.fullscreen ?? null,
+    fullscreen: t ? await topFullscreen(t) : null,
     ...(nav ? { nav } : {}),
   };
 }
@@ -376,7 +462,7 @@ async function targetInfo(): Promise<TargetInfo | null> {
     playing: t.report.playing,
     positionMs: t.report.positionMs,
     durationMs: t.report.durationMs,
-    fullscreen: t.report.fullscreen,
+    fullscreen: await topFullscreen(t),
   };
 }
 
