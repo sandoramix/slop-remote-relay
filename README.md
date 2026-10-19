@@ -131,21 +131,51 @@ On the phone you hold, open **Skipper** and either:
 That's it. The remote shows which path it is using (for example *Wi-Fi locale
 · 6 ms*); tap it to see all six.
 
-### 4. Control a browser (optional)
+### 4. The browser extension (optional)
+
+Full guide, with screenshots: <https://sandoramix.github.io/slop-remote-relay/extension.html>.
 
 1. Unzip `relay-extension-<version>.zip` into a folder you'll keep, e.g.
    `Documents/relay-extension` — updates go into the same folder.
 2. In Chrome or Brave open `chrome://extensions`, turn on **Developer mode**,
-   click **Load unpacked** and pick that folder.
-3. Click the Skipper icon and follow the three setup steps: relay address,
-   pairing code, then scan the QR code with your phone.
-4. That's it. Fullscreen works out of the box: it uses Chrome's debugger
-   permission, because a web page only goes fullscreen when a person asks and
-   this is the only way an extension can ask on your behalf. While a fullscreen
-   command runs, Chrome briefly shows a "Relay is debugging this browser" bar.
+   click **Load unpacked** and pick that folder. Pin the Skipper icon.
+3. **That's it for skipping.** The extension skips on any video by itself, with no
+   phone, no account and no server (see *Skip right in the browser* below).
+4. **To use your phone as its remote too**, open the popup's **Phone** tab, click
+   **Save and show QR code** and scan it with the app (or type the same pairing code).
+   **The relay field is optional: leave it empty.** The pairing code is made for you,
+   and the extension and the phone then talk over a public MQTT broker, which works as
+   is. A relay only adds faster paths (WebRTC, WebSocket, HTTP); see below.
 
-**No phone needed for skipping.** The extension also skips by itself, in the
-style you pick in the popup (*Overlay and shortcuts*):
+| Setting | Out of the box |
+|---|---|
+| Skipping in the browser | works at once |
+| Phone connection | works as is, over the public MQTT broker |
+| Relay server | optional, empty |
+| MQTT broker | `wss://broker.hivemq.com:8884/mqtt` (public: it can read the traffic, not forge it; use your own if that matters) |
+| Amounts | `10s 15s 1m 1m30s 5m 10m`, starting at 10s; type any, e.g. `1h30m30s` |
+| Look | edge pills; pick another in *Settings* |
+| Shortcuts | <kbd>Alt</kbd>+<kbd>Shift</kbd>+arrows |
+| Language | English; **EN \| IT** in the popup |
+
+Fullscreen works out of the box too: it uses Chrome's debugger permission, because a
+web page only goes fullscreen when a person asks and this is the only way an
+extension can ask on your behalf. While a fullscreen command runs, Chrome briefly
+shows a "Relay is debugging this browser" bar.
+
+The popup's **Phone** tab shows whether your phone is connected and over which path,
+and the last command; the **Skip** tab shows which tab commands go to. A green dot on
+the toolbar icon means a phone is connected.
+
+**Updates:** the extension checks GitHub twice a day. When a new version is
+out, the popup offers it: download the zip, unzip it over the same folder, and
+press **Reload Skipper**. Pairing and settings are kept. (Chrome only lets Web
+Store extensions update themselves; this is the closest a GitHub release gets.)
+
+#### Skip right in the browser
+
+The extension skips by itself, in the
+style you pick in the popup (*Settings → Look and control*):
 
 - **Edge pills** (default): back and forward slide in at the edges of the video
   when you move the pointer there; hover one to pick the amount.
@@ -159,25 +189,11 @@ shortcuts and sites to leave alone are edited in the popup, which also has the
 language picker (English or Italian, English by default). It does exactly what
 the phone's seek keys do and works alongside a connected phone.
 
-The popup shows whether your phone is connected and over which path, which tab
-commands go to, and the last command. A green dot on the toolbar icon means a
-phone is connected.
-
-**Updates:** the extension checks GitHub twice a day. When a new version is
-out, the popup offers it: download the zip, unzip it over the same folder, and
-press **Reload Skipper**. Pairing and settings are kept. (Chrome only lets Web
-Store extensions update themselves; this is the closest a GitHub release gets.)
-
-A browser can only be reached over the internet paths. The relay server is
-**optional**: with the address left empty the extension works as is, over the
-public MQTT broker. Add your own relay for the faster WebRTC, WebSocket and HTTP
-paths.
-
 ### Using it away from home — the relay server
 
-On the same Wi-Fi, nothing else is needed. To use the remote from elsewhere, or
-to control a browser, run the small relay server somewhere both devices can
-reach:
+On the same Wi-Fi, nothing else is needed, and a browser works as is over MQTT.
+To use the remote from elsewhere, or to get faster paths to a browser, run the
+small relay server somewhere both devices can reach:
 
 ```bash
 docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/slop-remote-relay-server:latest

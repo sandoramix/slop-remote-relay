@@ -132,3 +132,27 @@ footer {
 
 .policy h2 { font-size: 1.2rem; margin-top: 1.5rem; }
 .policy { padding-bottom: 2rem; }
+
+/* The extension guide */
+.toc { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; padding: 0.75rem 0 0.25rem; font-size: 0.92rem; }
+.toc a { text-decoration: none; border-bottom: 1px solid var(--line); }
+.toc a:hover { border-color: var(--accent); }
+.defaults { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.92rem; }
+.defaults th, .defaults td { text-align: left; vertical-align: top; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); }
+.defaults th { color: var(--muted); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.defaults td:first-child { white-space: nowrap; font-weight: 600; }
+@media (max-width: 36rem) { .defaults td:first-child { white-space: normal; } }
+kbd {
+  font: 0.82em ui-monospace, "SF Mono", Consolas, monospace;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 0.05rem 0.4rem;
+  white-space: nowrap;
+}
+.settings dt { font-weight: 600; margin-top: 1.1rem; }
+.settings dd { margin: 0.25rem 0 0; color: var(--muted); }
+.wide-shots figure { flex: 1 1 18rem; max-width: 100%; }
+@media (min-width: 40rem) { .wide-shots figure { max-width: calc(50% - 0.65rem); } }
+figure.popup { max-width: 21rem; margin: 1rem 0; }

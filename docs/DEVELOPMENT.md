@@ -89,7 +89,8 @@ is missing. A local build reports the version in `package.json`: set
 | `npm test` | TransportManager ordering/failover/promotion; every shared transport against a live relay, WebRTC over libdatachannel |
 | `RELAY_TEST_MQTT=wss://broker.hivemq.com:8884/mqtt npm test -w @relay/transports` | MQTT against a real broker |
 | `./gradlew test` (receiver) | Kotlin canonicalisation matches the TS vectors byte for byte; MQTT codec matches the TS encoder |
-| `npm run smoke:extension` | the built extension in Chrome for Testing, over relay WS, HTTP and WebRTC: status, seek, pause, fullscreen in and out, episode navigation, covered players, and the skip panel (89 checks) |
+| `npx tsx tools/extension-assets.ts` | regenerates the extension's screenshots (`pages/img`) and the store images (`docs/store-assets`) from the real build, with a sample video from the Internet Archive (needs internet) |
+| `npm run smoke:extension` | the built extension in Chrome for Testing, over relay WS, HTTP and WebRTC: status, seek, pause, fullscreen in and out, episode navigation, covered players, and the skip panel (92 checks) |
 | `npm run smoke -- <code> --relay <url>` | receiver on the emulator: signatures both ways, dedupe, forged and stale frames refused, mirror = one execution |
 | `npm run smoke:paths -- <code> --relay <url>` | receiver on the emulator over relay WS, HTTP, MQTT and WebRTC |
 | `npm run send -- <code> <op> ['{json}']` | fire one command at the receiver and print the reply |

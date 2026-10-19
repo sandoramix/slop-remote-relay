@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skipper for Chrome: guide</title>
+<meta name="description" content="Install Skipper for Chrome or Brave, skip right on any video with the pointer, the keyboard or your phone, and set up the optional phone connection. What works as is, and what each setting does.">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <img class="logo" src="icon.png" alt="" width="72" height="72">
+  <h1>Skipper for Chrome</h1>
+  <p class="tagline">Skip right on the video. Add your phone if you like.</p>
+  <p class="lead">
+    The extension skips on any video in Chrome or Brave all by itself, with nothing to set up. Pairing a
+    phone, so it becomes the remote, is optional and takes a minute.
+  </p>
+  <div class="actions">
+    <a class="button primary" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Download</a>
+    <a class="button" href="./">All of Skipper</a>
+  </div>
+</header>
+
+<main>
+  <nav class="toc" aria-label="On this page">
+    <a href="#as-is">Works as is</a>
+    <a href="#install">Install</a>
+    <a href="#skip">Skip on the video</a>
+    <a href="#styles">Four styles</a>
+    <a href="#phone">Connect a phone</a>
+    <a href="#settings">What each setting does</a>
+    <a href="#trouble">Troubleshooting</a>
+  </nav>
+
+  <section id="as-is">
+    <h2>What works as is</h2>
+    <p>Install it and these already work. You only change them if you want something different.</p>
+    <table class="defaults">
+      <thead><tr><th>Part</th><th>Out of the box</th><th>Change it if</th></tr></thead>
+      <tbody>
+        <tr><td>Skipping in the browser</td><td><strong>Works at once</strong>: no account, no phone, no server.</td><td>You'd rather have a different <a href="#styles">style</a> or keys.</td></tr>
+        <tr><td>Phone connection</td><td><strong>Works as is</strong>, over a public MQTT broker. A pairing code is made for you.</td><td>You want faster paths or your own broker.</td></tr>
+        <tr><td>Relay server</td><td><strong>Optional.</strong> Leave it empty.</td><td>You want the phone to reach the browser over WebRTC, WebSocket or HTTP too.</td></tr>
+        <tr><td>MQTT broker</td><td><code>wss://broker.hivemq.com:8884/mqtt</code>, public.</td><td>You'd rather commands did not pass through a broker you don't run.</td></tr>
+        <tr><td>Skip amounts</td><td><code>10s</code> <code>15s</code> <code>1m</code> <code>1m30s</code> <code>5m</code> <code>10m</code>, starting at 10s.</td><td>You want others. Type any amount, such as <code>1h30m30s</code>.</td></tr>
+        <tr><td>Look</td><td>Edge pills, with a short tip the first few times.</td><td>You prefer the dock, a gesture or the timeline.</td></tr>
+        <tr><td>Shortcuts</td><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+arrows.</td><td>They clash with something on your keyboard.</td></tr>
+        <tr><td>Language</td><td>English.</td><td>You want Italian: the <strong>EN | IT</strong> switch in the popup.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <ol class="steps">
+      <li>
+        <h3>Get the extension</h3>
+        <p>Download <code>relay-extension-&lt;version&gt;.zip</code> from the <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a> and unzip it into a folder you'll keep, for example <code>Documents/skipper-extension</code>.</p>
+        <p class="note">Updates go into the same folder: the popup tells you when one is out, and <em>Reload Skipper</em> picks it up. Your settings and pairing are kept.</p>
+      </li>
+      <li>
+        <h3>Load it</h3>
+        <p>Open <code>chrome://extensions</code> (<code>brave://extensions</code> in Brave), turn on <em>Developer mode</em>, click <em>Load unpacked</em> and pick the folder.</p>
+      </li>
+      <li>
+        <h3>Pin it</h3>
+        <p>Click the puzzle-piece icon and pin Skipper, so its icon and its green dot are always in reach. The dot means a phone is connected.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="skip">
+    <h2>Skip right on the video</h2>
+    <p>
+      Open any video and move the pointer over it. Controls slide in at the edges of the video and fade away when
+      you stop. Press back or forward to jump by the amount shown, which is <strong>10s</strong> to begin with.
+    </p>
+    <figure class="wide">
+      <img src="img/style-tip.jpg" width="960" height="540" loading="lazy" alt="A video with a short tip at the edge: hover a pill to pick the amount, Alt+Shift+Right skips forward">
+      <figcaption>The first few times, a short tip says how this style works. It stops for good once you've used it.</figcaption>
+    </figure>
+    <h3>Pick the amount</h3>
+    <ul>
+      <li><strong>On the video:</strong> hover a control to see the amounts either side of the current one, and click one. Scrolling over the control works too.</li>
+      <li><strong>In the popup:</strong> the <em>Skip</em> tab lists your amounts. Click one to select it, or press the two big buttons to jump from there.</li>
+      <li><strong>Type your own:</strong> in the box under the amounts. <code>45</code> is seconds; <code>2m</code>, <code>1m30s</code>, <code>1h</code>, <code>1h30m30s</code> and <code>1:30:30</code> all work, and <code>1h30</code> means 1 h 30 min. Press Enter and it joins the list.</li>
+      <li><strong>Edit the list:</strong> <em>Edit</em> shows a × on each amount, and <em>Restore default amounts</em> (it asks first) puts the originals back.</li>
+    </ul>
+    <figure class="popup">
+      <img src="img/extension-skip.png" width="380" height="539" loading="lazy" alt="The Skipper popup, Skip tab: the tab being controlled, the amounts, a box for another amount, and the two jump buttons">
+      <figcaption>The Skip tab</figcaption>
+    </figure>
+
+    <h3>Keyboard shortcuts</h3>
+    <p>Work on any page with a video, whichever style you use. They all need <kbd>Alt</kbd> and <kbd>Shift</kbd>, so a site's own keys (space, arrows, <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd>, <kbd>F</kbd>) keep doing what they do.</p>
+    <table class="defaults">
+      <thead><tr><th>Keys</th><th>Does</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>←</kbd></td><td>Skip back</td></tr>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>→</kbd></td><td>Skip forward</td></tr>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>Next / previous amount</td></tr>
+        <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Show or hide the controls on videos</td></tr>
+      </tbody>
+    </table>
+    <p>Change any of them in <em>Settings → Shortcuts</em>: press <em>Change</em>, then the keys you want. Skipper warns you about a combination that needs <kbd>Alt</kbd>, <kbd>Ctrl</kbd> or <kbd>Win</kbd> to be safe while typing, one that is <kbd>AltGr</kbd> on many keyboards (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>), one the browser keeps for itself, and one a site is known to use.</p>
+    <figure class="popup">
+      <img src="img/extension-shortcuts.png" width="380" height="600" loading="lazy" alt="The Settings tab with the shortcut list open: skip back, skip forward, next and previous amount, show or hide, each with a Change button">
+      <figcaption>Settings → Shortcuts</figcaption>
+    </figure>
+  </section>
+
+  <section id="styles">
+    <h2>Four ways to skip</h2>
+    <p>Pick the one you like in <em>Settings → Look and control</em>. All four do the same thing; only how you reach it differs. A new style explains itself with a short tip the first few times.</p>
+    <div class="shots wide-shots">
+      <figure>
+        <img src="img/style-pills.jpg" width="960" height="540" loading="lazy" alt="Edge pills on a video: back on the left edge, forward on the right, with the amounts above and below one of them">
+        <figcaption><strong>Edge pills</strong> (default). Back on the left, forward on the right. Hover one for the amounts either side.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/style-dock.jpg" width="960" height="540" loading="lazy" alt="The side dock open on a video: back and forward buttons and a chip for every amount">
+        <figcaption><strong>Side dock.</strong> One slim tab on the edge. Hover it for the buttons and every amount.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/style-gesture.jpg" width="960" height="540" loading="lazy" alt="The gesture style: a large +40s counter in the middle of the video">
+        <figcaption><strong>Gesture.</strong> Nothing on the video. Hold <kbd>Alt</kbd> and scroll over it: up skips forward, down skips back, and a number ticks up in the middle. <kbd>Alt</kbd>+<kbd>Shift</kbd>+scroll changes the amount. Pressing <kbd>Alt</kbd> shows a small guide.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/style-timeline.jpg" width="960" height="540" loading="lazy" alt="The timeline style: a bar along the bottom shows a marker moving from 1:18 to 2:18, with +1m in the middle">
+        <figcaption><strong>Timeline.</strong> Nothing on the video either. After a jump (a shortcut, or <kbd>Alt</kbd>+scroll) a bar glides in with a marker travelling from where you were to where you landed.</figcaption>
+      </figure>
+    </div>
+    <figure class="popup">
+      <img src="img/extension-styles.png" width="380" height="600" loading="lazy" alt="The Settings tab: four cards to pick the style, then switches for the on-video controls">
+      <figcaption>Settings → Look and control</figcaption>
+    </figure>
+    <h3>Keep it out of the way</h3>
+    <ul>
+      <li><strong>Off on one site:</strong> with that site's tab in front, open <em>Settings</em> and turn on <em>Off on &lt;site&gt;</em>. The list of sites sits right under it, for turning one back on.</li>
+      <li><strong>Off everywhere, shortcuts kept:</strong> turn off <em>Skip controls on videos</em> (or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>).</li>
+      <li><strong>No on-screen confirmation:</strong> turn off <em>Confirm each jump on screen</em>.</li>
+      <li><strong>No shortcuts:</strong> turn off <em>Keyboard shortcuts</em>.</li>
+    </ul>
+  </section>
+
+  <section id="phone">
+    <h2>Connect a phone <span class="optional">optional</span></h2>
+    <p>
+      Pair the browser with the Skipper app and your phone becomes its remote: jump, pause and go fullscreen from
+      the sofa. You don't need a server for this. <strong>It works as is.</strong>
+    </p>
+    <ol class="steps">
+      <li>
+        <h3>Open the Phone tab</h3>
+        <p>
+          The pairing code is already made for you. The relay field is optional, so <strong>leave it empty</strong>:
+          the extension then uses the public MQTT broker, which needs nothing from you.
+        </p>
+        <figure class="popup">
+          <img src="img/extension-setup.png" width="380" height="600" loading="lazy" alt="The Phone tab before pairing: an optional relay server field, a generated pairing code, and a Save and show QR code button">
+          <figcaption>The Phone tab, before pairing</figcaption>
+        </figure>
+      </li>
+      <li>
+        <h3>Save and scan</h3>
+        <p>Click <em>Save and show QR code</em>. In the Skipper app on your phone, scan the code with the camera and tap the link, or type the same pairing code on the app's welcome screen. Leave its relay field empty too.</p>
+        <figure class="popup">
+          <img src="img/extension-pair.png" width="380" height="600" loading="lazy" alt="The Phone tab after saving: waiting for your phone, with the QR code and the pairing code">
+          <figcaption>The QR code, waiting for the phone</figcaption>
+        </figure>
+      </li>
+      <li>
+        <h3>Check the dot</h3>
+        <p>When it turns green, the phone is connected and says which path it is using. The <em>Last command</em> line shows what it just sent.</p>
+        <figure class="popup">
+          <img src="img/extension-connected.png" width="380" height="479" loading="lazy" alt="The Phone tab with a phone connected over the relay, and the last command, a 30 second jump, acknowledged">
+          <figcaption>Connected</figcaption>
+        </figure>
+      </li>
+    </ol>
+    <p class="note">
+      The phone and the browser can be used together: both ask for the same jump on the same video, and a jump
+      made on the keyboard shows up on the phone's next status.
+    </p>
+  </section>
+
+  <section id="settings">
+    <h2>What each setting does</h2>
+    <p>All of these live on the <em>Phone</em> tab, in the sections under the status. None needs changing to start.</p>
+    <figure class="popup">
+      <img src="img/extension-broker.png" width="380" height="600" loading="lazy" alt="The Relay and broker section: the relay server field empty and the MQTT broker set to the public default">
+      <figcaption>Relay empty, broker at its default: the out-of-the-box setup</figcaption>
+    </figure>
+    <dl class="settings">
+      <dt>Relay server <span class="optional">optional</span></dt>
+      <dd>
+        The address of a relay you run, such as <code>wss://relay.example.com</code>. Empty is fine. With one, the
+        phone can also reach the browser over WebRTC (peer to peer), WebSocket and HTTP, which are faster than a
+        broker and work where one is blocked. See <a href="./#install">running the relay</a>.
+      </dd>
+      <dt>MQTT broker</dt>
+      <dd>
+        The default is a public broker, <code>broker.hivemq.com</code>, used as a mailbox between the phone and the
+        browser. Every command is signed with a key made from your pairing code, which the broker never sees, so it
+        cannot forge or replay a command. It <em>can</em> read the traffic (seek amounts, not what is on your screen),
+        so if that matters, point this at a broker of your own.
+      </dd>
+      <dt>Pairing code</dt>
+      <dd>
+        The only secret. Anyone with it can control this browser, so don't post it. <em>New code</em> makes another
+        one (and unpairs the phone until it scans again). Codes made here are long enough to be safe; a short one
+        you type yourself is flagged.
+      </dd>
+      <dt>Paths</dt>
+      <dd>
+        The connections in use, each with a switch. A path that needs a relay says so while the relay field is empty.
+        The browser can only be reached over the internet paths, so local Wi-Fi and Bluetooth don't apply to it.
+      </dd>
+      <dt>Language</dt>
+      <dd>
+        <strong>EN | IT</strong> at the top of the popup, remembered between sessions. English is the default whatever
+        language the browser uses.
+      </dd>
+    </dl>
+  </section>
+
+  <section id="trouble">
+    <h2>Troubleshooting</h2>
+    <dl class="settings">
+      <dt>A shortcut does nothing</dt>
+      <dd>It is ignored while you are typing in a box, on a site you switched off, and when <em>Keyboard shortcuts</em> is off. If another program or your keyboard layout switcher uses <kbd>Alt</kbd>+<kbd>Shift</kbd>, rebind the keys in <em>Settings → Shortcuts</em>.</dd>
+      <dt>The controls cover part of the player</dt>
+      <dd>Try the <strong>timeline</strong> or <strong>gesture</strong> style, which put nothing on the video, or switch the controls off for that site.</dd>
+      <dt>Nothing shows on a video</dt>
+      <dd>Controls appear when the pointer moves over a video that is at least 240×135 pixels, and not on a site you switched off. Pages that were open when you installed or updated the extension are set up automatically; reload one if it still does nothing.</dd>
+      <dt>Fullscreen shows a "debugging" bar</dt>
+      <dd>That is Chrome. A page only goes fullscreen when a person asks, and the only way an extension can ask for you is through the debugger, which shows that bar for a moment. It goes away by itself.</dd>
+      <dt>The phone says the browser is offline</dt>
+      <dd>Open the popup's <em>Phone</em> tab: the dot says whether a phone is heard, and the code on the phone must match the one shown there. A browser can only be reached over the internet, so the phone needs a connection too.</dd>
+      <dt>The popup says an update is out</dt>
+      <dd>Download the new zip, unzip it over the same folder and press <em>Reload Skipper</em>. Settings and pairing are kept.</dd>
+    </dl>
+    <p class="note">
+      The extension keeps no account and sends nothing anywhere except the connection you set up. See the
+      <a href="privacy.html">privacy policy</a>.
+    </p>
+    <p class="note">Screenshots show <em>Big Buck Bunny</em> © Blender Foundation, <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, <a href="https://peach.blender.org">peach.blender.org</a>.</p>
+  </section>
+</main>
+
+<footer>
+  <a href="./">Skipper</a>
+  <a href="privacy.html">Privacy policy</a>
+  <a href="https://github.com/sandoramix/slop-remote-relay">GitHub</a>
+  <a href="https://github.com/sandoramix/slop-remote-relay/issues">Report a problem</a>
+</footer>
+</body>
+</html>

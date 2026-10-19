@@ -28,11 +28,12 @@
   <section>
     <h2>What it does</h2>
     <ul class="features">
-      <li><strong>Jump by any amount.</strong> 10 s, 30 s, 5 min, 1:30. Pick a preset or type one, hold to keep going.</li>
+      <li><strong>Jump by any amount.</strong> 10s, 30s, 5m, 1m30s, 1h30m30s. Pick a preset or type one, hold to keep going.</li>
       <li><strong>Scrub</strong> to an exact point on a progress bar.</li>
       <li><strong>Play and pause.</strong></li>
       <li><strong>Fullscreen on and off</strong>, including web players in Chrome and Brave.</li>
       <li><strong>Several screens.</strong> Pair a phone and a browser and switch between them.</li>
+      <li><strong>Skip right in the browser, no phone needed.</strong> Pills, a dock, a scroll gesture or a timeline on the video, in the style you pick, or keyboard shortcuts. <a href="extension.html">See the browser guide.</a></li>
     </ul>
     <p>
       It works with YouTube, Netflix, Prime Video, Twitch, VLC and anything else that plays video,
@@ -58,7 +59,8 @@
       <div class="part">
         <h3>Skipper for Chrome</h3>
         <p class="where">desktop Chrome or Brave</p>
-        <p>Makes the video in any tab controllable.</p>
+        <p>Skips on any video by itself, and makes it controllable from the phone.</p>
+        <p><a href="extension.html">Guide</a></p>
       </div>
     </div>
     <div class="shots">
@@ -67,7 +69,7 @@
         <figcaption>Skipper, the remote</figcaption>
       </figure>
       <figure>
-        <img src="img/extension-connected.png" width="380" height="577" alt="The Skipper for Chrome popup: phone connected, the tab being controlled, and the last command received">
+        <img src="img/extension-connected.png" width="380" height="479" alt="The Skipper for Chrome popup: phone connected, the tab being controlled, and the last command received">
         <figcaption>Skipper for Chrome, taking commands</figcaption>
       </figure>
     </div>
@@ -121,25 +123,30 @@
       </li>
       <li>
         <h3>Add a browser <span class="optional">optional</span></h3>
-        <p>Install Skipper for Chrome, click its icon and follow the three steps: relay address, pairing code, scan the QR code with your phone.</p>
+        <p>Install Skipper for Chrome (or Brave). It already skips on any video by itself, with nothing to set up. To use your phone as its remote too, open the popup's <em>Phone</em> tab, click <em>Save and show QR code</em> and scan the code with the app.</p>
+        <p><strong>The relay field can stay empty.</strong> Left empty, the extension and the phone talk over a public MQTT broker, which works as is. A relay only adds faster paths.</p>
         <div class="shots">
           <figure>
-            <img src="img/extension-setup.png" width="380" height="884" alt="The Skipper for Chrome setup: relay server, pairing code, and a button to save and show the QR code">
-            <figcaption>The extension's setup</figcaption>
+            <img src="img/extension-setup.png" width="380" height="600" alt="The Skipper for Chrome Phone tab before pairing: an optional relay server, a generated pairing code, and a button to save and show the QR code">
+            <figcaption>The extension's Phone tab</figcaption>
+          </figure>
+          <figure>
+            <img src="img/extension-skip.png" width="380" height="539" alt="The Skipper for Chrome Skip tab: the amounts to jump by, a box for another amount, and the two jump buttons">
+            <figcaption>The Skip tab, which needs no phone</figcaption>
           </figure>
         </div>
         <p class="note">
           Not in the store yet? Download <code>relay-extension-&lt;version&gt;.zip</code>, unzip it into a folder you'll keep,
           open <code>chrome://extensions</code>, turn on <em>Developer mode</em> and click <em>Load unpacked</em>.
         </p>
-        <p class="note">A browser is reachable only over the internet, so it needs a relay server (below) or MQTT.</p>
+        <p class="note"><a href="extension.html">The full browser guide</a>: the four skip styles, shortcuts, and what every setting does.</p>
       </li>
     </ol>
   </section>
 
   <section>
     <h2>Away from home: the relay server</h2>
-    <p>On the same Wi-Fi nothing else is needed. To use the remote from elsewhere, or to control a browser, run the small relay server somewhere both devices can reach:</p>
+    <p>On the same Wi-Fi nothing else is needed, and a browser works as is over MQTT. For the remote to reach a phone from elsewhere, or for faster paths to a browser, run the small relay server somewhere both devices can reach:</p>
     <pre><code>docker run -d --name relay -p 8080:8080 ghcr.io/sandoramix/slop-remote-relay-server:latest</code></pre>
     <p>Put it behind HTTPS (for example with <a href="https://caddyserver.com">Caddy</a>) and enter <code>wss://your.domain</code> in each app. The server sees only an anonymous room id. It never learns your pairing code and stores nothing.</p>
   </section>
