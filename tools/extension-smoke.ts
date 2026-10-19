@@ -22,9 +22,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import puppeteer from 'puppeteer';
 import { canonicalize } from '../packages/protocol/src/codec';
-import { PROTOCOL_VERSION } from '../packages/protocol/src/messages';
+import { DEFAULT_MQTT_URL, PROTOCOL_VERSION } from '../packages/protocol/src/messages';
 import type { Transport } from '../packages/protocol/src/transport';
 import {
+  MqttTransport,
   RelayHttpTransport,
   RelayWsTransport,
   WebRtcTransport,
@@ -718,6 +719,31 @@ async function main(): Promise<void> {
   const paused = await tab.evaluate(() => document.querySelector('video')!.paused);
   check('pause reaches the open page', !!pause?.ok && paused, `${pause?.detail}`);
   await c.transport.close();
+
+  // 4 -- no relay at all: what setup saves with the relay field left empty. The default
+  // public MQTT broker alone has to carry a phone's commands.
+  console.log('\n[no relay: default MQTT broker only]');
+  await w2!.evaluate((settings) => chrome.storage.local.set({ settings }), { pairCode, relayUrl: '', mqttUrl: DEFAULT_MQTT_URL, disabled: [] });
+  await sleep(4000);
+  const mqttPhone = new MqttTransport({ url: DEFAULT_MQTT_URL, room, role: 'controller' });
+  const mc = new Controller(mqttPhone);
+  let mqttUp = true;
+  try {
+    await mc.connect();
+  } catch (e) {
+    mqttUp = false;
+    console.log(`  skip  the public broker is not reachable from here (${(e as Error).message})`);
+  }
+  if (mqttUp) {
+    await mqttPhone.send(sign({ type: 'ping', nonce: 'n' }));
+    const mst = await mc.status();
+    check('status over the default MQTT broker alone', typeof mst?.foregroundPackage === 'string', `${mst?.foregroundPackage}`);
+    const mseek = await mc.cmd({ op: 'playback.seekTo', positionMs: 3000 });
+    await sleep(400);
+    const mt = Number(await tab.evaluate(() => document.querySelector('video')!.currentTime));
+    check('seekTo over the default MQTT broker alone', !!mseek?.ok && Math.abs(mt - 3) < 0.8, `${mt.toFixed(1)}s ${mseek?.detail}`);
+    await mqttPhone.close();
+  }
 
   await browser.close();
   relay.kill();
