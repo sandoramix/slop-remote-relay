@@ -1,91 +1,119 @@
-// Draws the Skipper mark and renders every icon from that one drawing, so icons
-// are reproducible from source instead of being opaque binaries nobody can edit.
+// Renders the Relay mark to PNG with nothing but node:zlib, so icons are
+// reproducible from source instead of being opaque binaries nobody can edit.
 //
-//   node tools/make-icons.mjs            # writes every PNG
-//   node tools/make-icons.mjs --svg      # also writes docs/brand/skipper.svg
+//   node tools/make-icons.mjs
 //
-// The mark: the amber key (the one backlit button on a remote) with a timeline.
-// A short played stretch, a gap (what you skipped), and the playhead waiting on
-// the far side, with a thick arc leaping over the gap to land on it. Skip ahead,
-// drawn as the thing it does instead of a play triangle.
+// The mark: an amber key (the one backlit button on a remote) holding a dark
+// "skip forward" glyph — a triangle and a bar.
+import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import puppeteer from 'puppeteer';
 
-const AMBER = '#e8b04b';
-const INK = '#1b2027';
-const SLATE = '#14181e';
-const CREAM = '#f6efe3';
-const BEAK = '#e2692f';
+const AMBER = [232, 176, 75];
+const INK = [27, 32, 39];
+const SLATE = [20, 24, 30];
 
-const LINE = 10;
-const ARC = 8;
-
-/** The drawing in a 100×100 box. `mono`: one colour (the unplayed stretch stays fainter). */
-function drawing({ mono = false } = {}) {
-  const ink = mono ? '#fff' : INK;
-  const rest = mono ? '#fff' : CREAM;
-  return `
-    <path d="M14,68 L34,68" stroke="${ink}" stroke-width="${LINE}" stroke-linecap="round" fill="none"/>
-    <path d="M60,68 L87,68" stroke="${rest}" stroke-width="${LINE}" stroke-linecap="round" fill="none" ${mono ? 'opacity=".55"' : ''}/>
-    <circle cx="41" cy="68" r="2.5" fill="${ink}" opacity=".4"/><circle cx="47" cy="68" r="2.5" fill="${ink}" opacity=".4"/><circle cx="53" cy="68" r="2.5" fill="${ink}" opacity=".4"/>
-    <path d="M22,56 C20,10 50,2 58,24" stroke="${ink}" stroke-width="${ARC}" stroke-linecap="round" fill="none"/>
-    <rect x="65" y="28" width="7" height="56" rx="3.5" fill="${ink}"/>
-    <circle cx="68.5" cy="28" r="11.5" fill="${ink}"/>`;
+function crc32(buf) {
+  let c;
+  const table = [];
+  for (let n = 0; n < 256; n++) {
+    c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  let crc = 0xffffffff;
+  for (const b of buf) crc = table[(crc ^ b) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
-/** A little smaller than the key, so the drawing keeps clear of its rounded corners. */
-const onKey = (inner) => `<g transform="translate(50 50) scale(.9) translate(-50 -50)">${inner}</g>`;
+function png(size, pixel) {
+  const raw = Buffer.alloc((size * 4 + 1) * size);
+  const SS = 4; // supersampling for smooth edges
+  for (let y = 0; y < size; y++) {
+    raw[y * (size * 4 + 1)] = 0;
+    for (let x = 0; x < size; x++) {
+      let r = 0, g = 0, b = 0, a = 0;
+      for (let sy = 0; sy < SS; sy++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const [pr, pg, pb, pa] = pixel((x + (sx + 0.5) / SS) / size, (y + (sy + 0.5) / SS) / size);
+          r += pr * pa; g += pg * pa; b += pb * pa; a += pa;
+        }
+      }
+      const i = y * (size * 4 + 1) + 1 + x * 4;
+      const n = SS * SS;
+      raw[i] = a ? Math.round(r / a) : 0;
+      raw[i + 1] = a ? Math.round(g / a) : 0;
+      raw[i + 2] = a ? Math.round(b / a) : 0;
+      raw[i + 3] = Math.round((a / n) * 255);
+    }
+  }
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(td));
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 
-const KEY = `<rect x="3" y="3" width="94" height="94" rx="21" fill="${AMBER}"/>`;
-
-/** One 100×100 drawing as a standalone SVG. */
-const svg = (inner, defs = '') =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs>${defs}</defs>${inner}</svg>`;
-
-/** The mark itself: key + timeline. */
-export const mark = () => svg(KEY + onKey(drawing()));
-
-const variants = {
-  // Amber key on transparent (browser toolbar, splash, favicon) and on slate (launcher).
-  key: mark(),
-  keyOnSlate: svg(`<rect width="100" height="100" fill="${SLATE}"/>` + `<g transform="translate(50 50) scale(.9) translate(-50 -50)">${KEY + onKey(drawing())}</g>`),
-  // Adaptive-icon foreground: the mark inside Android's 66% safe zone.
-  foreground: svg(`<g transform="translate(50 50) scale(.56) translate(-50 -50)">${KEY + onKey(drawing())}</g>`),
-  // Themed (monochrome) icon: the same drawing in white.
-  monochrome: svg(`<g transform="translate(50 50) scale(.66) translate(-50 -50)">${drawing({ mono: true })}</g>`),
-  background: svg(`<rect width="100" height="100" fill="${SLATE}"/>`),
+// Signed-distance helpers in unit coordinates.
+const roundedSquare = (x, y, cx, cy, half, radius) => {
+  const qx = Math.abs(x - cx) - half + radius;
+  const qy = Math.abs(y - cy) - half + radius;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - radius;
+};
+const inTriangle = (x, y, [ax, ay], [bx, by], [cx, cy]) => {
+  const s = (px, py, qx, qy, rx, ry) => (px - rx) * (qy - ry) - (qx - rx) * (py - ry);
+  const d1 = s(x, y, ax, ay, bx, by), d2 = s(x, y, bx, by, cx, cy), d3 = s(x, y, cx, cy, ax, ay);
+  return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
 };
 
+/** The glyph inside a key centred at (cx, cy) with the given half-size. */
+function glyph(x, y, cx, cy, half) {
+  const s = half / 0.4;
+  const tri = inTriangle(x, y, [cx - 0.17 * s, cy - 0.17 * s], [cx - 0.17 * s, cy + 0.17 * s], [cx + 0.1 * s, cy]);
+  const bar = x > cx + 0.11 * s && x < cx + 0.17 * s && Math.abs(y - cy) < 0.17 * s;
+  return tri || bar;
+}
+
+/** Full icon: amber key on transparent (browser) or on slate (launcher). */
+const icon = (background) => (x, y) => {
+  if (roundedSquare(x, y, 0.5, 0.5, 0.46, 0.2) > 0) return background ? [...SLATE, 1] : [0, 0, 0, 0];
+  return glyph(x, y, 0.5, 0.5, 0.46) ? [...INK, 1] : [...AMBER, 1];
+};
+
+/** Adaptive-icon foreground: the mark inside Android's 66% safe zone. */
+const foreground = (x, y) => {
+  if (roundedSquare(x, y, 0.5, 0.5, 0.26, 0.11) > 0) return [0, 0, 0, 0];
+  return glyph(x, y, 0.5, 0.5, 0.26) ? [...INK, 1] : [...AMBER, 1];
+};
+const monochrome = (x, y) =>
+  roundedSquare(x, y, 0.5, 0.5, 0.26, 0.11) <= 0 && !glyph(x, y, 0.5, 0.5, 0.26) ? [255, 255, 255, 1] : [0, 0, 0, 0];
+const solid = (rgb) => () => [...rgb, 1];
+
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const wantSvg = process.argv.includes('--svg');
-
-const browser = await puppeteer.launch({ headless: true });
-const page = await browser.newPage();
-
-async function render(rel, size, name) {
-  await page.setViewport({ width: size, height: size, deviceScaleFactor: 1 });
-  await page.setContent(
-    `<!doctype html><body style="margin:0;background:transparent"><div style="width:${size}px;height:${size}px">${variants[name].replace('width="100" height="100"', `width="${size}" height="${size}"`)}</div>`,
-  );
+const out = (rel, size, fn) => {
   const file = path.join(root, rel);
   mkdirSync(path.dirname(file), { recursive: true });
-  await page.screenshot({ path: file, omitBackground: name !== 'keyOnSlate' && name !== 'background', clip: { x: 0, y: 0, width: size, height: size } });
+  writeFileSync(file, png(size, fn));
   console.log(`${rel} (${size}px)`);
-}
+};
 
-for (const size of [16, 48, 128]) await render(`apps/browser-extension/public/icon-${size}.png`, size, 'key');
-await render('apps/controller/assets/images/icon.png', 1024, 'keyOnSlate');
-await render('apps/controller/assets/images/android-icon-foreground.png', 512, 'foreground');
-await render('apps/controller/assets/images/android-icon-background.png', 512, 'background');
-await render('apps/controller/assets/images/android-icon-monochrome.png', 512, 'monochrome');
-await render('apps/controller/assets/images/splash-icon.png', 512, 'key');
-await render('apps/controller/assets/images/favicon.png', 48, 'key');
-
-if (wantSvg) {
-  const file = path.join(root, 'docs/brand/skipper.svg');
-  mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, variants.key.replace('width="100" height="100"', 'width="512" height="512"') + '\n');
-  console.log('docs/brand/skipper.svg');
-}
-await browser.close();
+for (const size of [16, 48, 128]) out(`apps/browser-extension/public/icon-${size}.png`, size, icon(false));
+out('apps/controller/assets/images/icon.png', 1024, icon(true));
+out('apps/controller/assets/images/android-icon-foreground.png', 512, foreground);
+out('apps/controller/assets/images/android-icon-background.png', 512, solid(SLATE));
+out('apps/controller/assets/images/android-icon-monochrome.png', 512, monochrome);
+out('apps/controller/assets/images/splash-icon.png', 512, icon(false));
+out('apps/controller/assets/images/favicon.png', 48, icon(false));

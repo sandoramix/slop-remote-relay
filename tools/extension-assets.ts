@@ -38,7 +38,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const b64 = (buf: Buffer) => `data:image/${buf[0] === 0xff ? 'jpeg' : 'png'};base64,${buf.toString('base64')}`;
 /** Video frames are photographs: JPEG, a fifth of the size. */
 const JPEG = { type: 'jpeg', quality: 86 } as const;
-const logo = `data:image/svg+xml;base64,${readFileSync(path.join(root, 'docs/brand/skipper.svg')).toString('base64')}`;
+const logo = `data:image/png;base64,${readFileSync(path.join(root, 'apps/browser-extension/public/icon-128.png')).toString('base64')}`;
 
 mkdirSync(SITE, { recursive: true });
 mkdirSync(STORE, { recursive: true });
