@@ -1,119 +1,114 @@
-// Renders the Relay mark to PNG with nothing but node:zlib, so icons are
-// reproducible from source instead of being opaque binaries nobody can edit.
+// Draws the Skipper mark and renders every icon from that one drawing, so icons
+// are reproducible from source instead of being opaque binaries nobody can edit.
 //
-//   node tools/make-icons.mjs
+//   node tools/make-icons.mjs            # writes every PNG
+//   node tools/make-icons.mjs --svg      # also writes docs/brand/skipper.svg
 //
-// The mark: an amber key (the one backlit button on a remote) holding a dark
-// "skip forward" glyph — a triangle and a bar.
-import { deflateSync } from 'node:zlib';
+// The mark: the amber key (the one backlit button on a remote) with the
+// skip-forward glyph drawn as a penguin sliding forward. The play triangle is its
+// body, a tuxedo split dark above and cream below, tapering to an orange beak
+// that points at the skip bar, with a single slanted slit for a stern eye. An
+// original drawing; the penguin is a mood, not a copy of anyone's character.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import puppeteer from 'puppeteer';
 
-const AMBER = [232, 176, 75];
-const INK = [27, 32, 39];
-const SLATE = [20, 24, 30];
+const AMBER = '#e8b04b';
+const INK = '#1b2027';
+const SLATE = '#14181e';
+const CREAM = '#f6efe3';
+const BEAK = '#e2692f';
 
-function crc32(buf) {
-  let c;
-  const table = [];
-  for (let n = 0; n < 256; n++) {
-    c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    table[n] = c >>> 0;
-  }
-  let crc = 0xffffffff;
-  for (const b of buf) crc = table[(crc ^ b) & 0xff] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
+const TRI = 'M13,20 L13,80 L56,50 Z';
+const BAR = { x: 83, y: 26, w: 8, h: 48, r: 3 };
+const HEAD = { x: 58, y: 50, r: 10.5 };
+
+/** The two halves of a shape: back (dark, above the middle) and belly (cream, below). */
+const split = (id, shape, back, belly) => `
+  <clipPath id="${id}-t"><rect x="0" y="0" width="100" height="50"/></clipPath>
+  <clipPath id="${id}-b"><rect x="0" y="50" width="100" height="50"/></clipPath>
+  <g clip-path="url(#${id}-t)">${shape(back)}</g>
+  <g clip-path="url(#${id}-b)">${shape(belly)}</g>`;
+
+const tri = (fill) => `<path d="${TRI}" stroke-linejoin="round" stroke-width="8" stroke="${fill}" fill="${fill}"/>`;
+const bar = (fill) => `<rect x="${BAR.x}" y="${BAR.y}" width="${BAR.w}" height="${BAR.h}" rx="${BAR.r}" fill="${fill}"/>`;
+const head = (fill) => `<circle cx="${HEAD.x}" cy="${HEAD.y}" r="${HEAD.r}" fill="${fill}"/>`;
+const beak = (fill) => `<path d="M67,45.5 L78,50 L67,54.5 Z" stroke-linejoin="round" stroke-width="3" stroke="${fill}" fill="${fill}"/>`;
+const feet = (fill) => `<ellipse cx="8" cy="63" rx="4" ry="5.5" fill="${fill}"/><ellipse cx="8" cy="77" rx="4" ry="5.5" fill="${fill}"/>`;
+const flipper = (fill) => `<ellipse cx="33" cy="64" rx="11" ry="4.2" transform="rotate(-20 33 64)" fill="${fill}"/>`;
+/** The face: a cream eye and one slanted brow over it, stern. */
+const eye = (fill) => `<circle cx="61" cy="50" r="2.9" fill="${fill}"/>`;
+const brow = (fill) => `<path d="M54,43.2 L64.5,46.6" stroke="${fill}" stroke-width="3.2" stroke-linecap="round" fill="none"/>`;
+
+/** The mark in a 100×100 box. `mono`: one colour, the face and the tuxedo line cut out. */
+function penguin({ mono = false } = {}) {
+  if (mono) return feet('#fff') + tri('#fff') + head('#fff') + beak('#fff') + bar('#fff');
+  return (
+    feet(BEAK) + split('p', (c) => tri(c), INK, CREAM) + flipper(INK) + head(INK) + beak(BEAK) +
+    eye(CREAM) + brow(CREAM) + split('b', (c) => bar(c), INK, CREAM)
+  );
 }
 
-function png(size, pixel) {
-  const raw = Buffer.alloc((size * 4 + 1) * size);
-  const SS = 4; // supersampling for smooth edges
-  for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0;
-    for (let x = 0; x < size; x++) {
-      let r = 0, g = 0, b = 0, a = 0;
-      for (let sy = 0; sy < SS; sy++) {
-        for (let sx = 0; sx < SS; sx++) {
-          const [pr, pg, pb, pa] = pixel((x + (sx + 0.5) / SS) / size, (y + (sy + 0.5) / SS) / size);
-          r += pr * pa; g += pg * pa; b += pb * pa; a += pa;
-        }
-      }
-      const i = y * (size * 4 + 1) + 1 + x * 4;
-      const n = SS * SS;
-      raw[i] = a ? Math.round(r / a) : 0;
-      raw[i + 1] = a ? Math.round(g / a) : 0;
-      raw[i + 2] = a ? Math.round(b / a) : 0;
-      raw[i + 3] = Math.round((a / n) * 255);
-    }
-  }
-  const chunk = (type, data) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const td = Buffer.concat([Buffer.from(type), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(td));
-    return Buffer.concat([len, td, crc]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
+/** What is punched out of the monochrome silhouette: the face, and a line where the tuxedo changes colour. */
+const monoMask = (id) => `
+  <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+    <rect width="100" height="100" fill="#fff"/>${eye('#000')}${brow('#000')}
+    <rect x="0" y="48.8" width="46" height="2.4" fill="#000"/>
+    <rect x="${BAR.x - 1}" y="48.8" width="${BAR.w + 2}" height="2.4" fill="#000"/>
+  </mask>`;
 
-// Signed-distance helpers in unit coordinates.
-const roundedSquare = (x, y, cx, cy, half, radius) => {
-  const qx = Math.abs(x - cx) - half + radius;
-  const qy = Math.abs(y - cy) - half + radius;
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - radius;
-};
-const inTriangle = (x, y, [ax, ay], [bx, by], [cx, cy]) => {
-  const s = (px, py, qx, qy, rx, ry) => (px - rx) * (qy - ry) - (qx - rx) * (py - ry);
-  const d1 = s(x, y, ax, ay, bx, by), d2 = s(x, y, bx, by, cx, cy), d3 = s(x, y, cx, cy, ax, ay);
-  return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
-};
+/** A little smaller than the key, so the glyph keeps clear of its rounded corners. */
+const onKey = (inner) => `<g transform="translate(50 50) scale(.92) translate(-50 -50)">${inner}</g>`;
 
-/** The glyph inside a key centred at (cx, cy) with the given half-size. */
-function glyph(x, y, cx, cy, half) {
-  const s = half / 0.4;
-  const tri = inTriangle(x, y, [cx - 0.17 * s, cy - 0.17 * s], [cx - 0.17 * s, cy + 0.17 * s], [cx + 0.1 * s, cy]);
-  const bar = x > cx + 0.11 * s && x < cx + 0.17 * s && Math.abs(y - cy) < 0.17 * s;
-  return tri || bar;
-}
+const KEY = `<rect x="3" y="3" width="94" height="94" rx="21" fill="${AMBER}"/>`;
 
-/** Full icon: amber key on transparent (browser) or on slate (launcher). */
-const icon = (background) => (x, y) => {
-  if (roundedSquare(x, y, 0.5, 0.5, 0.46, 0.2) > 0) return background ? [...SLATE, 1] : [0, 0, 0, 0];
-  return glyph(x, y, 0.5, 0.5, 0.46) ? [...INK, 1] : [...AMBER, 1];
-};
+/** One 100×100 drawing as a standalone SVG. */
+const svg = (inner, defs = '') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs>${defs}</defs>${inner}</svg>`;
 
-/** Adaptive-icon foreground: the mark inside Android's 66% safe zone. */
-const foreground = (x, y) => {
-  if (roundedSquare(x, y, 0.5, 0.5, 0.26, 0.11) > 0) return [0, 0, 0, 0];
-  return glyph(x, y, 0.5, 0.5, 0.26) ? [...INK, 1] : [...AMBER, 1];
+/** The mark itself: key + penguin. */
+export const mark = () => svg(KEY + onKey(penguin()));
+
+const variants = {
+  // Amber key on transparent (browser toolbar, splash, favicon) and on slate (launcher).
+  key: mark(),
+  keyOnSlate: svg(`<rect width="100" height="100" fill="${SLATE}"/>` + `<g transform="translate(50 50) scale(.9) translate(-50 -50)">${KEY + onKey(penguin())}</g>`),
+  // Adaptive-icon foreground: the mark inside Android's 66% safe zone.
+  foreground: svg(`<g transform="translate(50 50) scale(.56) translate(-50 -50)">${KEY + onKey(penguin())}</g>`),
+  // Themed (monochrome) icon: one white shape with the eye and the tuxedo line cut out.
+  monochrome: svg(`<g mask="url(#m)" transform="translate(50 50) scale(.66) translate(-50 -50)">${penguin({ mono: true })}</g>`, monoMask('m')),
+  background: svg(`<rect width="100" height="100" fill="${SLATE}"/>`),
 };
-const monochrome = (x, y) =>
-  roundedSquare(x, y, 0.5, 0.5, 0.26, 0.11) <= 0 && !glyph(x, y, 0.5, 0.5, 0.26) ? [255, 255, 255, 1] : [0, 0, 0, 0];
-const solid = (rgb) => () => [...rgb, 1];
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const out = (rel, size, fn) => {
+const wantSvg = process.argv.includes('--svg');
+
+const browser = await puppeteer.launch({ headless: true });
+const page = await browser.newPage();
+
+async function render(rel, size, name) {
+  await page.setViewport({ width: size, height: size, deviceScaleFactor: 1 });
+  await page.setContent(
+    `<!doctype html><body style="margin:0;background:transparent"><div style="width:${size}px;height:${size}px">${variants[name].replace('width="100" height="100"', `width="${size}" height="${size}"`)}</div>`,
+  );
   const file = path.join(root, rel);
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, png(size, fn));
+  await page.screenshot({ path: file, omitBackground: name !== 'keyOnSlate' && name !== 'background', clip: { x: 0, y: 0, width: size, height: size } });
   console.log(`${rel} (${size}px)`);
-};
+}
 
-for (const size of [16, 48, 128]) out(`apps/browser-extension/public/icon-${size}.png`, size, icon(false));
-out('apps/controller/assets/images/icon.png', 1024, icon(true));
-out('apps/controller/assets/images/android-icon-foreground.png', 512, foreground);
-out('apps/controller/assets/images/android-icon-background.png', 512, solid(SLATE));
-out('apps/controller/assets/images/android-icon-monochrome.png', 512, monochrome);
-out('apps/controller/assets/images/splash-icon.png', 512, icon(false));
-out('apps/controller/assets/images/favicon.png', 48, icon(false));
+for (const size of [16, 48, 128]) await render(`apps/browser-extension/public/icon-${size}.png`, size, 'key');
+await render('apps/controller/assets/images/icon.png', 1024, 'keyOnSlate');
+await render('apps/controller/assets/images/android-icon-foreground.png', 512, 'foreground');
+await render('apps/controller/assets/images/android-icon-background.png', 512, 'background');
+await render('apps/controller/assets/images/android-icon-monochrome.png', 512, 'monochrome');
+await render('apps/controller/assets/images/splash-icon.png', 512, 'key');
+await render('apps/controller/assets/images/favicon.png', 48, 'key');
+
+if (wantSvg) {
+  const file = path.join(root, 'docs/brand/skipper.svg');
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, variants.key.replace('width="100" height="100"', 'width="512" height="512"') + '\n');
+  console.log('docs/brand/skipper.svg');
+}
+await browser.close();

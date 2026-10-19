@@ -161,6 +161,15 @@ Things that differ from Chrome: the `WebView` node has no title text, and
 has no effect (see STATUS.md). Check what a click really did by dumping again
 (`url_bar` text, `episode-comment`, `player-cover`), not by the ack.
 
+## Icons
+
+Every icon is rendered from one drawing in `tools/make-icons.mjs` (the amber key
+with a penguin sliding forward, its body the play triangle, its beak pointing at the
+skip bar). `node tools/make-icons.mjs` rewrites the extension's and the
+controller's PNGs (it needs puppeteer, which the workspace already has); with
+`--svg` it also writes `docs/brand/skipper.svg`. The receiver's launcher icon is a
+separate vector drawable and is not generated.
+
 ## Conventions
 
 - Code comments in English; documentation in English; user-facing strings

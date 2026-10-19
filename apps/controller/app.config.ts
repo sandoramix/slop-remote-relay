@@ -24,7 +24,7 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'dev.sandoramix.skipper',
     buildNumber: String(versionCode),
-    icon: './assets/expo.icon',
+    icon: './assets/images/icon.png',
     infoPlist: {
       NSLocalNetworkUsageDescription:
         'Skipper cerca il ricevitore sulla tua rete Wi-Fi per comandarlo senza passare da internet.',
