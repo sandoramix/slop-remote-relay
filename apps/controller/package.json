@@ -1,7 +1,7 @@
 {
   "name": "@relay/controller",
   "main": "expo-router/entry",
-  "version": "0.2.0",
+  "version": "0.6.0",
   "dependencies": {
     "@config-plugins/react-native-webrtc": "^15.0.2",
     "@expo/html-elements": "^57.0.0",
