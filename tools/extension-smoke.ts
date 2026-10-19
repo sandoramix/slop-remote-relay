@@ -340,6 +340,359 @@ async function main(): Promise<void> {
   await coldTab.close();
   await tab.bringToFront();
 
+  // 2d -- the skip panel: shortcuts, overlay and toast, in the page, next to a connected phone
+  console.log('\n[skip panel]');
+  const setPanel = async (panel: Record<string, unknown>) => {
+    await worker!.evaluate((p) => chrome.storage.local.set({ panel: p }), panel as never);
+    await sleep(400);
+  };
+  const BASE = { overlay: 'hover', keys: true, toast: true, presets: [1, 2, 5], selected: 2, offHosts: [] as string[] };
+  const press = async (p: typeof tab, combo: string[], key: string) => {
+    for (const m of combo) await p.keyboard.down(m);
+    await p.keyboard.press(key as never);
+    for (const m of [...combo].reverse()) await p.keyboard.up(m);
+    await sleep(500);
+  };
+  const at = (p: typeof tab) => p.evaluate(() => document.querySelector('video')!.currentTime);
+  const park = (p: typeof tab, t: number) =>
+    p.evaluate((x) => { const v = document.querySelector('video')!; v.pause(); v.currentTime = x; }, t);
+  const pillOn = (p: typeof tab, side: 'l' | 'r' = 'r') =>
+    p.evaluate((sd) => document.querySelector('[data-skipper]')?.shadowRoot?.querySelector(`.side.${sd} .handle`)?.classList.contains('on') ?? false, side);
+  const floatText = (p: typeof tab) =>
+    p.evaluate(() => document.querySelector('[data-skipper]')?.shadowRoot?.querySelector('.side.r .float')?.textContent ?? '');
+  const savedPanel = async () =>
+    ((await worker!.evaluate(() => chrome.storage.local.get('panel'))) as { panel?: { selected?: number; overlay?: string } }).panel ?? {};
+
+  const pc = new Controller(new RelayWsTransport({ url: `ws://127.0.0.1:${RELAY_PORT}`, room, role: 'controller' }));
+  await pc.connect();
+  await tab.bringToFront();
+  await setPanel(BASE);
+  await park(tab, 1);
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  const fwd = await at(tab);
+  check('Alt+Shift+→ jumps forward by the selected amount', Math.abs(fwd - 3) < 0.5, `1.0s → ${fwd.toFixed(1)}s`);
+  await press(tab, ['Alt', 'Shift'], 'ArrowLeft');
+  const back = await at(tab);
+  check('Alt+Shift+← jumps back', Math.abs(back - 1) < 0.5, `→ ${back.toFixed(1)}s`);
+  await park(tab, 0);
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  check('quick jumps add up in the number shown', (await floatText(tab)) === '+4s', await floatText(tab));
+  await park(tab, 1);
+  await press(tab, [], 'ArrowRight');
+  check('a bare arrow is left to the site', Math.abs((await at(tab)) - back) < 0.3);
+
+  await press(tab, ['Alt', 'Shift'], 'ArrowUp');
+  const stored = (await worker!.evaluate(() => chrome.storage.local.get('panel'))) as { panel?: { selected?: number } };
+  check('Alt+Shift+↑ picks the next amount and saves it', stored.panel?.selected === 5, `selected=${stored.panel?.selected}`);
+  await setPanel(BASE);
+
+  // The phone keeps working beside it, and sees a jump made at the keyboard.
+  await park(tab, 1);
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  const seen = await pc.status();
+  check('the phone sees a jump made at the keyboard', Math.abs(Number(seen?.positionMs) - 3000) < 600, `positionMs=${seen?.positionMs}`);
+  const viaPhone = await pc.cmd({ op: 'playback.seekTo', positionMs: 4000 });
+  await sleep(300);
+  check('the phone still seeks after panel jumps', !!viaPhone?.ok && Math.abs((await at(tab)) - 4) < 0.5, `${viaPhone?.detail}`);
+
+  // Overlay
+  await park(tab, 1);
+  await tab.mouse.move(300, 200);
+  await tab.mouse.move(320, 210);
+  await sleep(500);
+  check('both pills slide in when the pointer is over the video', (await pillOn(tab, 'l')) && (await pillOn(tab, 'r')));
+  const box = await tab.evaluate(() => {
+    const r = document.querySelector('[data-skipper]')!.shadowRoot!.querySelector('.side.r .handle')!.getBoundingClientRect();
+    const v = document.querySelector('video')!.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, right: r.right, vRight: v.right, vMid: v.top + v.height / 2 };
+  });
+  check('the forward pill sits on the right edge, vertically centred', box.vRight - box.right < 30 && Math.abs(box.y - box.vMid) < 6,
+    `${(box.vRight - box.right).toFixed(0)} px from the edge, ${(box.y - box.vMid).toFixed(0)} px off centre`);
+  await tab.mouse.move(box.x, box.y);
+  await tab.mouse.click(box.x, box.y);
+  await sleep(500);
+  check('clicking the forward pill jumps', Math.abs((await at(tab)) - 3) < 0.5, `${(await at(tab)).toFixed(1)}s`);
+  check('the jump floats up beside the pill', (await floatText(tab)) === '+2s', await floatText(tab));
+  await tab.mouse.move(box.x, box.y + 2);
+  await sleep(300);
+  await tab.mouse.wheel({ deltaY: -100 });
+  await sleep(500);
+  check('the wheel over a pill picks the next amount', (await savedPanel()).selected === 5, `selected=${(await savedPanel()).selected}`);
+  await setPanel(BASE);
+  await tab.mouse.move(box.x, box.y - 2);
+  await sleep(300);
+  await tab.mouse.move(900, 600);
+  await sleep(3400);
+  check('the pills slide away on their own', !(await pillOn(tab)) && !(await pillOn(tab, 'l')));
+
+  // Fullscreen: the pill must be inside the fullscreen element to be seen
+  const fsPhone = await pc.cmd({ op: 'fullscreen.enter', toggle: true });
+  await tab.mouse.move(300, 300);
+  await tab.mouse.move(310, 310);
+  await sleep(600);
+  const parentId = await tab.evaluate(() => document.querySelector('[data-skipper]')?.parentElement?.id ?? null);
+  check('in fullscreen the pills live inside the fullscreen element', !!fsPhone?.ok && parentId === 'player', `parent=${parentId} ${fsPhone?.detail}`);
+  await pc.cmd({ op: 'fullscreen.exit' });
+  await sleep(500);
+
+  // Switching it off
+  await press(tab, ['Alt', 'Shift'], 'KeyS');
+  check('Alt+Shift+S switches the overlay off', (await savedPanel()).overlay === 'off', `${(await savedPanel()).overlay}`);
+  await tab.mouse.move(100, 100);
+  await tab.mouse.move(120, 120);
+  await sleep(500);
+  check('with the overlay off the pills stay away', !(await pillOn(tab)) && !(await pillOn(tab, 'l')));
+  await setPanel({ ...BASE, offHosts: ['127.0.0.1'] });
+  await park(tab, 1);
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  check('a site on the off list ignores the shortcuts', Math.abs((await at(tab)) - 1) < 0.3);
+  await setPanel({ ...BASE, keys: false });
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  check('shortcuts can be switched off', Math.abs((await at(tab)) - 1) < 0.3);
+  await setPanel(BASE);
+
+  // A player inside an iframe, with the keys pressed in the page around it
+  await tab.goto(`http://animeworld.ac:${PAGE_PORT}/play/cold.x/5?noad`);
+  await sleep(1500);
+  await pc.cmd({ op: 'playback.playPause' });
+  await sleep(800);
+  const playerFrame = () => tab.frames().find((f) => f.url().includes('/api/episode/'));
+  await playerFrame()?.evaluate(() => { const v = document.querySelector('video')!; v.pause(); v.currentTime = 1; });
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  const inFrame = (await playerFrame()?.evaluate(() => document.querySelector('video')!.currentTime)) ?? -1;
+  check('a shortcut pressed in the page jumps the video in its iframe', Math.abs(inFrame - 3) < 0.6, `${inFrame.toFixed(1)}s`);
+  await tab.goto(`http://127.0.0.1:${PAGE_PORT}/`);
+  await tab.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 2, { timeout: 20_000 });
+  // 2e -- the choice of style, the picker, the one-time tip, and the three other styles
+  console.log('\n[skip panel styles]');
+  const hasCls = (sel: string, cls: string) =>
+    tab.evaluate((s, c) => document.querySelector('[data-skipper]')?.shadowRoot?.querySelector(s)?.classList.contains(c) ?? false, sel, cls);
+  const text = (sel: string) =>
+    tab.evaluate((s) => document.querySelector('[data-skipper]')?.shadowRoot?.querySelector(s)?.textContent ?? '', sel);
+  const exists = (sel: string) =>
+    tab.evaluate((s) => !!document.querySelector('[data-skipper]')?.shadowRoot?.querySelector(s), sel);
+  const centre = (sel: string) =>
+    tab.evaluate((s) => {
+      const r = document.querySelector('[data-skipper]')!.shadowRoot!.querySelector(s)!.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }, sel);
+  const DONE = { shown: 0, done: true };
+  const wake = async () => {
+    await tab.mouse.move(300, 200);
+    await tab.mouse.move(320, 210);
+    await sleep(500);
+  };
+  const away = async () => {
+    await tab.mouse.move(900, 700);
+    await sleep(3400);
+  };
+  const withStyle = async (style: string, hints = DONE) => {
+    await tab.mouse.move(900, 700);
+    await setPanel({ ...BASE, style, hints });
+    await park(tab, 1);
+  };
+  const panelNow = async () =>
+    ((await worker!.evaluate(() => chrome.storage.local.get('panel'))) as {
+      panel?: { selected?: number; style?: string; hints?: { shown: number; done: boolean } };
+    }).panel ?? {};
+
+  // The picker on the default style
+  await withStyle('pills');
+  await wake();
+  const r = await centre('.side.r .handle');
+  await tab.mouse.move(r.x, r.y);
+  await sleep(500);
+  check('hovering a pill shows the amounts either side', (await hasCls('.side.r', 'pick')) && (await text('.side.r .nb.up')) === '5s' && (await text('.side.r .nb.down')) === '1s',
+    `up=${await text('.side.r .nb.up')} down=${await text('.side.r .nb.down')}`);
+  const up = await centre('.side.r .nb.up');
+  await tab.mouse.move(up.x, up.y);
+  await tab.mouse.click(up.x, up.y);
+  await sleep(400);
+  check('clicking one of them selects it', (await panelNow()).selected === 5, `selected=${(await panelNow()).selected}`);
+  await setPanel(BASE);
+
+  // The one-time tip
+  await withStyle('pills', { shown: 0, done: false });
+  await wake();
+  check('the tip shows the first time, in the style\'s own words', (await hasCls('.tip', 'on')) && (await text('.tip')).includes('Hover a pill'), await text('.tip'));
+  check('and is counted', (await panelNow()).hints?.shown === 1, JSON.stringify((await panelNow()).hints));
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  check('using the feature takes it away for good', !(await hasCls('.tip', 'on')) && (await panelNow()).hints?.done === true, JSON.stringify((await panelNow()).hints));
+  await withStyle('pills', { shown: 3, done: false });
+  await wake();
+  check('it is not shown a fourth time', !(await hasCls('.tip', 'on')));
+
+  // Side dock
+  await withStyle('dock');
+  await wake();
+  check('dock: a single tab shows, not the pills', (await hasCls('.dock', 'on')) && !(await exists('.side')) && !(await hasCls('.dock', 'open')));
+  const tabAt = await centre('.tab');
+  await tab.mouse.move(tabAt.x, tabAt.y);
+  await sleep(600);
+  check('dock: hovering the tab opens the controls', await hasCls('.dock', 'open'));
+  const fwdAt = await centre('.fwd');
+  await tab.mouse.move(fwdAt.x, fwdAt.y);
+  await tab.mouse.click(fwdAt.x, fwdAt.y);
+  await sleep(500);
+  check('dock: its forward button jumps and floats the number', Math.abs((await at(tab)) - 3) < 0.5 && (await text('.float')) === '+2s', `${(await at(tab)).toFixed(1)}s ${await text('.float')}`);
+  const chipAt = await tab.evaluate(() => {
+    const c = [...document.querySelector('[data-skipper]')!.shadowRoot!.querySelectorAll('.chip')].find((x) => x.textContent === '5s')!;
+    const b = c.getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  });
+  await tab.mouse.move(chipAt.x, chipAt.y);
+  await tab.mouse.click(chipAt.x, chipAt.y);
+  await sleep(400);
+  check('dock: a chip selects that amount', (await panelNow()).selected === 5, `selected=${(await panelNow()).selected}`);
+  await away();
+  check('dock: it slides away and closes by itself', !(await hasCls('.dock', 'on')) && !(await hasCls('.dock', 'open')));
+  await setPanel(BASE);
+
+  // Gesture
+  await withStyle('gesture');
+  await wake();
+  check('gesture: nothing is drawn on the video', !(await hasCls('.guide', 'on')) && !(await hasCls('.hud', 'on')) && !(await exists('.side')));
+  await tab.keyboard.down('Alt');
+  await sleep(400);
+  check('gesture: holding Alt shows what scrolling does', (await hasCls('.guide', 'on')) && (await text('.guide .gf')) === '+2s', await text('.guide .gf'));
+  await tab.mouse.wheel({ deltaY: -100 });
+  await sleep(600);
+  check('gesture: Alt + scroll up skips forward and ticks the number', Math.abs((await at(tab)) - 3) < 0.5 && (await text('.hud .num')) === '+2s' && (await hasCls('.hud', 'on')),
+    `${(await at(tab)).toFixed(1)}s ${await text('.hud .num')}`);
+  await tab.mouse.wheel({ deltaY: 100 });
+  await sleep(600);
+  check('gesture: scrolling down skips back', Math.abs((await at(tab)) - 1) < 0.5, `${(await at(tab)).toFixed(1)}s`);
+  await tab.keyboard.down('Shift');
+  await tab.mouse.wheel({ deltaY: -100 });
+  await sleep(500);
+  await tab.keyboard.up('Shift');
+  check('gesture: Shift + scroll changes the amount', (await panelNow()).selected === 5, `selected=${(await panelNow()).selected}`);
+  await tab.keyboard.up('Alt');
+  await sleep(400);
+  check('gesture: the guide goes when Alt is released', !(await hasCls('.guide', 'on')));
+  await setPanel(BASE);
+
+  // Timeline
+  await withStyle('timeline');
+  await wake();
+  check('timeline: nothing is drawn until a jump', !(await hasCls('.tl', 'on')) && !(await exists('.side')));
+  await press(tab, ['Alt', 'Shift'], 'ArrowRight');
+  const duration = await tab.evaluate(() => document.querySelector('video')!.duration);
+  const dotLeft = parseFloat(await tab.evaluate(() => (document.querySelector('[data-skipper]')!.shadowRoot!.querySelector('.dot') as HTMLElement).style.left));
+  check('timeline: a jump shows the bar with both times and the total',
+    (await hasCls('.tl', 'on')) && (await text('.from')) === '0:01' && (await text('.to')) === '0:03' && (await text('.chip')) === '+2s',
+    `${await text('.from')} → ${await text('.to')} ${await text('.chip')}`);
+  check('timeline: the marker is where the video landed', Math.abs(dotLeft - (3 / duration) * 100) < 3, `${dotLeft.toFixed(0)}% of ${duration.toFixed(1)}s`);
+  await sleep(2300);
+  check('timeline: the bar leaves by itself', !(await hasCls('.tl', 'on')));
+  await tab.keyboard.down('Alt');
+  await sleep(400);
+  check('timeline: holding Alt shows the bar with a hint', (await hasCls('.tl', 'on')) && (await text('.chip')).includes('2s'), await text('.chip'));
+  await park(tab, 1);
+  await tab.mouse.wheel({ deltaY: -100 });
+  await sleep(600);
+  await tab.keyboard.up('Alt');
+  check('timeline: Alt + scroll skips too', Math.abs((await at(tab)) - 3) < 0.6, `${(await at(tab)).toFixed(1)}s`);
+
+  // Choosing the style in the popup
+  const popup = await browser.newPage();
+  await popup.goto(`chrome-extension://${new URL(workerTarget.url()).hostname}/popup.html`);
+  await sleep(1500);
+  const tabButton = (name: RegExp) => popup.evaluate((src) => {
+    const b = [...document.querySelectorAll('nav.tabs button')].find((x) => new RegExp(src).test(x.textContent ?? '')) as HTMLElement | undefined;
+    b?.click();
+    return !!b;
+  }, name.source);
+  await tabButton(/Settings/);
+  await popup.evaluate(() => [...document.querySelectorAll('button.style-card')].find((b) => /Gesture/.test(b.textContent ?? ''))!.click());
+  await sleep(600);
+  check('the popup lists four styles and saves the one picked, restarting its tip',
+    (await popup.$$('button.style-card')).length === 4 && (await panelNow()).style === 'gesture' && (await panelNow()).hints?.done === false,
+    JSON.stringify(await panelNow()));
+
+  // An install that saved the old amounts can get the defaults back
+  await setPanel({ ...BASE, presets: [10, 30, 60, 300], selected: 30 });
+  await popup.reload();
+  await sleep(1200);
+  const chipTexts = () => popup.evaluate(() => [...document.querySelectorAll('.scroll .chips button.chip')].map((b) => b.textContent));
+  await tabButton(/Skip/);
+  await sleep(300);
+  await popup.evaluate(() => ([...document.querySelectorAll('.scroll .chips button.chip')].find((b) => b.textContent === 'Edit') as HTMLElement).click());
+  await sleep(200);
+  const clickButton = (re: string) => popup.evaluate((src) => {
+    const b = [...document.querySelectorAll('.scroll button')].find((x) => new RegExp(src).test(x.textContent ?? '')) as HTMLElement | undefined;
+    b?.click();
+    return !!b;
+  }, re);
+  await clickButton('Restore default amounts');
+  await sleep(300);
+  const asked = await popup.evaluate(() => !!document.querySelector('[role="alertdialog"]'));
+  await sleep(200);
+  check('"Restore default amounts" asks first, and nothing changes yet', asked && !(await chipTexts()).includes('1m30s'), JSON.stringify(await chipTexts()));
+  await clickButton('^Cancel$');
+  await sleep(300);
+  check('Cancel keeps the amounts', !(await popup.evaluate(() => !!document.querySelector('[role="alertdialog"]'))) && !(await chipTexts()).includes('1m30s'), JSON.stringify(await chipTexts()));
+  await clickButton('Restore default amounts');
+  await sleep(200);
+  await clickButton('^Restore$');
+  await sleep(500);
+  check('confirming brings back 10s, 15s, 1m, 1m30s, 5m, 10m',
+    JSON.stringify(await chipTexts()) === JSON.stringify(['10s', '15s', '1m', '1m30s', '5m', '10m', 'Edit']), JSON.stringify(await chipTexts()));
+  // A mixed amount typed in the box: 1h30m30s
+  await popup.evaluate(() => { const i = document.querySelector('.scroll form input') as HTMLInputElement; i.focus(); });
+  await popup.keyboard.type('1h30m30s');
+  await sleep(300);
+  const useLabel = await popup.evaluate(() => (document.querySelector('.scroll form button[type="submit"]') as HTMLButtonElement).textContent);
+  check('typing 1h30m30s is understood and offered as 1h30m30s', useLabel === 'Use 1h30m30s', `${useLabel}`);
+  await popup.keyboard.press('Enter');
+  await sleep(500);
+  check('and becomes a chip, selected', (await chipTexts()).includes('1h30m30s') && (await panelNow()).selected === 5430, JSON.stringify(await chipTexts()));
+  await tabButton(/Settings/);
+  await sleep(300);
+
+  const scrolling = await popup.evaluate(() => {
+    const s = document.querySelector('.scroll') as HTMLElement;
+    s.scrollTop = 99999;
+    const f = document.querySelector('footer')!.getBoundingClientRect();
+    return { scrollable: s.scrollHeight > s.clientHeight, atEnd: s.scrollTop > 0, footerShown: f.bottom <= innerHeight, pageFits: document.documentElement.scrollHeight <= innerHeight };
+  });
+  check('the popup scrolls inside its own area and the footer stays put', scrolling.scrollable && scrolling.atEnd && scrolling.footerShown && scrolling.pageFits, JSON.stringify(scrolling));
+
+  // Language: the popup and the panel on the video follow the picker
+  const langBtn = (l: string) => popup.evaluate((x) => {
+    const b = [...document.querySelectorAll('.segmented button')].find((y) => y.textContent === x) as HTMLElement | undefined;
+    b?.click();
+    return !!b;
+  }, l);
+  const tabsText = () => popup.evaluate(() => document.querySelector('nav.tabs')?.textContent ?? '');
+  check('the popup starts in English whatever the browser says', (await tabsText()).includes('Settings'), await tabsText());
+  await langBtn('IT');
+  await sleep(400);
+  const savedLang = async () => ((await worker!.evaluate(() => chrome.storage.local.get('language'))) as { language?: string }).language;
+  check('picking IT switches the popup to Italian and saves it', (await tabsText()).includes('Impostazioni') && (await savedLang()) === 'it', `${await tabsText()} / ${await savedLang()}`);
+  await popup.reload();
+  await sleep(1200);
+  const selectedTab = await popup.evaluate(() => document.querySelector('nav.tabs button[aria-selected="true"]')?.textContent ?? '');
+  check('the language and the last tab are remembered', selectedTab.includes('Impostazioni') && (await tabsText()).includes('Telefono'), selectedTab);
+  await setPanel({ ...BASE, style: 'pills', hints: { shown: 0, done: false } });
+  await tab.bringToFront();
+  await tab.reload();
+  await tab.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 2, { timeout: 20_000 });
+  await sleep(1000);
+  await wake();
+  check('the tip on the video speaks Italian too', (await text('.tip')).includes('Passa su una pillola'), await text('.tip'));
+  await popup.bringToFront();
+  await langBtn('EN');
+  await sleep(400);
+  check('and EN brings English back', (await tabsText()).includes('Settings') && (await savedLang()) === 'en');
+  await popup.close();
+  await setPanel(BASE);
+  await tab.bringToFront();
+
+  await pc.transport.close();
+  await tab.bringToFront();
+
   // 3 -- a tab that was already open when the extension was installed: the
   // manifest never injects into it, and what is left of the previous copy's
   // content script is orphaned. Same key, so the reinstall keeps the same id.

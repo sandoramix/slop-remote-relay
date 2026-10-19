@@ -4,7 +4,7 @@
  * connected with a command just run.
  *
  *   npm run build -w @relay/browser-extension
- *   npx tsx tools/extension-screenshots.ts [out-dir] [--lang=it]
+ *   npx tsx tools/extension-screenshots.ts [out-dir] [--lang=it]   (the popup's own language, en or it)
  */
 import { spawn } from 'node:child_process';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
@@ -24,10 +24,15 @@ const RELAY_PORT = 18191;
 const PAGE_PORT = 18192;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function shot(popup: Page, name: string) {
+async function shot(popup: Page, name: string, tab: 'skip' | 'phone' | 'settings' = 'phone', open = false) {
+  await popup.evaluate((t) => chrome.storage.local.set({ popupTab: t }), tab);
   await popup.bringToFront();
   await popup.reload({ waitUntil: 'networkidle0' });
   await sleep(1500);
+  if (open) {
+    await popup.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
+    await sleep(300);
+  }
   const body = await popup.$('body');
   await body!.screenshot({ path: path.join(outDir, `${name}.png`) });
   console.log(`${name}.png`);
@@ -63,12 +68,15 @@ async function main() {
   await video.waitForFunction(() => (document.querySelector("video")?.readyState ?? 0) >= 2, { timeout: 20_000 });
   await video.evaluate(() => document.querySelector("video")!.dispatchEvent(new Event("play")));
 
+  // The popup's language is its own setting now; the browser's --lang no longer decides it.
+  await worker!.evaluate((l) => chrome.storage.local.set({ language: l }), lang);
   const popup = await browser.newPage();
   await popup.setViewport({ width: 380, height: 900, deviceScaleFactor: 2 });
   await popup.goto(`chrome-extension://${id}/popup.html`);
   // A real update check against GitHub, so the banner shows when this build is behind.
   await popup.evaluate(() => chrome.runtime.sendMessage({ to: 'worker', type: 'checkUpdate' }));
   await shot(popup, '1-setup');
+  await shot(popup, '1b-skip', 'skip');
 
   const pairCode = 'k7vd-3mqx-9hpa-wr2e';
   await worker!.evaluate(
@@ -94,11 +102,9 @@ async function main() {
   await sleep(1500);
   await shot(popup, '3-connected');
 
-  // The same popup, all sections open.
-  await popup.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
-  await sleep(300);
-  await (await popup.$('body'))!.screenshot({ path: path.join(outDir, '4-expanded.png') });
-  console.log('4-expanded.png');
+  // The same tabs with every section open, and the settings tab.
+  await shot(popup, '4-expanded', 'phone', true);
+  await shot(popup, '5-settings', 'settings', true);
 
   await phone.close();
   await browser.close();
