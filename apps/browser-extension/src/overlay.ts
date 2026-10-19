@@ -63,7 +63,7 @@ svg { display: block; }
   transition: opacity .18s ease-in, transform .22s ease-in, visibility 0s linear .22s; }
 .osd.on { opacity: 1; visibility: visible; transform: translate(-50%, -50%);
   transition: opacity .16s ease-out, transform .32s cubic-bezier(.2, 1.2, .3, 1), visibility 0s; }
-.tip { --tx: -50%; position: absolute; max-width: 320px; padding: 11px 16px; border-radius: 14px; font-size: 13px; line-height: 1.4;
+.tip { --tx: -50%; position: absolute; width: max-content; max-width: 320px; padding: 11px 16px; border-radius: 14px; font-size: 13px; line-height: 1.4;
   text-align: center; opacity: 0; visibility: hidden; ${GLASS} transform: translate(var(--tx), 10px);
   transition: opacity .25s ease-in, transform .3s ease-in, visibility 0s linear .3s; }
 .tip[data-align="end"] { --tx: -100%; text-align: right; }

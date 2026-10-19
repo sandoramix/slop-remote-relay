@@ -517,6 +517,11 @@ async function main(): Promise<void> {
   await withStyle('pills', { shown: 0, done: false });
   await wake();
   check('the tip shows the first time, in the style\'s own words', (await hasCls('.tip', 'on')) && (await text('.tip')).includes('Hover a pill'), await text('.tip'));
+  const tipBox = await tab.evaluate(() => {
+    const r = document.querySelector('[data-skipper]')?.shadowRoot?.querySelector('.tip')?.getBoundingClientRect();
+    return r ? { w: Math.round(r.width), h: Math.round(r.height) } : null;
+  });
+  check('the tip is a readable box, not a column of single words', !!tipBox && tipBox.w >= 200 && tipBox.h <= 90, JSON.stringify(tipBox));
   check('and is counted', (await panelNow()).hints?.shown === 1, JSON.stringify((await panelNow()).hints));
   await press(tab, ['Alt', 'Shift'], 'ArrowRight');
   check('using the feature takes it away for good', !(await hasCls('.tip', 'on')) && (await panelNow()).hints?.done === true, JSON.stringify((await panelNow()).hints));
