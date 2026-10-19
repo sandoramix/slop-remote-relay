@@ -52,7 +52,7 @@ export default function SeekScreen() {
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={add}
-          placeholder="45, 2m, 1:30, 1h"
+          placeholder="45, 2m, 1:30, 1h30m"
           keyboardType="numbers-and-punctuation"
           error={draft && !parsed ? t('seek.badFormat') : duplicate ? t('seekSettings.duplicate') : null}
           hint={parsed ? `= ${jumpLabel(parsed)}` : t('seekSettings.hint')}

@@ -15,7 +15,7 @@ const REPEAT_MS = 650;
  * Pick a jump, then press back or forward.
  *
  * The amount is free: the chips are the user's presets (any number, any size),
- * and "Other" takes a typed value like 45, 2m, 1:30 or 1h. Two oversized keys do
+ * and "Other" takes a typed value like 45, 2m, 1:30 or 1h30m30s. Two oversized keys do
  * the jumping, so the thumb finds them without looking; holding one repeats.
  */
 export function SeekPad() {

@@ -126,7 +126,7 @@ export const en = {
   // Seek pad
   'seek.custom': 'Custom jump',
   'seek.other': 'Other',
-  'seek.placeholder': 'e.g. 45, 2m, 1:30, 1h',
+  'seek.placeholder': 'e.g. 45, 2m, 1:30, 1h30m',
   'seek.useThis': 'Use this jump',
   'seek.badFormat': 'Unrecognised format',
   'seek.anyDuration': 'Any duration, up to 24 hours',
@@ -206,7 +206,7 @@ export const en = {
   'seekSettings.add': 'Add',
   'seekSettings.duration': 'Duration',
   'seekSettings.duplicate': 'Already in favourites',
-  'seekSettings.hint': 'Seconds, minutes (2m), hours (1h) or mm:ss',
+  'seekSettings.hint': 'Seconds, minutes (2m), hours (1h), mixed (1h30m30s) or mm:ss',
 
   // Servers screen
   'servers.relay': 'Relay',

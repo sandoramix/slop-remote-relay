@@ -124,7 +124,7 @@ export const it: Record<keyof typeof en, string> = {
   // Seek pad
   'seek.custom': 'Salto personalizzato',
   'seek.other': 'Altro',
-  'seek.placeholder': 'es. 45, 2m, 1:30, 1h',
+  'seek.placeholder': 'es. 45, 2m, 1:30, 1h30m',
   'seek.useThis': 'Usa questo salto',
   'seek.badFormat': 'Formato non riconosciuto',
   'seek.anyDuration': 'Qualsiasi durata, fino a 24 ore',
@@ -204,7 +204,7 @@ export const it: Record<keyof typeof en, string> = {
   'seekSettings.add': 'Aggiungi',
   'seekSettings.duration': 'Durata',
   'seekSettings.duplicate': 'È già fra i preferiti',
-  'seekSettings.hint': 'Secondi, minuti (2m), ore (1h) o mm:ss',
+  'seekSettings.hint': 'Secondi, minuti (2m), ore (1h), misti (1h30m30s) o mm:ss',
 
   // Servers screen
   'servers.relay': 'Relay',

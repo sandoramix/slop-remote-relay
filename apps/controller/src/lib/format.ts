@@ -1,42 +1,8 @@
 import { t } from './i18n';
 
-/** 75 → "1:15", 3725 → "1:02:05". Input in seconds. */
-export function clock(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = String(s % 60).padStart(2, '0');
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
-}
-
-/** Chip label for a jump: 10 → "10s", 90 → "1:30", 300 → "5 min", 3600 → "1 h". */
-export function jumpLabel(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds % 3600 === 0) return `${seconds / 3600} h`;
-  if (seconds % 60 === 0) return `${seconds / 60} min`;
-  return clock(seconds);
-}
-
-/**
- * Lenient parser for a typed jump: "45", "45s", "2m", "2 min", "1:30",
- * "1:02:05", "1h". Returns seconds, or null when it cannot make sense of it.
- */
-export function parseJump(input: string): number | null {
-  const t = input.trim().toLowerCase().replace(',', '.');
-  if (!t) return null;
-  if (/^\d+(:\d{1,2}){1,2}$/.test(t)) {
-    const parts = t.split(':').map(Number);
-    const seconds = parts.reduce((acc, p) => acc * 60 + p, 0);
-    return seconds > 0 ? seconds : null;
-  }
-  const m = t.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs?|seconds?|secondi?|m|mins?|minutes?|minuti?|h|hours?|ore?)?$/);
-  if (!m) return null;
-  const value = Number(m[1]);
-  const unit = m[2] ?? 's';
-  const factor = unit.startsWith('h') || unit.startsWith('or') ? 3600 : unit.startsWith('m') ? 60 : 1;
-  const seconds = Math.round(value * factor);
-  return seconds > 0 && seconds <= 86_400 ? seconds : null;
-}
+// Jump amounts are written and read by the same code as in the browser
+// extension's skip panel; see packages/protocol/src/jump.ts.
+export { clock, jumpLabel, parseJump } from '@relay/protocol';
 
 const KNOWN: Record<string, string> = {
   'com.google.android.youtube': 'YouTube',

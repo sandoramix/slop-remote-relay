@@ -1,5 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_MQTT_URL, DEFAULT_STUN_URLS, TRANSPORT_IDS, type TransportId } from '@relay/protocol';
+import {
+  DEFAULT_JUMP_PRESETS,
+  DEFAULT_JUMP_SECONDS,
+  DEFAULT_MQTT_URL,
+  DEFAULT_STUN_URLS,
+  TRANSPORT_IDS,
+  type TransportId,
+} from '@relay/protocol';
 import { z } from 'zod';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -52,9 +59,9 @@ export const SettingsSchema = z.object({
   turn: TurnSchema.nullable().catch(null),
 
   /** Seconds. Any number of them, any size: each becomes a chip on the remote. */
-  seekPresets: z.array(z.number().int().positive().max(86_400)).min(1).catch([10, 30, 60, 300]),
+  seekPresets: z.array(z.number().int().positive().max(86_400)).min(1).catch([...DEFAULT_JUMP_PRESETS]),
   /** The chip selected on the remote, so it survives a restart. */
-  selectedSeek: z.number().int().positive().max(86_400).catch(30),
+  selectedSeek: z.number().int().positive().max(86_400).catch(DEFAULT_JUMP_SECONDS),
 
   /** Mirror commands across two transports. Costs a duplicate frame, buys reliability. */
   mirrorCritical: z.boolean().catch(true),
