@@ -12,13 +12,13 @@
     "message": "Set up Skipper"
   },
   "setupIntro": {
-    "message": "Pair this browser with the Skipper app on your phone. It takes a minute."
+    "message": "Optional: pair this browser with the Skipper app on your phone. Skipping from this browser works without it."
   },
   "stepRelay": {
-    "message": "Relay server"
+    "message": "Relay server (optional)"
   },
   "stepRelayHint": {
-    "message": "The address of your relay, e.g. wss://relay.example.com. A browser can only be reached over the internet."
+    "message": "Leave empty and it works as is, over the public MQTT broker. Add your own relay for the faster WebRTC, WebSocket and HTTP paths, e.g. wss://relay.example.com."
   },
   "stepCode": {
     "message": "Pairing code"
@@ -161,9 +161,6 @@
   "pathNeedsRelay": {
     "message": "needs a relay address"
   },
-  "settingsSection": {
-    "message": "Settings"
-  },
   "relayServer": {
     "message": "Relay server"
   },
@@ -233,9 +230,6 @@
   "getIt": {
     "message": "Get it"
   },
-  "aboutSection": {
-    "message": "How it works"
-  },
   "aboutRemote": {
     "message": "The Skipper app on your phone is the remote. This extension receives its commands and carries them out on the tab playing a video: jump, play/pause, fullscreen."
   },
@@ -259,5 +253,215 @@
   },
   "guide": {
     "message": "Guide"
+  },
+  "panelNoAnswer": {
+    "message": "No answer from the extension"
+  },
+  "panelAmount": {
+    "message": "Jump: {amount}"
+  },
+  "panelOverlayOn": {
+    "message": "Skip controls on"
+  },
+  "panelOverlayOff": {
+    "message": "Skip controls off"
+  },
+  "panelBack": {
+    "message": "Back {amount}"
+  },
+  "panelForward": {
+    "message": "Forward {amount}"
+  },
+  "panelChangeAmount": {
+    "message": "Scroll to change the jump"
+  },
+  "panelBadFormat": {
+    "message": "Try 45, 2m, 1:30 or 1h30m"
+  },
+  "skipTitle": {
+    "message": "Skip"
+  },
+  "skipEdit": {
+    "message": "Edit"
+  },
+  "skipDone": {
+    "message": "Done"
+  },
+  "skipRemove": {
+    "message": "Remove"
+  },
+  "skipPlaceholder": {
+    "message": "Other amount: 45, 2m, 1:30, 1h30m"
+  },
+  "skipAdd": {
+    "message": "Add"
+  },
+  "skipAddAmount": {
+    "message": "Use {amount}"
+  },
+  "skipIndependent": {
+    "message": "Works on its own, no phone needed. With a phone connected, both do the same jump on the same video."
+  },
+  "optOverlay": {
+    "message": "Skip controls on videos"
+  },
+  "optOverlayHint": {
+    "message": "The look picked above. Off leaves only the shortcuts."
+  },
+  "optToast": {
+    "message": "Confirm each jump on screen"
+  },
+  "optKeys": {
+    "message": "Keyboard shortcuts"
+  },
+  "optKeysHint": {
+    "message": "Every shortcut needs Alt, Ctrl or Win, so the site's own keys keep working."
+  },
+  "optHideHost": {
+    "message": "Off on {host}"
+  },
+  "hiddenOn": {
+    "message": "Off on these sites"
+  },
+  "shortcutsTitle": {
+    "message": "Shortcuts"
+  },
+  "shortcutsHint": {
+    "message": "Click Change, then press the keys you want. Esc cancels."
+  },
+  "recording": {
+    "message": "Press keys…"
+  },
+  "change": {
+    "message": "Change"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "resetKeys": {
+    "message": "Restore default shortcuts"
+  },
+  "act_back": {
+    "message": "Skip back"
+  },
+  "act_forward": {
+    "message": "Skip forward"
+  },
+  "act_nextAmount": {
+    "message": "Next amount"
+  },
+  "act_prevAmount": {
+    "message": "Previous amount"
+  },
+  "act_overlay": {
+    "message": "Show or hide the controls"
+  },
+  "problem_needsModifier": {
+    "message": "Add Alt, Ctrl or Win, or typing would trigger it."
+  },
+  "problem_altGr": {
+    "message": "Ctrl+Alt is AltGr on many keyboards."
+  },
+  "problem_browser": {
+    "message": "The browser uses this itself."
+  },
+  "usedBy": {
+    "message": "Already used for \"{action}\"."
+  },
+  "siteUses": {
+    "message": "{site} uses this too."
+  },
+  "styleTitle": {
+    "message": "Look and control"
+  },
+  "style_pills": {
+    "message": "Edge pills"
+  },
+  "style_pills_d": {
+    "message": "Back and forward on the video's edges. Hover one to pick the amount."
+  },
+  "style_dock": {
+    "message": "Side dock"
+  },
+  "style_dock_d": {
+    "message": "One slim tab on the edge that opens into buttons and amounts."
+  },
+  "style_gesture": {
+    "message": "Gesture"
+  },
+  "style_gesture_d": {
+    "message": "No buttons. Hold Alt and scroll over the video to skip."
+  },
+  "style_timeline": {
+    "message": "Timeline"
+  },
+  "style_timeline_d": {
+    "message": "No buttons. Shortcuts or Alt + scroll, and a bar that shows where you landed."
+  },
+  "tip_pills": {
+    "message": "Hover a pill to pick the amount · {key} skips forward"
+  },
+  "tip_dock": {
+    "message": "Hover the tab for buttons and amounts · {key} skips forward"
+  },
+  "tip_gesture": {
+    "message": "Hold Alt and scroll over the video to skip · {key} works too"
+  },
+  "tip_timeline": {
+    "message": "Press {key} to skip, or hold Alt and scroll over the video"
+  },
+  "guideScroll": {
+    "message": "scroll"
+  },
+  "guideShift": {
+    "message": "Shift + scroll changes the amount"
+  },
+  "tlGuide": {
+    "message": "Scroll to skip {amount}"
+  },
+  "dockOpen": {
+    "message": "Skip controls"
+  },
+  "pickAmount": {
+    "message": "Set the jump to {amount}"
+  },
+  "introTitle": {
+    "message": "New: skip right on the video"
+  },
+  "introBody": {
+    "message": "Move the pointer over any video. Pick how it looks and works in the Settings tab."
+  },
+  "introGotIt": {
+    "message": "Got it"
+  },
+  "tab_skip": {
+    "message": "Skip"
+  },
+  "tab_phone": {
+    "message": "Phone"
+  },
+  "tab_settings": {
+    "message": "Settings"
+  },
+  "relaySection": {
+    "message": "Relay and broker"
+  },
+  "updatesAbout": {
+    "message": "Updates and about"
+  },
+  "languageLabel": {
+    "message": "Language"
+  },
+  "updateWhatsNew": {
+    "message": "What's new"
+  },
+  "skipRestore": {
+    "message": "Restore default amounts"
+  },
+  "skipRestoreAsk": {
+    "message": "Replace your amounts with the defaults?"
+  },
+  "skipRestoreYes": {
+    "message": "Restore"
   }
 }

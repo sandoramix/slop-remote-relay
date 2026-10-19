@@ -1,4 +1,5 @@
 import type { NavStatus } from '@relay/protocol';
+import { startPanel } from './overlay';
 import { currentIndex, type NavEntry, type NavPlan, planApplies, stepIndex } from './nav';
 import type { ActionResult, FrameAction, MediaReport, NavReadResult, NavResult } from './shared';
 
@@ -193,6 +194,8 @@ function boot(): void {
     document.addEventListener(ev, notify, true);
   }
   document.addEventListener('fullscreenchange', notify);
+
+  startPanel(mainVideo);
 }
 
 boot();

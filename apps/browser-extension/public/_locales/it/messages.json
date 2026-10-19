@@ -12,13 +12,13 @@
     "message": "Configura Skipper"
   },
   "setupIntro": {
-    "message": "Associa questo browser all'app Skipper sul telefono. Ci vuole un minuto."
+    "message": "Facoltativo: associa questo browser all'app Skipper sul telefono. Salti dal browser funzionano anche senza."
   },
   "stepRelay": {
-    "message": "Server relay"
+    "message": "Server relay (facoltativo)"
   },
   "stepRelayHint": {
-    "message": "L'indirizzo del tuo relay, es. wss://relay.esempio.it. Il browser si raggiunge solo via internet."
+    "message": "Lascialo vuoto e funziona così, tramite il broker MQTT pubblico. Aggiungi il tuo relay per i percorsi più rapidi WebRTC, WebSocket e HTTP, es. wss://relay.esempio.it."
   },
   "stepCode": {
     "message": "Codice di accoppiamento"
@@ -161,9 +161,6 @@
   "pathNeedsRelay": {
     "message": "serve l'indirizzo del relay"
   },
-  "settingsSection": {
-    "message": "Impostazioni"
-  },
   "relayServer": {
     "message": "Server relay"
   },
@@ -233,9 +230,6 @@
   "getIt": {
     "message": "Scaricalo"
   },
-  "aboutSection": {
-    "message": "Come funziona"
-  },
   "aboutRemote": {
     "message": "L'app Skipper sul telefono è il telecomando. Questa estensione riceve i comandi e li esegue nella scheda che riproduce un video: salti, play/pausa, schermo intero."
   },
@@ -259,5 +253,215 @@
   },
   "guide": {
     "message": "Guida"
+  },
+  "panelNoAnswer": {
+    "message": "Nessuna risposta dall'estensione"
+  },
+  "panelAmount": {
+    "message": "Salto: {amount}"
+  },
+  "panelOverlayOn": {
+    "message": "Controlli di salto attivi"
+  },
+  "panelOverlayOff": {
+    "message": "Controlli di salto nascosti"
+  },
+  "panelBack": {
+    "message": "Indietro di {amount}"
+  },
+  "panelForward": {
+    "message": "Avanti di {amount}"
+  },
+  "panelChangeAmount": {
+    "message": "Scorri per cambiare il salto"
+  },
+  "panelBadFormat": {
+    "message": "Prova 45, 2m, 1:30 o 1h30m"
+  },
+  "skipTitle": {
+    "message": "Salta"
+  },
+  "skipEdit": {
+    "message": "Modifica"
+  },
+  "skipDone": {
+    "message": "Fatto"
+  },
+  "skipRemove": {
+    "message": "Rimuovi"
+  },
+  "skipPlaceholder": {
+    "message": "Altro valore: 45, 2m, 1:30, 1h30m"
+  },
+  "skipAdd": {
+    "message": "Aggiungi"
+  },
+  "skipAddAmount": {
+    "message": "Usa {amount}"
+  },
+  "skipIndependent": {
+    "message": "Funziona da solo, senza telefono. Con un telefono connesso, entrambi fanno lo stesso salto sullo stesso video."
+  },
+  "optOverlay": {
+    "message": "Controlli di salto sui video"
+  },
+  "optOverlayHint": {
+    "message": "L'aspetto scelto sopra. Disattivati restano solo le scorciatoie."
+  },
+  "optToast": {
+    "message": "Conferma ogni salto a schermo"
+  },
+  "optKeys": {
+    "message": "Scorciatoie da tastiera"
+  },
+  "optKeysHint": {
+    "message": "Ogni scorciatoia richiede Alt, Ctrl o Win, così i tasti del sito continuano a funzionare."
+  },
+  "optHideHost": {
+    "message": "Nascosto su {host}"
+  },
+  "hiddenOn": {
+    "message": "Nascosto su questi siti"
+  },
+  "shortcutsTitle": {
+    "message": "Scorciatoie"
+  },
+  "shortcutsHint": {
+    "message": "Premi Cambia, poi i tasti che vuoi. Esc annulla."
+  },
+  "recording": {
+    "message": "Premi i tasti…"
+  },
+  "change": {
+    "message": "Cambia"
+  },
+  "cancel": {
+    "message": "Annulla"
+  },
+  "resetKeys": {
+    "message": "Ripristina le scorciatoie"
+  },
+  "act_back": {
+    "message": "Salta indietro"
+  },
+  "act_forward": {
+    "message": "Salta avanti"
+  },
+  "act_nextAmount": {
+    "message": "Valore successivo"
+  },
+  "act_prevAmount": {
+    "message": "Valore precedente"
+  },
+  "act_overlay": {
+    "message": "Mostra o nascondi i controlli"
+  },
+  "problem_needsModifier": {
+    "message": "Aggiungi Alt, Ctrl o Win, o scrivendo lo attiveresti."
+  },
+  "problem_altGr": {
+    "message": "Ctrl+Alt è AltGr su molte tastiere."
+  },
+  "problem_browser": {
+    "message": "Il browser lo usa già."
+  },
+  "usedBy": {
+    "message": "Già usata per \"{action}\"."
+  },
+  "siteUses": {
+    "message": "Lo usa anche {site}."
+  },
+  "styleTitle": {
+    "message": "Aspetto e controllo"
+  },
+  "style_pills": {
+    "message": "Pillole ai bordi"
+  },
+  "style_pills_d": {
+    "message": "Indietro e avanti ai lati del video. Passaci sopra per scegliere il valore."
+  },
+  "style_dock": {
+    "message": "Dock laterale"
+  },
+  "style_dock_d": {
+    "message": "Una linguetta sottile sul bordo che si apre in pulsanti e valori."
+  },
+  "style_gesture": {
+    "message": "Gesto"
+  },
+  "style_gesture_d": {
+    "message": "Nessun pulsante. Tieni premuto Alt e scorri sul video per saltare."
+  },
+  "style_timeline": {
+    "message": "Linea del tempo"
+  },
+  "style_timeline_d": {
+    "message": "Nessun pulsante. Scorciatoie o Alt + scorrimento, e una barra che mostra dove sei arrivato."
+  },
+  "tip_pills": {
+    "message": "Passa su una pillola per scegliere il valore · {key} salta avanti"
+  },
+  "tip_dock": {
+    "message": "Passa sulla linguetta per pulsanti e valori · {key} salta avanti"
+  },
+  "tip_gesture": {
+    "message": "Tieni premuto Alt e scorri sul video per saltare · funziona anche {key}"
+  },
+  "tip_timeline": {
+    "message": "Premi {key} per saltare, o tieni premuto Alt e scorri sul video"
+  },
+  "guideScroll": {
+    "message": "scorri"
+  },
+  "guideShift": {
+    "message": "Maiusc + scorrimento cambia il valore"
+  },
+  "tlGuide": {
+    "message": "Scorri per saltare di {amount}"
+  },
+  "dockOpen": {
+    "message": "Controlli di salto"
+  },
+  "pickAmount": {
+    "message": "Imposta il salto a {amount}"
+  },
+  "introTitle": {
+    "message": "Novità: salta direttamente sul video"
+  },
+  "introBody": {
+    "message": "Muovi il puntatore su un video qualsiasi. Scegli aspetto e controllo nella scheda Impostazioni."
+  },
+  "introGotIt": {
+    "message": "Ho capito"
+  },
+  "tab_skip": {
+    "message": "Salta"
+  },
+  "tab_phone": {
+    "message": "Telefono"
+  },
+  "tab_settings": {
+    "message": "Impostazioni"
+  },
+  "relaySection": {
+    "message": "Relay e broker"
+  },
+  "updatesAbout": {
+    "message": "Aggiornamenti e info"
+  },
+  "languageLabel": {
+    "message": "Lingua"
+  },
+  "updateWhatsNew": {
+    "message": "Novità"
+  },
+  "skipRestore": {
+    "message": "Ripristina i valori predefiniti"
+  },
+  "skipRestoreAsk": {
+    "message": "Sostituire i tuoi valori con quelli predefiniti?"
+  },
+  "skipRestoreYes": {
+    "message": "Ripristina"
   }
 }

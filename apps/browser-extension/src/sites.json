@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-site strategies, as data. start (see start.ts): the control that starts a player kept behind a cover, and the URL of the frame that plays once started. nav (see nav.ts): where the page keeps its episode list — items, label, current — or its own next/prev buttons. fullscreenKey is the site's own keyboard shortcut, sent as a real key event through the debugger; seekApi names a page-world seek for players that break when currentTime is written. Leaving fullscreen needs no recipe: document.exitFullscreen() works everywhere.",
+  "_comment": "Per-site strategies, as data. start (see start.ts): the control that starts a player kept behind a cover, and the URL of the frame that plays once started. nav (see nav.ts): where the page keeps its episode list — items, label, current — or its own next/prev buttons. fullscreenKey is the site's own keyboard shortcut, sent as a real key event through the debugger; seekApi names a page-world seek for players that break when currentTime is written. keys lists the key combinations with a modifier that the site binds itself (the skip panel warns when one is chosen; bare keys never conflict, since the panel only answers modifier combinations). Leaving fullscreen needs no recipe: document.exitFullscreen() works everywhere.",
   "animeworld.ac": {
     "start": {
       "paths": "^/play/",
@@ -14,14 +14,16 @@
     }
   },
   "youtube.com": {
-    "fullscreenKey": "f"
+    "fullscreenKey": "f",
+    "keys": ["Ctrl+ArrowLeft", "Ctrl+ArrowRight", "Shift+KeyN", "Shift+KeyP"]
   },
   "netflix.com": {
     "fullscreenKey": "f",
     "seekApi": "netflix"
   },
   "twitch.tv": {
-    "fullscreenKey": "f"
+    "fullscreenKey": "f",
+    "keys": ["Alt+KeyT", "Alt+KeyX"]
   },
   "primevideo.com": {
     "fullscreenKey": "f"

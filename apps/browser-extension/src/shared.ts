@@ -1,6 +1,7 @@
 import type { DeviceStatus, NavStatus } from '@relay/protocol';
 import type { NavPlan } from './nav';
 import { DEFAULT_MQTT_URL } from '@relay/protocol';
+import { normalizePanel, type PanelSettings } from './panel';
 
 /**
  * Messages between the three extension contexts. The offscreen document owns
@@ -42,6 +43,18 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   const stored = (await chrome.storage.local.get('settings')) as { settings?: Partial<ExtensionSettings> };
   return { ...DEFAULT_SETTINGS, ...stored.settings };
 }
+
+/** The skip panel's settings: their own key, so saving them never restarts the transports. */
+export async function loadPanel(): Promise<PanelSettings> {
+  const stored = (await chrome.storage.local.get('panel')) as { panel?: unknown };
+  return normalizePanel(stored.panel);
+}
+
+export async function savePanel(panel: PanelSettings): Promise<void> {
+  await chrome.storage.local.set({ panel });
+}
+
+export { tr } from './i18n';
 
 /** What a content script reports about the media in its frame. */
 export interface MediaReport {

@@ -1,13 +1,46 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
-import { compareVersions } from '@relay/protocol';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { compareVersions, DEFAULT_JUMP_PRESETS, DEFAULT_JUMP_SECONDS, jumpLabel, parseJump } from '@relay/protocol';
+import {
+  type Language,
+  LANGUAGE_NAMES,
+  LANGUAGES,
+  loadLanguage,
+  saveLanguage,
+  setLanguage,
+  tr,
+} from './i18n';
 import qrcode from 'qrcode-generator';
 import {
+  ACTIONS,
+  addPreset,
+  boundTo,
+  chips,
+  comboFromEvent,
+  comboProblem,
+  DEFAULT_BINDINGS,
+  DEFAULT_PANEL,
+  formatCombo,
+  hostOff,
+  jumpCommand,
+  type PanelAction,
+  type PanelSettings,
+  type PanelStyle,
+  removePreset,
+  setHostOff,
+  siteKeys,
+  STYLES,
+} from './panel';
+import sites from './sites.json';
+import {
+  type ActionResult,
   type BrowserTransportId,
   type ExtensionSettings,
   type LastCommand,
+  loadPanel,
   loadSettings,
   PRESENCE_WINDOW_MS,
+  savePanel,
   type ReceiverState,
   type RuntimeMessage,
   isStoreInstall,
@@ -17,11 +50,7 @@ import {
 
 // ------------------------------------------------------------------- i18n
 
-/** chrome.i18n with {name} placeholders. English is the fallback locale. */
-function t(key: string, vars: Record<string, string | number> = {}): string {
-  const msg = chrome.i18n.getMessage(key) || key;
-  return msg.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ''));
-}
+const t = tr;
 
 function ago(at: number | null, now: number): string {
   if (!at) return '';
@@ -132,22 +161,100 @@ function useNow(): number {
 const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
 const LATEST_RELEASE = 'https://github.com/sandoramix/slop-remote-relay/releases/latest';
 
-function Header() {
+function Header({ language, onLanguage }: { language: Language; onLanguage: (l: Language) => void }) {
   return (
     <header class="header">
       <img src="icon-48.png" alt="" width={32} height={32} />
-      <div>
+      <div class="grow">
         <h1>Skipper</h1>
         <p class="muted small">{t('subtitle')}</p>
       </div>
+      <div class="segmented" role="group" aria-label={t('languageLabel')}>
+        {LANGUAGES.map((l) => (
+          <button
+            type="button"
+            key={l}
+            class={language === l ? 'on' : ''}
+            aria-pressed={language === l}
+            title={LANGUAGE_NAMES[l]}
+            lang={l}
+            onClick={() => onLanguage(l)}
+          >
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
     </header>
+  );
+}
+
+type Tab = 'skip' | 'phone' | 'settings';
+const TABS: Tab[] = ['skip', 'phone', 'settings'];
+const isTab = (x: unknown): x is Tab => TABS.some((id) => id === x);
+
+/**
+ * The popup's scrolling part: header, tabs and footer stay put, and what is
+ * between them scrolls inside its own themed scrollbar. Soft fades at the top
+ * and bottom edge show there is more, and disappear at the ends.
+ */
+function ScrollArea({ children, resetKey }: { children: preact.ComponentChildren; resetKey: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const measure = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.setProperty('--fade-top', el.scrollTop > 2 ? '18px' : '0px');
+    el.style.setProperty('--fade-bottom', el.scrollHeight - el.clientHeight - el.scrollTop > 2 ? '18px' : '0px');
+  };
+
+  // A different tab starts at the top.
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = 0;
+    measure();
+  }, [resetKey]);
+
+  // Content grows and shrinks (sections open, an update arrives): keep the fades right.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    for (const child of Array.from(el.children)) observer.observe(child);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div class="scroll" ref={ref} onScroll={measure}>
+      <div class="stack">{children}</div>
+    </div>
+  );
+}
+
+function Tabs({ tab, onTab, phoneTone }: { tab: Tab; onTab: (t: Tab) => void; phoneTone: string }) {
+  return (
+    <nav class="tabs" role="tablist">
+      {TABS.map((id) => (
+        <button
+          type="button"
+          key={id}
+          role="tab"
+          aria-selected={tab === id}
+          class={tab === id ? 'on' : ''}
+          onClick={() => onTab(id)}
+        >
+          {id === 'phone' ? <span class={`dot ${phoneTone}`} /> : null}
+          {t(`tab_${id}`)}
+        </button>
+      ))}
+    </nav>
   );
 }
 
 function Setup({ initial, onDone }: { initial: ExtensionSettings; onDone: (s: ExtensionSettings) => void }) {
   const [relay, setRelay] = useState(initial.relayUrl);
   const [code, setCode] = useState(initial.pairCode || generatePairCode());
-  const relayOk = isWsUrl(relay);
+  // Optional: the public MQTT broker already works as shipped.
+  const relayOk = !relay.trim() || isWsUrl(relay);
 
   return (
     <section class="card stack">
@@ -172,8 +279,8 @@ function Setup({ initial, onDone }: { initial: ExtensionSettings; onDone: (s: Ex
             spellcheck={false}
             onInput={(e) => setRelay((e.target as HTMLInputElement).value)}
           />
-          <span class={relay && !relayOk ? 'error small' : 'muted small'}>
-            {relay && !relayOk ? t('invalidRelay') : t('stepRelayHint')}
+          <span class={!relayOk ? 'error small' : 'muted small'}>
+            {!relayOk ? t('invalidRelay') : t('stepRelayHint')}
           </span>
         </span>
       </label>
@@ -287,6 +394,348 @@ function LastCommandRow({ cmd, now }: { cmd: LastCommand | null; now: number }) 
         {!cmd.ok && cmd.detail ? <span class="error small">{cmd.detail}</span> : null}
       </div>
     </section>
+  );
+}
+
+// -------------------------------------------------------------- skip panel
+
+const IS_MAC = /Mac/i.test(navigator.platform);
+
+/** The panel's settings, kept in step with what pages and other popups save. */
+function usePanel(): [PanelSettings, (patch: Partial<PanelSettings>) => void] {
+  const [panel, setPanel] = useState<PanelSettings>(DEFAULT_PANEL);
+  useEffect(() => {
+    void loadPanel().then(setPanel);
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === 'local' && changes.panel) void loadPanel().then(setPanel);
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
+  }, []);
+  const update = (patch: Partial<PanelSettings>) => {
+    const next = { ...panel, ...patch };
+    setPanel(next);
+    void savePanel(next);
+  };
+  return [panel, update];
+}
+
+function SkipCard({ panel, update, ready }: { panel: PanelSettings; update: (p: Partial<PanelSettings>) => void; ready: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [result, setResult] = useState<ActionResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const parsed = parseJump(draft);
+
+  const jump = async (direction: 1 | -1) => {
+    setBusy(true);
+    const res = (await chrome.runtime
+      .sendMessage({ to: 'worker', type: 'execute', cmd: jumpCommand(direction, panel.selected) } satisfies RuntimeMessage)
+      .catch((e: Error) => ({ ok: false, detail: e.message }))) as ActionResult;
+    setResult(res);
+    setBusy(false);
+    setTimeout(() => setResult(null), 2500);
+  };
+
+  return (
+    <section class="card stack">
+      <span class="label">{t('skipTitle')}</span>
+      <div class="chips">
+        {chips(panel).map((seconds) => (
+          <button
+            type="button"
+            key={seconds}
+            class={`chip ${seconds === panel.selected ? 'sel' : ''}`}
+            aria-pressed={seconds === panel.selected}
+            onClick={() =>
+              editing ? update({ presets: removePreset(panel.presets, seconds) }) : update({ selected: seconds })
+            }
+          >
+            {jumpLabel(seconds)}
+            {editing && panel.presets.length > 1 ? <span aria-label={t('skipRemove')}> ×</span> : null}
+          </button>
+        ))}
+        <button
+          type="button"
+          class="chip dashed"
+          onClick={() => {
+            setEditing(!editing);
+            setAsking(false);
+          }}
+        >
+          {editing ? t('skipDone') : t('skipEdit')}
+        </button>
+      </div>
+      {editing && !asking ? (
+        <button type="button" class="ghost" onClick={() => setAsking(true)}>
+          {t('skipRestore')}
+        </button>
+      ) : null}
+      {editing && asking ? (
+        <div class="card confirm stack tight" role="alertdialog" aria-label={t('skipRestoreAsk')}>
+          <span class="small">{t('skipRestoreAsk')}</span>
+          <div class="row">
+            <button
+              type="button"
+              class="primary grow"
+              onClick={() => {
+                update({ presets: [...DEFAULT_JUMP_PRESETS], selected: DEFAULT_JUMP_SECONDS });
+                setAsking(false);
+                setEditing(false);
+              }}
+            >
+              {t('skipRestoreYes')}
+            </button>
+            <button type="button" class="ghost" onClick={() => setAsking(false)}>
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <form
+        class="row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!parsed) return;
+          update({ selected: parsed, presets: addPreset(panel.presets, parsed) });
+          setDraft('');
+        }}
+      >
+        <input
+          class="grow"
+          value={draft}
+          placeholder={t('skipPlaceholder')}
+          spellcheck={false}
+          aria-label={t('skipPlaceholder')}
+          onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+        />
+        <button type="submit" class="ghost" disabled={!parsed}>
+          {parsed ? t('skipAddAmount', { amount: jumpLabel(parsed) }) : t('skipAdd')}
+        </button>
+      </form>
+      {draft && !parsed ? <span class="error small">{t('panelBadFormat')}</span> : null}
+      <div class="row">
+        <button type="button" class="jump grow" disabled={busy || !ready} onClick={() => void jump(-1)}>
+          ↺ −{jumpLabel(panel.selected)}
+        </button>
+        <button type="button" class="jump grow" disabled={busy || !ready} onClick={() => void jump(1)}>
+          +{jumpLabel(panel.selected)} ↻
+        </button>
+      </div>
+      {result && !result.ok ? <span class="error small">{result.detail}</span> : null}
+      <span class="muted small">{t('skipIndependent')}</span>
+    </section>
+  );
+}
+
+function ShortcutRow({
+  action,
+  panel,
+  recording,
+  onRecord,
+}: {
+  action: PanelAction;
+  panel: PanelSettings;
+  recording: PanelAction | null;
+  onRecord: (a: PanelAction | null) => void;
+}) {
+  const active = recording === action;
+  const combo = panel.bindings[action];
+  const problem = comboProblem(combo);
+  const clash = Object.keys(sites)
+    .filter((d) => !d.startsWith('_') && siteKeys(sites as Record<string, { keys?: string[] }>, d).includes(combo))
+    .join(', ');
+  return (
+    <li class="shortcut">
+      <span class="grow">
+        {t(`act_${action}`)}
+        {problem || clash ? (
+          <span class="warn small"> · {problem ? t(`problem_${problem}`) : t('siteUses', { site: clash })}</span>
+        ) : null}
+      </span>
+      <kbd>{active ? t('recording') : formatCombo(combo, IS_MAC)}</kbd>
+      <button type="button" class="ghost" onClick={() => onRecord(active ? null : action)}>
+        {active ? t('cancel') : t('change')}
+      </button>
+    </li>
+  );
+}
+
+// ------------------------------------------------------------- style picker
+
+const PREVIEWS: Record<PanelStyle, preact.ComponentChildren> = {
+  pills: (
+    <>
+      <rect x="2" y="15" width="17" height="10" rx="5" />
+      <rect x="45" y="15" width="17" height="10" rx="5" />
+    </>
+  ),
+  dock: (
+    <>
+      <rect x="57" y="12" width="7" height="16" rx="3" />
+      <rect x="30" y="9" width="24" height="22" rx="5" fill="none" />
+      <rect x="33" y="13" width="8" height="6" rx="2" />
+      <rect x="43" y="13" width="8" height="6" rx="2" />
+    </>
+  ),
+  gesture: (
+    <>
+      <circle cx="32" cy="20" r="10" fill="none" />
+      <text x="32" y="23.5" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" stroke="none">
+        ⌥ ⇅
+      </text>
+    </>
+  ),
+  timeline: (
+    <>
+      <rect x="10" y="26" width="44" height="3" rx="1.5" fill="none" />
+      <rect x="10" y="26" width="30" height="3" rx="1.5" />
+      <circle cx="40" cy="27.5" r="3.5" fill="currentColor" stroke="none" />
+    </>
+  ),
+};
+
+function StylePicker({ panel, update }: { panel: PanelSettings; update: (p: Partial<PanelSettings>) => void }) {
+  return (
+    <div class="stack tight">
+      <span class="label">{t('styleTitle')}</span>
+      <div class="styles" role="radiogroup" aria-label={t('styleTitle')}>
+        {STYLES.map((id) => (
+          <button
+            type="button"
+            key={id}
+            role="radio"
+            aria-checked={panel.style === id}
+            class={`style-card ${panel.style === id ? 'sel' : ''}`}
+            // A new style is new to the person: let it explain itself again.
+            onClick={() => update({ style: id, hints: { shown: 0, done: false } })}
+          >
+            <svg viewBox="0 0 64 40" aria-hidden="true">
+              <rect x="0" y="0" width="64" height="40" rx="4" class="screen" />
+              <g class="art">{PREVIEWS[id]}</g>
+            </svg>
+            <strong class="small">{t(`style_${id}`)}</strong>
+            <span class="muted small">{t(`style_${id}_d`)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Shown once, after the extension gains the panel: where the new thing is. */
+function IntroNote() {
+  const [seen, setSeen] = useState<boolean | null>(null);
+  useEffect(() => {
+    void chrome.storage.local.get('panelIntro').then((r) => setSeen(r.panelIntro === true));
+  }, []);
+  if (seen !== false) return null;
+  return (
+    <section class="card update stack">
+      <div class="stack tight">
+        <strong>{t('introTitle')}</strong>
+        <span class="muted small">{t('introBody')}</span>
+      </div>
+      <button
+        type="button"
+        class="primary"
+        onClick={() => {
+          void chrome.storage.local.set({ panelIntro: true });
+          setSeen(true);
+        }}
+      >
+        {t('introGotIt')}
+      </button>
+    </section>
+  );
+}
+
+/** Look, on-video controls and the sites they stay away from. */
+function LookSettings({ panel, update, host }: { panel: PanelSettings; update: (p: Partial<PanelSettings>) => void; host: string | null }) {
+  const hiddenHere = !!host && hostOff(panel.offHosts, host);
+  const others = panel.offHosts.filter((h) => h !== host);
+  const toggle = (label: string, hint: string | null, on: boolean, set: (v: boolean) => void) => (
+    <label class="row option">
+      <span class="grow stack tight">
+        <span>{label}</span>
+        {hint ? <span class="muted small">{hint}</span> : null}
+      </span>
+      <input type="checkbox" class="switch" checked={on} onChange={(e) => set((e.target as HTMLInputElement).checked)} />
+    </label>
+  );
+
+  return (
+    <div class="stack">
+      <StylePicker panel={panel} update={update} />
+      {toggle(t('optOverlay'), t('optOverlayHint'), panel.overlay === 'hover', (on) => update({ overlay: on ? 'hover' : 'off' }))}
+      {toggle(t('optToast'), null, panel.toast, (toast) => update({ toast }))}
+      {toggle(t('optKeys'), t('optKeysHint'), panel.keys, (keys) => update({ keys }))}
+      {host
+        ? toggle(t('optHideHost', { host }), null, hiddenHere, (off) => update({ offHosts: setHostOff(panel.offHosts, host, off) }))
+        : null}
+      {others.length > 0 ? (
+        <div class="stack tight">
+          <span class="label">{t('hiddenOn')}</span>
+          <div class="chips">
+            {others.map((h) => (
+              <button type="button" class="chip" key={h} onClick={() => update({ offHosts: setHostOff(panel.offHosts, h, false) })}>
+                {h} ×
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The shortcut list and its recorder. */
+function ShortcutSettings({ panel, update }: { panel: PanelSettings; update: (p: Partial<PanelSettings>) => void }) {
+  const [recording, setRecording] = useState<PanelAction | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  // While a shortcut is being recorded, the next combination is the answer.
+  useEffect(() => {
+    if (!recording) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') return setRecording(null);
+      const combo = comboFromEvent(e);
+      if (!combo) return; // only a modifier so far
+      if (comboProblem(combo) === 'needsModifier') return setNote(t('problem_needsModifier'));
+      const other = boundTo(panel.bindings, combo, recording);
+      if (other) return setNote(t('usedBy', { action: t(`act_${other}`) }));
+      update({ bindings: { ...panel.bindings, [recording]: combo } });
+      setNote(null);
+      setRecording(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [recording, panel]);
+
+  return (
+    <div class="stack tight">
+      <ul class="shortcuts">
+        {ACTIONS.map((a) => (
+          <ShortcutRow
+            key={a}
+            action={a}
+            panel={panel}
+            recording={recording}
+            onRecord={(r) => {
+              setNote(null);
+              setRecording(r);
+            }}
+          />
+        ))}
+      </ul>
+      {note ? <span class="error small">{note}</span> : <span class="muted small">{t('shortcutsHint')}</span>}
+      <button type="button" class="ghost" onClick={() => update({ bindings: { ...DEFAULT_BINDINGS } })}>
+        {t('resetKeys')}
+      </button>
+    </div>
   );
 }
 
@@ -442,7 +891,6 @@ function SettingsSection({ settings, onChange }: { settings: ExtensionSettings; 
         <input type="url" value={mqtt} spellcheck={false} onInput={(e) => setMqtt((e.target as HTMLInputElement).value)} />
         {!mqttOk ? <span class="error small">{t('invalidRelay')}</span> : null}
       </label>
-      {isStoreInstall() ? null : <UpdateSetting />}
       <button
         type="button"
         class="primary"
@@ -500,11 +948,14 @@ function UpdateBanner() {
         </span>
       </div>
       {info.summary.length ? (
-        <ul class="notes small">
-          {info.summary.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
+        <details class="whatsnew">
+          <summary class="small">{t('updateWhatsNew')}</summary>
+          <ul class="notes small">
+            {info.summary.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </details>
       ) : null}
       {!downloaded ? (
         <div class="row">
@@ -584,50 +1035,114 @@ function UpdateSetting() {
 
 function App() {
   const [settings, setSettings] = useState<ExtensionSettings | null>(null);
+  const [language, setLang] = useState<Language | null>(null);
+  const [tab, setTab] = useState<Tab>('skip');
   const [justPaired, setJustPaired] = useState(false);
   const state = useReceiverState();
   const now = useNow();
   const paired = !!settings?.pairCode;
-  const target = useTarget(paired);
+  const target = useTarget(true);
+  const [panel, updatePanel] = usePanel();
+  const targetHost = (() => {
+    try {
+      return target ? new URL(target.url).hostname : null;
+    } catch {
+      return null;
+    }
+  })();
 
   useEffect(() => {
-    void loadSettings().then(setSettings);
+    void Promise.all([loadSettings(), loadLanguage(), chrome.storage.local.get('popupTab')]).then(([s, l, stored]) => {
+      setLanguage(l);
+      setLang(l);
+      setSettings(s);
+      if (isTab(stored.popupTab)) setTab(stored.popupTab);
+    });
   }, []);
 
-  if (!settings) return null;
+  if (!settings || !language) return null;
+
+  const pickTab = (next: Tab) => {
+    setTab(next);
+    void chrome.storage.local.set({ popupTab: next });
+  };
+  const pickLanguage = (l: Language) => {
+    setLanguage(l);
+    setLang(l);
+    void saveLanguage(l);
+  };
+
+  // What the Phone tab's dot says, so the connection is visible from every tab.
+  const present = !!state?.lastFrameAt && now - state.lastFrameAt < PRESENCE_WINDOW_MS;
+  const phoneTone = !paired
+    ? 'wait'
+    : present
+      ? 'ok'
+      : state?.paths.some((p) => p.up)
+        ? 'ready'
+        : state && state.paths.length > 0
+          ? 'bad'
+          : 'wait';
 
   return (
     <main class="stack">
-      <Header />
-      {isStoreInstall() ? null : <UpdateBanner />}
-      {!paired ? (
-        <Setup
-          initial={settings}
-          onDone={(s) => {
-            setSettings(s);
-            setJustPaired(true);
-          }}
-        />
-      ) : (
-        <>
-          <StatusCard state={state} now={now} />
-          <TargetCard target={target} />
-          <LastCommandRow cmd={state?.lastCommand ?? null} now={now} />
-          {/* Open while no phone has ever connected: pairing is the next step. */}
-          <Collapsible title={t('pairSection')} open={justPaired || !state?.lastFrameAt}>
-            <PairSection settings={settings} onChange={setSettings} />
-          </Collapsible>
-          <Collapsible title={t('pathsSection')}>
-            <PathsSection settings={settings} state={state} now={now} onChange={setSettings} />
-          </Collapsible>
-          <Collapsible title={t('settingsSection')}>
-            <SettingsSection settings={settings} onChange={setSettings} />
-          </Collapsible>
-        </>
-      )}
-      <Collapsible title={t('aboutSection')} open={!paired}>
-        <AboutSection />
-      </Collapsible>
+      <Header language={language} onLanguage={pickLanguage} />
+      <Tabs tab={tab} onTab={pickTab} phoneTone={phoneTone} />
+      <ScrollArea resetKey={tab}>
+        {isStoreInstall() ? null : <UpdateBanner />}
+
+        {tab === 'skip' ? (
+          <>
+            {/* Skipping needs no phone and no server, so it is here from the first open. */}
+            <IntroNote />
+            <TargetCard target={target} />
+            <SkipCard panel={panel} update={updatePanel} ready={!!target?.hasMedia} />
+          </>
+        ) : null}
+
+        {tab === 'phone' ? (
+          !paired ? (
+            <Setup
+              initial={settings}
+              onDone={(s) => {
+                setSettings(s);
+                setJustPaired(true);
+              }}
+            />
+          ) : (
+            <>
+              <StatusCard state={state} now={now} />
+              <LastCommandRow cmd={state?.lastCommand ?? null} now={now} />
+              {/* Open while no phone has ever connected: pairing is the next step. */}
+              <Collapsible title={t('pairSection')} open={justPaired || !state?.lastFrameAt}>
+                <PairSection settings={settings} onChange={setSettings} />
+              </Collapsible>
+              <Collapsible title={t('pathsSection')}>
+                <PathsSection settings={settings} state={state} now={now} onChange={setSettings} />
+              </Collapsible>
+              <Collapsible title={t('relaySection')}>
+                <SettingsSection settings={settings} onChange={setSettings} />
+              </Collapsible>
+            </>
+          )
+        ) : null}
+
+        {tab === 'settings' ? (
+          <>
+            <section class="card">
+              <LookSettings panel={panel} update={updatePanel} host={targetHost} />
+            </section>
+            <Collapsible title={t('shortcutsTitle')}>
+              <ShortcutSettings panel={panel} update={updatePanel} />
+            </Collapsible>
+            <Collapsible title={t('updatesAbout')}>
+              {isStoreInstall() ? null : <UpdateSetting />}
+              <AboutSection />
+            </Collapsible>
+          </>
+        ) : null}
+      </ScrollArea>
+
       <footer class="footer muted small">
         <span>{t('version', { version: chrome.runtime.getManifest().version })}</span>
         <span class="row">

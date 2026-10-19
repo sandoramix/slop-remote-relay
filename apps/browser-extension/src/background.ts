@@ -533,6 +533,12 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: tru
     return true;
   }
   if (msg.type === 'execute') {
+    // A content script (the skip panel) may only ask for a jump. Fullscreen goes
+    // through the debugger, and nothing a page's frame says should reach that.
+    if (sender.tab && (msg.cmd as Command).op !== 'playback.seek') {
+      respond({ ok: false, detail: 'not allowed from a page' });
+      return false;
+    }
     execute(msg.cmd as Command)
       .then(respond)
       .catch((e: Error) => respond({ ok: false, detail: e.message }));
