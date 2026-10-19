@@ -21,7 +21,6 @@ export default function Onboarding() {
   const upsert = useSettings((s) => s.upsertTarget);
   const set = useSettings((s) => s.set);
   const valid = TargetSchema.safeParse(target).success;
-  const needsRelay = target.kind === 'browser' && !relay.trim();
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -55,7 +54,7 @@ export default function Onboarding() {
 
           <PrimaryButton
             label={t('onboarding.start')}
-            disabled={!valid || needsRelay}
+            disabled={!valid}
             onPress={() => {
               if (relay.trim()) set({ relayUrl: relay.trim() });
               upsert(target);

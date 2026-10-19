@@ -260,7 +260,7 @@ export const it: Record<keyof typeof en, string> = {
   'onboarding.intro':
     'Salta la sigla dal divano. Il telefono diventa il telecomando del video che gira su un altro schermo. Associa il primo dispositivo per iniziare.',
   'onboarding.remote': 'Da remoto',
-  'onboarding.footerBrowser': "Il browser si raggiunge solo via internet: serve l'indirizzo del tuo relay.",
+  'onboarding.footerBrowser': "Facoltativo. Senza relay il browser si raggiunge via MQTT, che funziona così com'è.",
   'onboarding.footerAndroid': 'Facoltativo. Senza relay restano Wi-Fi locale, Bluetooth e MQTT.',
   'onboarding.relayServer': 'Server relay',
   'onboarding.start': 'Inizia',

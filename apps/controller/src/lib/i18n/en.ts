@@ -262,7 +262,7 @@ export const en = {
   'onboarding.intro':
     'Skip the intro from the sofa. Your phone becomes the remote for the video playing on another screen. Pair your first device to get started.',
   'onboarding.remote': 'Remote access',
-  'onboarding.footerBrowser': "The browser can only be reached over the internet: you need your relay's address.",
+  'onboarding.footerBrowser': 'Optional. Without a relay a browser is reached over MQTT, which works as is.',
   'onboarding.footerAndroid': 'Optional. Without a relay you keep local Wi-Fi, Bluetooth and MQTT.',
   'onboarding.relayServer': 'Relay server',
   'onboarding.start': 'Get started',
