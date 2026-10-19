@@ -1,12 +1,23 @@
 # Releasing
 
-Push a tag in the form `v<major>.<minor>.<patch>` and GitHub Actions builds
+First bump the version in the files that carry it, and commit: CI takes the
+version from the tag, but a local build does not, so a file left behind makes
+local builds (and the extension's popup) report the old number.
+
+- `apps/browser-extension/package.json` and `apps/browser-extension/public/manifest.json`
+- `apps/controller/package.json`
+- the fallback `versionName` in `apps/receiver-android/app/build.gradle.kts`
+
+Then push a tag in the form `v<major>.<minor>.<patch>` and GitHub Actions builds
 every app and publishes a GitHub Release (`.github/workflows/release.yml`):
 
 ```bash
 git tag v0.3.0
 git push origin v0.3.0
 ```
+
+To build one app at a given version without bumping, set `RELAY_VERSION`, e.g.
+`RELAY_VERSION=v0.5.0 npm run zip -w @relay/browser-extension`.
 
 | Artifact | Built by |
 |---|---|

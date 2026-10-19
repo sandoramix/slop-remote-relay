@@ -189,6 +189,92 @@ driving the ad. A player in an iframe means the top document holds the
 fullscreen element, so fullscreen state and `fullscreen.exit` go to the top
 frame.
 
+## The skip panel (browser)
+
+The extension can skip on its own, with no phone and no server: an overlay in one of four selectable
+styles, keyboard shortcuts, and a Skip card in the popup (shown from
+the first open, before any pairing). It adds no executor and no
+transport. Every jump is the same `playback.seek` the phone sends, handed to the
+worker's existing `execute()`, so the tab and frame pick, the start plans and
+the Netflix `seekApi` apply unchanged. The phone and the panel can be used at
+the same time; the panel never goes through the offscreen document, so it
+touches neither signatures nor the dedupe window, and a jump made at the
+keyboard shows up in the next `device.status`.
+
+- **Logic** (`src/panel.ts`, no DOM, no `chrome.*`, unit-tested): settings and
+  their normalisation, preset helpers, key combinations, conflict checks.
+  Jump amounts are parsed and labelled by `@relay/protocol`'s `jump.ts`, the
+  same code as the controller's seek pad.
+- **In the page** (`src/overlay.ts`, started by the content script in every
+  frame) is what every style shares: the settings, the shortcut handler,
+  Alt + scroll, finding the video's visible rectangle, moving into the
+  fullscreen element when there is one that can hold children (not a bare
+  `<video>`), a centred note for messages, and the one-time tip. Buttons never
+  take focus, so the player's own keys keep working. A style is one module in
+  `src/styles/` implementing `StyleDef` (`styles/types.ts`): its markup and CSS
+  go in the shared Shadow DOM, and the core calls its view with where the video
+  is and what just happened. Adding a style is one module and one line in the
+  `STYLES` table, plus a name in `panel.ts`; nothing else changes.
+- **The four styles**, chosen in the popup (default `pills`), all of them
+  answering the same shortcuts and reduced-motion aware:
+  - `pills`: back on the video's left edge, forward on the right, vertically
+    centred like a mobile player's double-tap zones. They slide in when the
+    pointer moves over a video of at least 240×135 px and out after 2.6 s of
+    rest. Hovering one shows the amounts either side, to click or scroll
+    through, so the amount is discoverable without being told. A jump floats
+    its number up beside the pill; quick repeats add up (+30s, +1m).
+  - `dock`: one slim tab on the right edge; hovering it opens a card with back,
+    forward and every amount as a chip.
+  - `gesture`: nothing on the video. Alt + scroll skips (one notch is one
+    jump, a trackpad's small steps add up), Shift + Alt + scroll changes the
+    amount, holding Alt shows a guide, and a large number ticks up in the
+    middle.
+  - `timeline`: nothing on the video either; after a jump a bar glides in
+    along the bottom with a marker travelling from where the video was to where
+    it landed, both times and the total. Alt + scroll works here too.
+  The first time a style is seen, a short tip says how it works (at most three
+  times, never again once the person has used a shortcut, the picker or the
+  gesture; picking a style starts it over).
+- **Settings**: `chrome.storage.local` key `panel`, apart from `settings`, so
+  saving them never restarts the transports. Presets, selected amount, overlay
+  on/off, shortcuts on/off, toast, the shortcut for each action, and a list of
+  hosts where the panel stays away.
+- **Shortcuts** are stored as `KeyboardEvent.code` combinations, so they mean
+  the same key on any layout. Defaults are `Alt+Shift+←/→` (jump),
+  `Alt+Shift+↑/↓` (change the amount) and `Alt+Shift+S` (pill on/off). A
+  combination must carry Alt, Ctrl or Meta, so nothing the panel answers can
+  clash with a site's bare keys or fire while typing; `Ctrl+Alt` is flagged
+  (AltGr on many layouts) and so are the browser's own. Combinations a site
+  binds with a modifier are data: `keys` in `sites.json`, shown as a warning in
+  the recorder. A handled key is stopped (`stopImmediatePropagation`) so the
+  site never also acts on it.
+- **Trust**: a content script may only ask the worker for `playback.seek`.
+  Fullscreen goes through the debugger, and nothing a page's frame says reaches
+  that.
+
+### The popup and the language (browser)
+
+The popup is three tabs, remembered between openings: **Skip** (what commands
+would go to, the skip card, a one-time "New" note), **Phone** (connection status,
+last command, pairing QR, paths, relay and broker; before pairing, the setup
+card) and **Settings** (look and control with the four style cards and the
+toggles, the shortcut recorder, updates and the about text). The Phone tab
+carries a status dot, so the connection is visible from every tab. The header, the
+tabs and the footer stay put and what is between them scrolls inside its own
+themed scrollbar (a slim thumb in the gutter, accent-coloured on hover) with soft
+fades at the edges that have more to show; the popup never scrolls as a page. The relay
+address is optional in setup: the public MQTT broker works as shipped.
+
+The language is the extension's own setting (EN | IT in the header), kept under
+its own storage key `language` and English by default whatever the browser says,
+like the apps. `chrome.i18n` can only follow the browser, so `src/i18n.ts`
+bundles both `public/_locales` catalogs and looks messages up by hand; the
+popup and the on-video panel (a content script) both use it and follow a change
+live. Only the name and description in the manifest still follow the browser
+(Chrome reads those itself). `i18n.test.ts` fails when a message is missing from
+either language, when its `{placeholders}` differ, or when the code asks for a
+message that does not exist.
+
 ## Navigating a series (Android)
 
 Same ops, same `nav` status block, read through the accessibility tree of the

@@ -48,6 +48,20 @@ anything. `docs/DEVELOPMENT.md` covers building and testing each app.
   language) with Italian as the second language, chosen in-app; every new
   string needs both.
 
+## Releasing
+
+- **A release bumps the version files as well as the tag.** CI takes the version
+  from the tag, but a local build does not: the extension, for one, reads
+  `apps/browser-extension/package.json`, so an un-bumped file produces a
+  "0.2.0" zip next to a 0.5.0 install. Before tagging, set the new version in
+  `apps/browser-extension/package.json`, `apps/browser-extension/public/manifest.json`,
+  `apps/controller/package.json` and the fallback `versionName` in
+  `apps/receiver-android/app/build.gradle.kts`, commit, then tag. The internal
+  packages (`packages/*`, `services/relay`) are not released on their own and
+  keep their version. Steps and artifacts: `docs/RELEASE.md`.
+- To test a build at a specific version without bumping, set `RELAY_VERSION`
+  (e.g. `RELAY_VERSION=v0.5.0 npm run zip -w @relay/browser-extension`).
+
 ## How to work
 
 - One step at a time; don't move on until the current step builds and has been

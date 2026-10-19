@@ -76,7 +76,10 @@ npm run watch -w @relay/browser-extension
 ```
 
 Load `dist/` unpacked in `chrome://extensions`. Per-site strategies are in
-`src/sites.json`.
+`src/sites.json`. The extension's strings live in `public/_locales/{en,it}`; every
+new string needs both, and `npm test -w @relay/browser-extension` fails if one
+is missing. A local build reports the version in `package.json`: set
+`RELAY_VERSION` (e.g. `v0.5.0`) to build at another one.
 
 ## Tests
 
@@ -86,7 +89,7 @@ Load `dist/` unpacked in `chrome://extensions`. Per-site strategies are in
 | `npm test` | TransportManager ordering/failover/promotion; every shared transport against a live relay, WebRTC over libdatachannel |
 | `RELAY_TEST_MQTT=wss://broker.hivemq.com:8884/mqtt npm test -w @relay/transports` | MQTT against a real broker |
 | `./gradlew test` (receiver) | Kotlin canonicalisation matches the TS vectors byte for byte; MQTT codec matches the TS encoder |
-| `npm run smoke:extension` | the built extension in Chrome for Testing, over relay WS, HTTP and WebRTC: status, seek, pause, fullscreen in and out |
+| `npm run smoke:extension` | the built extension in Chrome for Testing, over relay WS, HTTP and WebRTC: status, seek, pause, fullscreen in and out, episode navigation, covered players, and the skip panel (89 checks) |
 | `npm run smoke -- <code> --relay <url>` | receiver on the emulator: signatures both ways, dedupe, forged and stale frames refused, mirror = one execution |
 | `npm run smoke:paths -- <code> --relay <url>` | receiver on the emulator over relay WS, HTTP, MQTT and WebRTC |
 | `npm run send -- <code> <op> ['{json}']` | fire one command at the receiver and print the reply |

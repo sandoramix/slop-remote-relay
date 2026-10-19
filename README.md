@@ -27,7 +27,7 @@ to the device, and the device acts on whatever is in front.
 
 ## What you can do
 
-- **Jump by any amount**: 10 s, 30 s, 5 minutes, 1:30, 2 hours — pick a preset or
+- **Jump by any amount**: 10s, 30s, 5m, 1m30s, 1h30m30s — pick a preset or
   type one. Hold the key to keep jumping.
 - **Scrub** to an exact point on a progress bar.
 - **Play / pause.**
@@ -144,6 +144,21 @@ That's it. The remote shows which path it is using (for example *Wi-Fi locale
    this is the only way an extension can ask on your behalf. While a fullscreen
    command runs, Chrome briefly shows a "Relay is debugging this browser" bar.
 
+**No phone needed for skipping.** The extension also skips by itself, in the
+style you pick in the popup (*Overlay and shortcuts*):
+
+- **Edge pills** (default): back and forward slide in at the edges of the video
+  when you move the pointer there; hover one to pick the amount.
+- **Side dock**: one slim tab on the edge that opens into buttons and amounts.
+- **Gesture**: nothing on the video; hold `Alt` and scroll over it.
+- **Timeline**: nothing on the video; a bar shows where you landed after each jump.
+
+In every style `Alt+Shift+←` / `Alt+Shift+→` jump by the amount you picked
+(`Alt+Shift+↑/↓` changes it, `Alt+Shift+S` hides the controls). Amounts,
+shortcuts and sites to leave alone are edited in the popup, which also has the
+language picker (English or Italian, English by default). It does exactly what
+the phone's seek keys do and works alongside a connected phone.
+
 The popup shows whether your phone is connected and over which path, which tab
 commands go to, and the last command. A green dot on the toolbar icon means a
 phone is connected.
@@ -153,8 +168,10 @@ out, the popup offers it: download the zip, unzip it over the same folder, and
 press **Reload Skipper**. Pairing and settings are kept. (Chrome only lets Web
 Store extensions update themselves; this is the closest a GitHub release gets.)
 
-A browser can only be reached over the internet paths, so it needs a relay
-server (or MQTT).
+A browser can only be reached over the internet paths. The relay server is
+**optional**: with the address left empty the extension works as is, over the
+public MQTT broker. Add your own relay for the faster WebRTC, WebSocket and HTTP
+paths.
 
 ### Using it away from home — the relay server
 
