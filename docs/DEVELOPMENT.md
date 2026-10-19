@@ -164,8 +164,8 @@ has no effect (see STATUS.md). Check what a click really did by dumping again
 ## Icons
 
 Every icon is rendered from one drawing in `tools/make-icons.mjs` (the amber key
-with a penguin sliding forward, its body the play triangle, its beak pointing at the
-skip bar). `node tools/make-icons.mjs` rewrites the extension's and the
+with a timeline: a short played stretch, a gap, and a thick arc leaping the gap to
+land on the playhead). `node tools/make-icons.mjs` rewrites the extension's and the
 controller's PNGs (it needs puppeteer, which the workspace already has); with
 `--svg` it also writes `docs/brand/skipper.svg`. The receiver's launcher icon is a
 separate vector drawable and is not generated.
