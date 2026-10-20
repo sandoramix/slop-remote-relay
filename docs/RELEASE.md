@@ -97,6 +97,19 @@ Only AltStore **Classic** and SideStore: they install unsigned builds and sign
 them with the user's Apple ID. AltStore PAL needs Apple notarization, which
 requires the paid developer program.
 
+## Site placeholders
+
+`pages/` links to the Chrome Web Store through the placeholder
+`__CHROME_WEBSTORE_URL__`. Both jobs that deploy the site (`pages.yml` and the
+`altstore` job here) run `tools/pages-fill.sh site`, which fills it from the
+`CHROME_WEBSTORE_URL` repository variable (*Settings → Secrets and variables →
+Actions → Variables*) and fails if the variable is unset. A local copy of the
+value lives in the git-ignored `.env`. To change it:
+
+```bash
+gh variable set CHROME_WEBSTORE_URL --body 'https://chromewebstore.google.com/detail/…'
+```
+
 ## Android signing
 
 Both APKs are signed with the same key, passed through AGP's injected signing

@@ -18,7 +18,7 @@
     phone, so it becomes the remote, is optional and takes a minute.
   </p>
   <div class="actions">
-    <a class="button primary" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Download</a>
+    <a class="button primary" href="__CHROME_WEBSTORE_URL__">Add to Chrome</a>
     <a class="button" href="./">All of Skipper</a>
   </div>
 </header>
@@ -57,12 +57,14 @@
     <ol class="steps">
       <li>
         <h3>Get the extension</h3>
-        <p>Download <code>relay-extension-&lt;version&gt;.zip</code> from the <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a> and unzip it into a folder you'll keep, for example <code>Documents/skipper-extension</code>.</p>
-        <p class="note">Updates go into the same folder: the popup tells you when one is out, and <em>Reload Skipper</em> picks it up. Your settings and pairing are kept.</p>
-      </li>
-      <li>
-        <h3>Load it</h3>
-        <p>Open <code>chrome://extensions</code> (<code>brave://extensions</code> in Brave), turn on <em>Developer mode</em>, click <em>Load unpacked</em> and pick the folder.</p>
+        <p>Open <a href="__CHROME_WEBSTORE_URL__">Skipper on the Chrome Web Store</a> and click <em>Add to Chrome</em>. Brave installs from the same page. The store keeps it up to date.</p>
+        <p class="note">
+          Rather not use the store? Download <code>relay-extension-&lt;version&gt;.zip</code> from the
+          <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a> and unzip it into a folder you'll keep.
+          Open <code>chrome://extensions</code> (<code>brave://extensions</code> in Brave), turn on <em>Developer mode</em>, click
+          <em>Load unpacked</em> and pick the folder. This copy tells you when an update is out; unzip it into the same folder and press
+          <em>Reload Skipper</em>. Your settings and pairing are kept.
+        </p>
       </li>
       <li>
         <h3>Pin it</h3>
@@ -240,7 +242,7 @@
       <dt>The phone says the browser is offline</dt>
       <dd>Open the popup's <em>Phone</em> tab: the dot says whether a phone is heard, and the code on the phone must match the one shown there. A browser can only be reached over the internet, so the phone needs a connection too.</dd>
       <dt>The popup says an update is out</dt>
-      <dd>Download the new zip, unzip it over the same folder and press <em>Reload Skipper</em>. Settings and pairing are kept.</dd>
+      <dd>Only the copy from a GitHub release says this; the store updates its copy by itself. Download the new zip, unzip it over the same folder and press <em>Reload Skipper</em>. Settings and pairing are kept.</dd>
     </dl>
     <p class="note">
       The extension keeps no account and sends nothing anywhere except the connection you set up. See the

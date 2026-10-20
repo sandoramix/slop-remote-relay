@@ -142,6 +142,11 @@ npm run send -- cielo-lento-42 device.status
   of the same site now: one Pages workflow copies all of `pages/` and keeps the
   live `altstore.json`, and the release's AltStore job copies all of `pages/`
   too. Not yet deployed in this form.
+- Chrome Web Store link on the site: `pages/` carries a `__CHROME_WEBSTORE_URL__`
+  placeholder that `tools/pages-fill.sh` replaces from the `CHROME_WEBSTORE_URL`
+  repository variable in both deploy jobs, failing the deploy if it is unset or
+  a placeholder is left. The script was run locally on a copy of `pages/` (four
+  links filled, empty variable rejected); the deployed result is not checked yet.
 
 **Known, not done**
 

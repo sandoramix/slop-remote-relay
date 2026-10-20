@@ -13,3 +13,6 @@ out/
 *.jks
 *.keystore
 signing.properties
+
+# Local environment (values mirrored in GitHub repository variables)
+.env

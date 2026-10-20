@@ -433,7 +433,10 @@ jobs:
       - name: Build source
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node tools/altstore-source.mjs site "${{ runner.temp }}/ios-info.json"
+          CHROME_WEBSTORE_URL: ${{ vars.CHROME_WEBSTORE_URL }}
+        run: |
+          node tools/altstore-source.mjs site "${{ runner.temp }}/ios-info.json"
+          tools/pages-fill.sh site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -9,7 +9,7 @@ name: Pages
 on:
   push:
     branches: [master]
-    paths: ['pages/**', '.github/workflows/pages.yml']
+    paths: ['pages/**', 'tools/pages-fill.sh', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 concurrency:
@@ -29,10 +29,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Assemble site
+        env:
+          CHROME_WEBSTORE_URL: ${{ vars.CHROME_WEBSTORE_URL }}
         run: |
           mkdir site
           cp -r pages/. site/
           test -f site/pair/index.html
+          tools/pages-fill.sh site
           cp apps/controller/assets/images/icon.png site/icon.png
           base="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}"
           curl -fsSL "$base/altstore.json" -o site/altstore.json || echo "no live altstore.json yet"

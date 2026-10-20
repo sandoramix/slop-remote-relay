@@ -94,6 +94,7 @@
           <li><code>relay-controller-&lt;version&gt;.apk</code> on the phone you'll hold</li>
           <li><code>relay-receiver-&lt;version&gt;.apk</code> on the Android phone that plays video</li>
         </ul>
+        <p>For a browser, Skipper for Chrome is on the <a href="__CHROME_WEBSTORE_URL__">Chrome Web Store</a>.</p>
         <p class="note">Android asks you to allow installs from your browser or file manager. That's expected for apps outside the Play Store.</p>
         <p class="note"><strong>iPhone as the remote:</strong> in <a href="https://altstore.io">AltStore</a> or <a href="https://sidestore.io">SideStore</a>, go to <em>Browse → Sources → +</em> and add <code>https://sandoramix.github.io/slop-remote-relay/altstore.json</code>.</p>
       </li>
@@ -123,7 +124,7 @@
       </li>
       <li>
         <h3>Add a browser <span class="optional">optional</span></h3>
-        <p>Install Skipper for Chrome (or Brave). It already skips on any video by itself, with nothing to set up. To use your phone as its remote too, open the popup's <em>Phone</em> tab, click <em>Save and show QR code</em> and scan the code with the app.</p>
+        <p>Install <a href="__CHROME_WEBSTORE_URL__">Skipper for Chrome</a> from the Chrome Web Store (it works in Brave too). It already skips on any video by itself, with nothing to set up. To use your phone as its remote too, open the popup's <em>Phone</em> tab, click <em>Save and show QR code</em> and scan the code with the app.</p>
         <p><strong>The relay field can stay empty.</strong> Left empty, the extension and the phone talk over a public MQTT broker, which works as is. A relay only adds faster paths.</p>
         <div class="shots">
           <figure>
@@ -136,7 +137,7 @@
           </figure>
         </div>
         <p class="note">
-          Not in the store yet? Download <code>relay-extension-&lt;version&gt;.zip</code>, unzip it into a folder you'll keep,
+          Rather not use the store? Download <code>relay-extension-&lt;version&gt;.zip</code> from the release, unzip it into a folder you'll keep,
           open <code>chrome://extensions</code>, turn on <em>Developer mode</em> and click <em>Load unpacked</em>.
         </p>
         <p class="note"><a href="extension.html">The full browser guide</a>: the four skip styles, shortcuts, and what every setting does.</p>
