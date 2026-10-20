@@ -146,7 +146,8 @@ npm run send -- cielo-lento-42 device.status
   placeholder that `tools/pages-fill.sh` replaces from the `CHROME_WEBSTORE_URL`
   repository variable in both deploy jobs, failing the deploy if it is unset or
   a placeholder is left. The script was run locally on a copy of `pages/` (four
-  links filled, empty variable rejected); the deployed result is not checked yet.
+  links filled, empty variable rejected), and the Pages deploy of 0.6.1 serves
+  `extension.html` with both store links filled and no placeholder left.
 
 **Known, not done**
 
