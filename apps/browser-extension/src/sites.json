@@ -13,6 +13,20 @@
       "current": ".active"
     }
   },
+  "animesaturn.net": {
+    "nav": {
+      "paths": "^/anime/[^/]+/ep-\\d+",
+      "items": "a.ep-tile[data-watch-link]",
+      "current": ".is-current"
+    }
+  },
+  "animeunity.co": {
+    "nav": {
+      "paths": "^/anime/",
+      "next": "#video-bottom a.episode.next",
+      "prev": "#video-bottom a.episode.prev"
+    }
+  },
   "youtube.com": {
     "fullscreenKey": "f",
     "keys": ["Ctrl+ArrowLeft", "Ctrl+ArrowRight", "Shift+KeyN", "Shift+KeyP"]
