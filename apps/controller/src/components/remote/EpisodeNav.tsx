@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, SkipBack, SkipForward } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import type { NavStatus } from '@relay/protocol';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { useT } from '../../lib/i18n';
@@ -12,13 +13,46 @@ const RANGE = 50;
 /** A page needs a moment to load the next episode before a status read sees it. */
 const REFRESH_AFTER_MS = 1800;
 
+/** While the page loads the next episode, status has no `nav` for a few polls; keep the last one this long. */
+const GRACE_MS = 12000;
+
+/**
+ * The receiver's nav block, held steady across the gaps a page load leaves:
+ * the last good block stays for GRACE_MS after status stops reporting one, and
+ * the episode list is carried over from the previous block while the series
+ * (same count) is the same, so neither the keys nor the open list flicker.
+ */
+function useSteadyNav(): { nav: NavStatus | null; live: boolean } {
+  const reported = useSession((s) => s.status?.nav);
+  const kept = useRef<NavStatus | null>(null);
+  const [, expire] = useState(0);
+
+  if (reported) {
+    const prev = kept.current;
+    const items = reported.items ?? (prev && prev.count === reported.count ? prev.items : undefined);
+    kept.current = items === reported.items ? reported : { ...reported, items };
+  }
+
+  useEffect(() => {
+    if (reported) return;
+    const timer = setTimeout(() => {
+      kept.current = null;
+      expire((n) => n + 1);
+    }, GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [reported]);
+
+  return { nav: kept.current, live: !!reported };
+}
+
 /**
  * Previous / next episode, and the full list behind a toggle. Shown only while
- * the receiver reports a navigable series (status.nav); hidden otherwise.
+ * the receiver reports a navigable series (status.nav); hidden once it has
+ * stopped reporting one for longer than a page load takes.
  */
 export function EpisodeNav() {
   const t = useT();
-  const nav = useSession((s) => s.status?.nav);
+  const { nav, live } = useSteadyNav();
   const run = useCommand();
   const busy = useCommandState((s) => s.busy);
   const [open, setOpen] = useState(false);
@@ -59,10 +93,10 @@ export function EpisodeNav() {
     return (
       <Pressable
         onPress={() => step(delta)}
-        disabled={!enabled || busy !== null}
+        disabled={!live || !enabled || busy !== null}
         accessibilityRole="button"
         accessibilityLabel={delta > 0 ? t('episode.next') : t('episode.prev')}
-        className={`h-14 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card active:opacity-70 ${enabled ? '' : 'opacity-40'}`}
+        className={`h-14 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border bg-card active:opacity-70 ${live && enabled ? '' : 'opacity-40'}`}
       >
         {busy === key ? (
           <ActivityIndicator color={palette.foreground} />
@@ -132,7 +166,7 @@ export function EpisodeNav() {
                   <Pressable
                     key={at}
                     onPress={() => void run('goto', (c) => c.navGoto(at, label)).then(refreshSoon)}
-                    disabled={busy !== null}
+                    disabled={!live || busy !== null}
                     accessibilityRole="button"
                     accessibilityLabel={t('episode.item', { n: label })}
                     accessibilityState={{ selected: on }}
