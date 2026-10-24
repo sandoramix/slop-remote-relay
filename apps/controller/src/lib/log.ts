@@ -80,16 +80,22 @@ export async function clearLog() {
 }
 
 /** The log with what a developer asks first: app, device, language. */
-export async function buildReport(extra: Record<string, string> = {}): Promise<string> {
+export async function collectReport(extra: Record<string, string> = {}) {
   await load();
-  const header = [
-    `Skipper controller ${Constants.expoConfig?.version ?? '?'}`,
-    `${Platform.OS} ${Platform.Version}, ${Device.manufacturer ?? '?'} ${Device.modelName ?? '?'}`,
-    `Language ${useSettings.getState().language}`,
-    ...Object.entries(extra).map(([k, v]) => `${k}: ${v}`),
-    '---',
-  ];
-  return [...header, ...lines].join('\n');
+  return {
+    version: Constants.expoConfig?.version ?? '?',
+    details: [
+      `${Platform.OS} ${Platform.Version}, ${Device.manufacturer ?? '?'} ${Device.modelName ?? '?'}`,
+      `App language: ${useSettings.getState().language}`,
+      ...Object.entries(extra).map(([k, v]) => `${k}: ${v}`),
+    ],
+    log: lines.join('\n'),
+  };
+}
+
+export async function buildReport(extra: Record<string, string> = {}): Promise<string> {
+  const { version, details, log: text } = await collectReport(extra);
+  return [`Skipper controller ${version}`, ...details, '---', text].join('\n');
 }
 
 let installed = false;

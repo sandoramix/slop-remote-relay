@@ -109,12 +109,12 @@ object AppLog {
     }
 
     /** What a developer needs first: app, device, and what the receiver has been granted. */
-    fun report(context: Context, versionName: String, state: Map<String, String>): String = buildString {
-        appendLine("Skipper receiver $versionName")
-        appendLine("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}")
-        appendLine("Language ${context.chosenLanguage()}")
-        state.forEach { (k, v) -> appendLine("$k: $v") }
-        appendLine("---")
-        append(read())
-    }
+    fun details(context: Context, versionName: String, state: Map<String, String>): List<String> = listOf(
+        "Skipper receiver $versionName",
+        "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}",
+        "App language: ${context.chosenLanguage()}",
+    ) + state.map { (k, v) -> "$k: $v" }
+
+    fun report(context: Context, versionName: String, state: Map<String, String>): String =
+        details(context, versionName, state).joinToString("\n") + "\n---\n" + read()
 }

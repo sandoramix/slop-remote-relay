@@ -428,6 +428,16 @@ extension, *Settings → Report a problem* (copy, or save as a file).
   their own storage key and the popup merges them by time, so two contexts never
   overwrite each other.
 
+**Report on GitHub.** Each app also has a button that opens a prefilled
+`issues/new` link: title `[app version] `, a "What happened?" placeholder, the
+details (app, version, device, language, receiver grants or path states) and the
+newest log lines, all in English whatever the app language. It needs no token
+and no server, so nothing secret ships in an app and the person submits from their
+own account. A URL holds only about 8 KB, so the newest ~60 lines are cut until
+the link fits (`MAX_ENCODED_BODY`), and the full report is put on the clipboard
+for pasting. Code: `packages/protocol/src/issue.ts` (controller, extension) and
+its Kotlin twin `core/IssueReport.kt`; both are unit-tested.
+
 The pair code, its secret and its room are registered with `hide` / `hideFromLog`
 as soon as they are known and replaced by `‹hidden›` in every line, so a log can
 be pasted into a public issue. Nothing is uploaded: sharing is the person's act.

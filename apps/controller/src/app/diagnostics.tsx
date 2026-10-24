@@ -1,11 +1,13 @@
 import type { TransportId } from '@relay/protocol';
-import type { DeviceStatus, TopologySnapshot } from '@relay/protocol';
-import { RefreshCw, Share2, Trash2 } from 'lucide-react-native';
+import { type DeviceStatus, issueUrl, type TopologySnapshot } from '@relay/protocol';
+import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
+import { Bug, RefreshCw, Share2, Trash2 } from 'lucide-react-native';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Divider, LinkRow, Section } from '../components/form';
 import { executorLabel, prettySource } from '../lib/format';
 import { useT, type TranslationKey } from '../lib/i18n';
-import { buildReport, clearLog } from '../lib/log';
+import { buildReport, clearLog, collectReport } from '../lib/log';
 import { palette } from '../lib/palette';
 import { TRANSPORTS } from '../lib/transports/registry';
 import { useSession } from '../state/session';

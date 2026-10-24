@@ -3,3 +3,4 @@ export * from './codec';
 export * from './jump';
 export * from './transport';
 export * from './version';
+export * from './issue';

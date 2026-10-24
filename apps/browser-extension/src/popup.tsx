@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { compareVersions, DEFAULT_JUMP_PRESETS, DEFAULT_JUMP_SECONDS, jumpLabel, parseJump } from '@relay/protocol';
+import { compareVersions, DEFAULT_JUMP_PRESETS, DEFAULT_JUMP_SECONDS, issueUrl, jumpLabel, parseJump } from '@relay/protocol';
 import { clearLog, readLog } from './log';
 import {
   getLanguage,
@@ -745,17 +745,26 @@ function ShortcutSettings({ panel, update }: { panel: PanelSettings; update: (p:
 function LogSection() {
   const [note, setNote] = useState<string | null>(null);
 
-  const report = async (): Promise<string> => {
+  const collect = async () => {
     const { settings } = (await chrome.storage.local.get('settings')) as { settings?: { pairCode?: string } };
-    const body = await readLog(settings?.pairCode ? [settings.pairCode] : []);
-    if (!body) return '';
-    const header = [
-      `Skipper extension ${chrome.runtime.getManifest().version}`,
-      navigator.userAgent,
-      `Language ${getLanguage()}`,
-      '---',
-    ];
-    return [...header, body].join('\n');
+    const version = chrome.runtime.getManifest().version;
+    return {
+      version,
+      details: [`Skipper extension ${version}`, navigator.userAgent, `Popup language: ${getLanguage()}`],
+      log: await readLog(settings?.pairCode ? [settings.pairCode] : []),
+    };
+  };
+
+  const report = async (): Promise<string> => {
+    const { details, log } = await collect();
+    return log ? [...details, '---', log].join('\n') : '';
+  };
+
+  /** A prefilled GitHub issue (English, newest lines); the full report goes to the clipboard. */
+  const github = async () => {
+    const { version, details, log } = await collect();
+    if (log) await navigator.clipboard.writeText([...details, '---', log].join('\n')).catch(() => undefined);
+    await chrome.tabs.create({ url: issueUrl({ app: 'extension', version, details, log }) });
   };
 
   const copy = async () => {
@@ -781,6 +790,9 @@ function LogSection() {
       <div class="row">
         <button type="button" class="ghost" onClick={() => void copy()}>
           {t('logCopy')}
+        </button>
+        <button type="button" class="ghost" onClick={() => void github()}>
+          {t('logGithub')}
         </button>
         <button type="button" class="ghost" onClick={() => void download()}>
           {t('logDownload')}

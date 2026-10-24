@@ -466,6 +466,7 @@
   },
   "logTitle": { "message": "Report a problem" },
   "logHint": { "message": "Sends the extension log to the developer. It lists what the extension did and when; it never contains your pair code." },
+  "logGithub": { "message": "Report on GitHub" },
   "logCopy": { "message": "Copy log" },
   "logDownload": { "message": "Save log as file" },
   "logClear": { "message": "Clear log" },

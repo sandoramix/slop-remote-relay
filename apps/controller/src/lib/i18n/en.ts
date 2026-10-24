@@ -83,6 +83,7 @@ export const en = {
   'diag.log': 'Report a problem',
   'diag.logHint': 'Sends the app log to the developer. It lists what the app did and when; it never contains your pair code.',
   'diag.logShare': 'Share log',
+  'diag.logGithub': 'Report on GitHub',
   'diag.logClear': 'Clear log',
   'diag.logCleared': 'Log cleared',
   'diag.paths': 'Paths',

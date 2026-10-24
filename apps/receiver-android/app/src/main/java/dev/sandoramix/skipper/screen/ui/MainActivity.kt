@@ -2,6 +2,8 @@ package dev.sandoramix.skipper.screen.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -30,6 +32,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import dev.sandoramix.skipper.screen.R
 import dev.sandoramix.skipper.screen.core.AppLog
+import dev.sandoramix.skipper.screen.core.IssueReport
 import dev.sandoramix.skipper.screen.core.SUPPORTED_LANGUAGES
 import dev.sandoramix.skipper.screen.core.chosenLanguage
 import dev.sandoramix.skipper.screen.core.localized
@@ -189,7 +192,8 @@ class MainActivity : Activity() {
 
         val diagnostics = card(
             text(getString(R.string.log_note), 13f, MUTED),
-            button(getString(R.string.log_btn_share)) { shareLog() },
+            button(getString(R.string.log_btn_github)) { reportOnGithub() },
+            button(getString(R.string.log_btn_share), secondary = true) { shareLog() },
             button(getString(R.string.log_btn_clear), secondary = true) {
                 AppLog.clear()
                 Toast.makeText(this, R.string.log_cleared, Toast.LENGTH_SHORT).show()
@@ -230,16 +234,18 @@ class MainActivity : Activity() {
         if (updater.silentCheckDue()) updater.check(silent = true)
     }
 
-    /** The log plus what a developer asks first, through the system share sheet (mail, chat, clipboard). */
-    private fun shareLog() {
-        val state = linkedMapOf(
+    /** What a developer asks first: what the receiver has been granted and which paths are on. */
+    private fun logState() = linkedMapOf(
             "Accessibility" to if (RelayAccessibilityService.instance != null) "on" else "off",
             "Notification access" to if (RelayNotificationListener.isBound) "on" else "off",
             "Shizuku" to if (ShizukuBridge.running()) "running" else "not running",
             "Paired" to if (prefs.getString(RelayForegroundService.KEY_PAIR_CODE, null).isNullOrBlank()) "no" else "yes",
             "Paths off" to prefs.getString(RelayForegroundService.KEY_DISABLED, "").orEmpty().ifBlank { "none" },
-        )
-        val report = AppLog.report(this, updater.installedVersion(), state)
+    )
+
+    /** The log plus the details, through the system share sheet (mail, chat, clipboard). */
+    private fun shareLog() {
+        val report = AppLog.report(this, updater.installedVersion(), logState())
         if (AppLog.read().isBlank()) {
             Toast.makeText(this, R.string.log_empty, Toast.LENGTH_SHORT).show()
         }
@@ -249,6 +255,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, report)
         }
         startActivity(Intent.createChooser(send, getString(R.string.log_share_title)))
+    }
+
+    /** Opens a prefilled GitHub issue (English, newest log lines) and puts the full report on the clipboard. */
+    private fun reportOnGithub() {
+        val version = updater.installedVersion()
+        val details = AppLog.details(this, version, logState())
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.log_share_title), AppLog.report(this, version, logState())))
+        openUrl(IssueReport.url("receiver", version, details, AppLog.read()))
     }
 
     override fun onStart() {

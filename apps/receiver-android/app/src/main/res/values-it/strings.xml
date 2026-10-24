@@ -77,6 +77,7 @@
     <string name="err_start_timeout">Premuto il pulsante di avvio su %1$s, ma il player non è comparso</string>
     <string name="log_header">Diagnostica</string>
     <string name="log_note">Qualcosa non va? Invia il log allo sviluppatore. Elenca cosa ha fatto l\'app e quando; non contiene mai il codice di abbinamento.</string>
+    <string name="log_btn_github">Segnala su GitHub</string>
     <string name="log_btn_share">Condividi il log</string>
     <string name="log_btn_clear">Cancella il log</string>
     <string name="log_cleared">Log cancellato</string>
