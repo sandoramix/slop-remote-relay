@@ -1,6 +1,6 @@
 {
   "name": "@relay/browser-extension",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Skipper receiver for desktop Chrome and Brave: drive the video in any tab from the phone",
