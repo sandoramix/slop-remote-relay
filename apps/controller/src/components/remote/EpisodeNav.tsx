@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, SkipBack, SkipForward } from 'lucide-react-native';
 import type { NavStatus } from '@relay/protocol';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { haptic } from '../../lib/haptics';
 import { useT } from '../../lib/i18n';
@@ -24,25 +24,24 @@ const GRACE_MS = 12000;
  */
 function useSteadyNav(): { nav: NavStatus | null; live: boolean } {
   const reported = useSession((s) => s.status?.nav);
-  const kept = useRef<NavStatus | null>(null);
-  const [, expire] = useState(0);
+  const [kept, setKept] = useState<NavStatus | null>(null);
 
-  if (reported) {
-    const prev = kept.current;
-    const items = reported.items ?? (prev && prev.count === reported.count ? prev.items : undefined);
-    kept.current = items === reported.items ? reported : { ...reported, items };
-  }
+  // No ref writes during render (the React Compiler is on): derive from props/state, store in an effect.
+  const carried = reported && !reported.items && kept && kept.count === reported.count ? kept.items : undefined;
+  const nav = reported ? (carried ? { ...reported, items: carried } : reported) : kept;
 
   useEffect(() => {
-    if (reported) return;
-    const timer = setTimeout(() => {
-      kept.current = null;
-      expire((n) => n + 1);
-    }, GRACE_MS);
+    if (reported) {
+      setKept((prev) =>
+        !reported.items && prev && prev.count === reported.count ? { ...reported, items: prev.items } : reported,
+      );
+      return;
+    }
+    const timer = setTimeout(() => setKept(null), GRACE_MS);
     return () => clearTimeout(timer);
   }, [reported]);
 
-  return { nav: kept.current, live: !!reported };
+  return { nav, live: !!reported };
 }
 
 /**

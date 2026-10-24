@@ -12,7 +12,7 @@ android {
         minSdk = 26          // MediaSession + dispatchGesture both need 24; 26 for channels
         targetSdk = 35
         versionCode = 1
-        versionName = "0.7.0"
+        versionName = "0.7.1"
     }
 
     buildTypes {
