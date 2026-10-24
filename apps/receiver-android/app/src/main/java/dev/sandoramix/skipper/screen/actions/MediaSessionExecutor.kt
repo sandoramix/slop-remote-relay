@@ -8,7 +8,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import android.view.KeyEvent
 import dev.sandoramix.skipper.screen.core.Command
 import dev.sandoramix.skipper.screen.core.ExecResult
@@ -65,7 +65,7 @@ class MediaSessionExecutor(private val context: Context) : ActionExecutor {
         } catch (e: SecurityException) {
             // Thrown when the notification listener has been revoked out from
             // under us. Not fatal: the chain falls through to accessibility.
-            Log.w(TAG, "No notification listener access", e)
+            AppLog.w(TAG, "No notification listener access", e)
             return null
         }
 

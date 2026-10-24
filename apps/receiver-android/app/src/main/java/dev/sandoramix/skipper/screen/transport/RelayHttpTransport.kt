@@ -1,6 +1,6 @@
 package dev.sandoramix.skipper.screen.transport
 
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,7 +72,7 @@ class RelayHttpTransport(
                     val backoff = min(1000L shl min(attempt, 5), 30_000L)
                     val wait = (backoff * (0.5 + Random.nextDouble() * 0.5)).toLong()
                     attempt++
-                    Log.w(TAG, "poll failed (${e.message}) — retry in ${wait}ms")
+                    AppLog.w(TAG, "poll failed (${e.message}) — retry in ${wait}ms")
                     delay(wait)
                 }
             }
@@ -87,7 +87,7 @@ class RelayHttpTransport(
                     .post(raw.toRequestBody("text/plain; charset=utf-8".toMediaType()))
                     .build()
                 http.newCall(request).execute().close()
-            }.onFailure { Log.w(TAG, "send failed: ${it.message}") }
+            }.onFailure { AppLog.w(TAG, "send failed: ${it.message}") }
         }
     }
 

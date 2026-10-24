@@ -1,7 +1,9 @@
 import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { compareVersions, DEFAULT_JUMP_PRESETS, DEFAULT_JUMP_SECONDS, jumpLabel, parseJump } from '@relay/protocol';
+import { clearLog, readLog } from './log';
 import {
+  getLanguage,
   type Language,
   LANGUAGE_NAMES,
   LANGUAGES,
@@ -739,6 +741,63 @@ function ShortcutSettings({ panel, update }: { panel: PanelSettings; update: (p:
   );
 }
 
+/** The log for the developer: copied, or saved as a file, with the pair code taken out. */
+function LogSection() {
+  const [note, setNote] = useState<string | null>(null);
+
+  const report = async (): Promise<string> => {
+    const { settings } = (await chrome.storage.local.get('settings')) as { settings?: { pairCode?: string } };
+    const body = await readLog(settings?.pairCode ? [settings.pairCode] : []);
+    if (!body) return '';
+    const header = [
+      `Skipper extension ${chrome.runtime.getManifest().version}`,
+      navigator.userAgent,
+      `Language ${getLanguage()}`,
+      '---',
+    ];
+    return [...header, body].join('\n');
+  };
+
+  const copy = async () => {
+    const text = await report();
+    if (!text) return setNote(t('logEmpty'));
+    await navigator.clipboard.writeText(text);
+    setNote(t('logCopied'));
+  };
+
+  const download = async () => {
+    const text = await report();
+    if (!text) return setNote(t('logEmpty'));
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    link.download = `skipper-extension-log-${new Date().toISOString().slice(0, 10)}.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  return (
+    <div class="stack tight">
+      <p class="small muted">{t('logHint')}</p>
+      <div class="row">
+        <button type="button" class="ghost" onClick={() => void copy()}>
+          {t('logCopy')}
+        </button>
+        <button type="button" class="ghost" onClick={() => void download()}>
+          {t('logDownload')}
+        </button>
+        <button
+          type="button"
+          class="ghost"
+          onClick={() => void clearLog().then(() => setNote(null))}
+        >
+          {t('logClear')}
+        </button>
+      </div>
+      {note ? <span class="small muted">{note}</span> : null}
+    </div>
+  );
+}
+
 /** What the extension does and where to get the remote: for first-time users and store reviewers. */
 function AboutSection() {
   return (
@@ -1134,6 +1193,9 @@ function App() {
             </section>
             <Collapsible title={t('shortcutsTitle')}>
               <ShortcutSettings panel={panel} update={updatePanel} />
+            </Collapsible>
+            <Collapsible title={t('logTitle')}>
+              <LogSection />
             </Collapsible>
             <Collapsible title={t('updatesAbout')}>
               {isStoreInstall() ? null : <UpdateSetting />}

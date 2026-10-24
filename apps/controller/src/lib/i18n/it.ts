@@ -78,6 +78,11 @@ export const it: Record<keyof typeof en, string> = {
   'state.failed': 'non raggiungibile',
 
   // Diagnostics
+  'diag.log': 'Segnala un problema',
+  'diag.logHint': "Invia il log dell'app allo sviluppatore. Elenca cosa ha fatto l'app e quando; non contiene mai il codice di abbinamento.",
+  'diag.logShare': 'Condividi il log',
+  'diag.logClear': 'Cancella il log',
+  'diag.logCleared': 'Log cancellato',
   'diag.paths': 'Percorsi',
   'diag.noPaths': 'Nessun percorso attivo',
   'diag.receiver': 'Ricevitore',

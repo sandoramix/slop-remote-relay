@@ -3,7 +3,7 @@ package dev.sandoramix.skipper.screen.actions
 import android.content.Context
 import dev.sandoramix.skipper.screen.R
 import dev.sandoramix.skipper.screen.core.str
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import dev.sandoramix.skipper.screen.core.Command
 import dev.sandoramix.skipper.screen.core.ExecResult
 import dev.sandoramix.skipper.screen.core.ExecutorId
@@ -88,7 +88,7 @@ class ShizukuExecutor(
                 // Tree search needs accessibility, which already had its turn.
                 is Step.Node, is Step.MediaSession -> false
             }
-            Log.d(TAG, "$what ${step::class.simpleName} -> $done")
+            AppLog.d(TAG, "$what ${step::class.simpleName} -> $done")
             if (!done) continue
             delay(VERIFY_MS)
             when (fullscreenState()) {
@@ -120,7 +120,7 @@ class ShizukuExecutor(
 
     private suspend fun key(code: String): Int? {
         if (!KEYCODE.matches(code)) {
-            Log.w(TAG, "refusing key code $code")
+            AppLog.w(TAG, "refusing key code $code")
             return null
         }
         return ShizukuBridge.run("input", "keyevent", code)?.first?.takeIf { it == 0 }

@@ -1,9 +1,11 @@
 import type { TransportId } from '@relay/protocol';
-import { RefreshCw } from 'lucide-react-native';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Section } from '../components/form';
+import type { DeviceStatus, TopologySnapshot } from '@relay/protocol';
+import { RefreshCw, Share2, Trash2 } from 'lucide-react-native';
+import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { Divider, LinkRow, Section } from '../components/form';
 import { executorLabel, prettySource } from '../lib/format';
 import { useT, type TranslationKey } from '../lib/i18n';
+import { buildReport, clearLog } from '../lib/log';
 import { palette } from '../lib/palette';
 import { TRANSPORTS } from '../lib/transports/registry';
 import { useSession } from '../state/session';
@@ -17,6 +19,17 @@ const STATE_LABEL: Record<string, TranslationKey> = {
   failed: 'state.failed',
 };
 
+/** The log plus the live picture (paths, receiver), through the system share sheet. */
+async function shareLog(topology: TopologySnapshot | null, status: DeviceStatus | null) {
+  const report = await buildReport({
+    Paths: topology?.transports.map((p) => `${p.id}=${p.state}${p.active ? '*' : ''}`).join(' ') || 'none',
+    Receiver: status
+      ? `${status.foregroundPackage ?? '?'} executors=${status.executors.join(',') || 'none'} nav=${status.nav ? 'yes' : 'no'}`
+      : 'no status',
+  });
+  await Share.share({ message: report, title: 'Skipper log' }).catch(() => undefined);
+}
+
 /** Every path's health, the receiver's capabilities, and a short event log. */
 export default function Diagnostics() {
   const t = useT();
@@ -27,6 +40,20 @@ export default function Diagnostics() {
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 px-4 pb-12 pt-2">
+      <Section title={t('diag.log')} footer={t('diag.logHint')}>
+        <LinkRow
+          icon={<Share2 size={18} color={palette.primary} />}
+          label={t('diag.logShare')}
+          onPress={() => void shareLog(topology, status)}
+        />
+        <Divider />
+        <LinkRow
+          icon={<Trash2 size={18} color={palette.muted} />}
+          label={t('diag.logClear')}
+          onPress={() => void clearLog().then(() => useSession.getState().pushLog(t('diag.logCleared')))}
+        />
+      </Section>
+
       <Section title={t('diag.paths')}>
         {topology?.transports.length ? (
           topology.transports.map((p, i) => (

@@ -2,7 +2,6 @@ package dev.sandoramix.skipper.screen.core
 
 import android.content.Context
 import android.os.BatteryManager
-import android.util.Log
 import dev.sandoramix.skipper.screen.actions.ExecutorChain
 import dev.sandoramix.skipper.screen.actions.MediaSessionExecutor
 import dev.sandoramix.skipper.screen.recipes.RecipeEngine
@@ -41,7 +40,7 @@ class CommandRouter(
     suspend fun handle(raw: String, transportId: String): String? {
         val verdict = Codec.verify(raw, secret)
         if (verdict is Codec.Verdict.Rejected) {
-            Log.w(TAG, "Frame rejected on $transportId: ${verdict.reason}")
+            AppLog.w(TAG, "Frame rejected on $transportId: ${verdict.reason}")
             return null
         }
 
@@ -54,25 +53,35 @@ class CommandRouter(
             "cmd" -> {
                 // Duplicate arrivals are expected, not an error — say nothing.
                 if (!dedupe.admit(id)) return null
-                executeCommand(env, id)
+                executeCommand(env, id, transportId)
             }
             else -> null
         }
     }
 
-    private suspend fun executeCommand(env: JSONObject, ref: String): String {
+    private suspend fun executeCommand(env: JSONObject, ref: String, transportId: String): String {
         val started = System.currentTimeMillis()
         val commandJson = env.optJSONObject("cmd")
             ?: return ack(ref, ok = false, detail = "comando mancante", tookMs = 0)
 
         val command = Command.fromJson(commandJson)
-            ?: return ack(ref, ok = false, detail = "operazione sconosciuta", tookMs = 0)
+        if (command == null) {
+            AppLog.w(TAG, "Unknown command on $transportId: ${commandJson.optString("op")}")
+            return ack(ref, ok = false, detail = "operazione sconosciuta", tookMs = 0)
+        }
 
         if (command is Command.Status) {
             return event("status", status(command.includeNavItems))
         }
 
         val result = chain.run(command)
+        // One line per command: what was asked, over which path, which layer acted, how long it took.
+        AppLog.i(
+            TAG,
+            "$command via $transportId -> ${if (result.ok) "ok" else "FAILED"} " +
+                "(${result.executor?.wire ?: "none"}, ${System.currentTimeMillis() - started} ms)" +
+                (result.detail?.let { ": $it" } ?: ""),
+        )
         return ack(
             ref = ref,
             ok = result.ok,

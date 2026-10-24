@@ -20,6 +20,7 @@ import {
   WebRtcTransport,
   type PeerConnectionFactory,
 } from '@relay/transports';
+import { captureErrors, hideFromLog, initLog, log } from './log';
 import {
   type ActionResult,
   type BrowserTransportId,
@@ -39,6 +40,9 @@ import {
  * controller mirrors critical commands across two paths; the dedupe window is
  * what keeps a "+30s" from jumping 60.
  */
+
+initLog('offscreen');
+captureErrors('offscreen');
 
 const enc = new TextEncoder();
 const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
@@ -71,7 +75,7 @@ async function envelope<T extends Envelope>(body: Omit<T, 'v' | 'id' | 'ts'> & {
 async function handle(raw: string, from: BrowserTransportId): Promise<void> {
   const result = await decodeAndVerify(raw, signer);
   if (!result.ok) {
-    console.warn(`[relay] frame rejected on ${from}: ${result.reason}`);
+    log.w('offscreen', `frame rejected on ${from}: ${result.reason}`);
     return;
   }
   const env = result.envelope;
@@ -111,6 +115,7 @@ async function handle(raw: string, from: BrowserTransportId): Promise<void> {
   }
   const { op, ...args } = cmd as { op: string } & LastCommand['args'];
   lastCommand = { op, args, ok: res.ok, detail: res.detail, at: Date.now(), path: from };
+  (res.ok ? log.i : log.w)('offscreen', `${op} via ${from} -> ${res.ok ? 'ok' : 'FAILED'} (${Date.now() - started} ms)${res.detail ? `: ${res.detail}` : ''}`);
   publishState();
   await reply(
     await envelope<AckEnvelope>({
@@ -162,6 +167,7 @@ async function run(id: BrowserTransportId, entry: Live): Promise<void> {
             onMessage: (raw) => void handle(raw, id),
             onStateChange: (state, detail) => {
               if (state === 'connected') {
+                if (!entry.up) log.i('offscreen', `${id} up`);
                 entry.up = true;
                 attempt = 0;
                 publishState();
@@ -187,7 +193,7 @@ async function run(id: BrowserTransportId, entry: Live): Promise<void> {
       if (entry.stopped) return;
       await entry.transport.close().catch(() => undefined);
       const wait = Math.min(1000 * 2 ** attempt++, 30_000) * (0.5 + Math.random() / 2);
-      console.warn(`[relay] ${id} down (${(error as Error).message}), retry in ${Math.round(wait)} ms`);
+      log.w('offscreen', `${id} down (${(error as Error).message}), retry in ${Math.round(wait)} ms`);
       await new Promise((r) => setTimeout(r, wait));
     }
   }
@@ -206,6 +212,8 @@ async function configure(settings: ExtensionSettings): Promise<void> {
 
   const secret = await sha256Hex(`secret:${settings.pairCode}`);
   const room = (await sha256Hex(`room:${settings.pairCode}`)).slice(0, 24);
+  hideFromLog(settings.pairCode, secret, room);
+  log.i('offscreen', `configure: ${settings.relayUrl ? 'relay set' : 'no relay'}, paths off: ${settings.disabled.join(',') || 'none'}`);
   key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
 
   const factory: PeerConnectionFactory = (config) =>

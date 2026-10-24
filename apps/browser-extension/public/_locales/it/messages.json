@@ -463,5 +463,12 @@
   },
   "skipRestoreYes": {
     "message": "Ripristina"
-  }
+  },
+  "logTitle": { "message": "Segnala un problema" },
+  "logHint": { "message": "Invia il log dell'estensione allo sviluppatore. Elenca cosa ha fatto l'estensione e quando; non contiene mai il codice di abbinamento." },
+  "logCopy": { "message": "Copia il log" },
+  "logDownload": { "message": "Salva il log in un file" },
+  "logClear": { "message": "Cancella il log" },
+  "logCopied": { "message": "Copiato" },
+  "logEmpty": { "message": "Il log è vuoto" }
 }

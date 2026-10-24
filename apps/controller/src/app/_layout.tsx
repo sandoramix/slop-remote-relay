@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { useT } from '../lib/i18n';
+import { installLogCapture } from '../lib/log';
 import { palette } from '../lib/palette';
 import { useRelayConnection } from '../state/session';
 import { useSettings } from '../state/settings';
@@ -15,6 +16,8 @@ import { useUpdate } from '../state/update';
 // Keep the splash up until settings are loaded, so the first frame already
 // knows whether to show onboarding or the remote.
 void SplashScreen.preventAutoHideAsync();
+
+installLogCapture();
 
 function KeepAwake() {
   useKeepAwake('relay-remote');

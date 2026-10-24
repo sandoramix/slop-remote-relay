@@ -1,6 +1,7 @@
 package dev.sandoramix.skipper.screen.service
 
 import android.service.notification.NotificationListenerService
+import dev.sandoramix.skipper.screen.core.AppLog
 
 /**
  * Bound purely to unlock MediaSessionManager.getActiveSessions(), which requires
@@ -14,11 +15,14 @@ class RelayNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        AppLog.init(this)
         isBound = true
+        AppLog.i("NotificationListener", "bound")
     }
 
     override fun onListenerDisconnected() {
         isBound = false
+        AppLog.i("NotificationListener", "unbound")
         super.onListenerDisconnected()
     }
 

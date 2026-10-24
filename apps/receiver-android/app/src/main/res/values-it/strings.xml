@@ -75,6 +75,13 @@
     <string name="err_start_no_control">Il player su %1$s non è stato avviato e il pulsante per avviarlo non è stato trovato</string>
     <string name="err_start_click">Impossibile premere il pulsante di avvio del player su %1$s</string>
     <string name="err_start_timeout">Premuto il pulsante di avvio su %1$s, ma il player non è comparso</string>
+    <string name="log_header">Diagnostica</string>
+    <string name="log_note">Qualcosa non va? Invia il log allo sviluppatore. Elenca cosa ha fatto l\'app e quando; non contiene mai il codice di abbinamento.</string>
+    <string name="log_btn_share">Condividi il log</string>
+    <string name="log_btn_clear">Cancella il log</string>
+    <string name="log_cleared">Log cancellato</string>
+    <string name="log_empty">Il log è vuoto</string>
+    <string name="log_share_title">Log del ricevitore Skipper</string>
     <string name="update_header">Aggiornamenti</string>
     <string name="update_current">Versione installata: %1$s</string>
     <string name="update_btn_check">Cerca aggiornamenti</string>

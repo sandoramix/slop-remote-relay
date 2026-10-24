@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { create } from 'zustand';
 import { RelayClient } from '../lib/client';
 import { hmacSha256Hex, roomFromPairCode, secretFromPairCode } from '../lib/crypto';
+import { hideFromLog, log } from '../lib/log';
 import { buildTransports } from '../lib/transports/registry';
 import { type Settings, type Target, useActiveTarget, useSettings } from './settings';
 
@@ -34,9 +35,21 @@ export const useSession = create<SessionState>()((set) => ({
   statusAt: null,
   log: [],
   error: null,
-  pushLog: (text, tone = 'info') =>
-    set((s) => ({ log: [{ at: Date.now(), text, tone }, ...s.log].slice(0, MAX_LOG) })),
+  pushLog: (text, tone = 'info') => {
+    // The screen keeps the last few; the file log (lib/log.ts) is what gets reported.
+    (tone === 'error' ? log.w : log.i)('session', text);
+    set((s) => ({ log: [{ at: Date.now(), text, tone }, ...s.log].slice(0, MAX_LOG) }));
+  },
 }));
+
+/** One line when the set of path states changes, not on every heartbeat. */
+let lastPaths = '';
+function logPaths(topology: TopologySnapshot) {
+  const summary = topology.transports.map((p) => `${p.id}=${p.state}${p.active ? '*' : ''}`).join(' ');
+  if (summary === lastPaths) return;
+  lastPaths = summary;
+  log.i('paths', summary);
+}
 
 /**
  * What a rebuild depends on. Changing the seek presets or haptics must not tear
@@ -76,6 +89,8 @@ export function useRelayConnection(): void {
     const room = roomFromPairCode(target.pairCode);
     const hmac = (m: string) => hmacSha256Hex(secret, m);
     const { pushLog } = useSession.getState();
+    hideFromLog(target.pairCode, secret, room);
+    log.i('session', `connecting to ${target.kind} "${target.name}"`);
 
     const client = new RelayClient(
       {
@@ -84,7 +99,11 @@ export function useRelayConnection(): void {
         mirrorCritical: settings.mirrorCritical,
       },
       {
-        onTopology: (topology) => !cancelled && useSession.setState({ topology }),
+        onTopology: (topology) => {
+          if (cancelled) return;
+          logPaths(topology);
+          useSession.setState({ topology });
+        },
         onStatus: (status) =>
           !cancelled && useSession.setState({ status, statusAt: Date.now() }),
         onLog: (line) => !cancelled && pushLog(line),

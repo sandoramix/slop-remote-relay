@@ -3,7 +3,7 @@ package dev.sandoramix.skipper.screen.transport
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.java_websocket.WebSocket
@@ -36,7 +36,7 @@ class LanServerTransport(
         val ws = object : WebSocketServer(InetSocketAddress(port)) {
             override fun onOpen(conn: WebSocket, handshake: ClientHandshake) {
                 synchronized(clients) { clients.add(conn) }
-                Log.i(TAG, "controller connected from ${conn.remoteSocketAddress}")
+                AppLog.i(TAG, "controller connected from ${conn.remoteSocketAddress}")
             }
 
             override fun onClose(conn: WebSocket, code: Int, reason: String?, remote: Boolean) {
@@ -52,12 +52,12 @@ class LanServerTransport(
             }
 
             override fun onError(conn: WebSocket?, ex: Exception) {
-                Log.w(TAG, "socket error", ex)
+                AppLog.w(TAG, "socket error", ex)
             }
 
             override fun onStart() {
                 connectionLostTimeout = 30
-                Log.i(TAG, "listening on :$port")
+                AppLog.i(TAG, "listening on :$port")
                 advertise()
             }
         }
@@ -95,10 +95,10 @@ class LanServerTransport(
             // Block bodies, not expression bodies: Log.i/Log.w return Int and the
             // listener methods are void.
             override fun onServiceRegistered(info: NsdServiceInfo) {
-                Log.i(TAG, "advertised as ${info.serviceName}")
+                AppLog.i(TAG, "advertised as ${info.serviceName}")
             }
             override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) {
-                Log.w(TAG, "mDNS registration failed: $code")
+                AppLog.w(TAG, "mDNS registration failed: $code")
             }
             override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
             override fun onUnregistrationFailed(info: NsdServiceInfo, code: Int) = Unit
@@ -111,7 +111,7 @@ class LanServerTransport(
             manager.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
             nsd = manager
             registration = listener
-        }.onFailure { Log.w(TAG, "mDNS advertisement unavailable", it) }
+        }.onFailure { AppLog.w(TAG, "mDNS advertisement unavailable", it) }
     }
 
     private companion object { const val TAG = "LanServerTransport" }

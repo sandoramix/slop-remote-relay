@@ -1,6 +1,6 @@
 package dev.sandoramix.skipper.screen.transport
 
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -72,7 +72,7 @@ class MqttTransport(
                         is MqttCodec.Packet.SubAck -> {
                             subscribed = packet.granted != 0x80
                             attempt = 0
-                            Log.i(TAG, "subscribed to $inbox")
+                            AppLog.i(TAG, "subscribed to $inbox")
                             startKeepAlive(ws)
                         }
                         is MqttCodec.Packet.Publish -> if (packet.topic == inbox) {
@@ -110,7 +110,7 @@ class MqttTransport(
         val base = min(1000L shl min(attempt, 6), 60_000L)
         val wait = (base * (0.5 + Random.nextDouble() * 0.5)).toLong()
         attempt++
-        Log.w(TAG, "broker down ($reason) — redial in ${wait}ms")
+        AppLog.w(TAG, "broker down ($reason) — redial in ${wait}ms")
         scope.launch {
             delay(wait)
             dial()

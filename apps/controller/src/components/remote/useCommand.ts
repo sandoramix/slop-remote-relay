@@ -71,7 +71,7 @@ export function useCommand() {
         else haptic.error();
         if (!options.quiet || !result.ok) show(describe(result));
         useSession.getState().pushLog(
-          `${key}: ${result.ok ? 'ok' : 'error'} ${result.detail ?? ''} (${result.rttMs} ms)`,
+          `${key}: ${result.ok ? 'ok' : 'error'} ${result.detail ?? ''} (${result.rttMs} ms${result.via ? `, ${result.via}` : '}${result.executedBy ? `, ${result.executedBy}` : '})`,
           result.ok ? 'ok' : 'error',
         );
         void client.refreshStatus().catch(() => undefined);

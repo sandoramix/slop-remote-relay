@@ -25,13 +25,17 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import dev.sandoramix.skipper.screen.R
+import dev.sandoramix.skipper.screen.core.AppLog
 import dev.sandoramix.skipper.screen.core.SUPPORTED_LANGUAGES
 import dev.sandoramix.skipper.screen.core.chosenLanguage
 import dev.sandoramix.skipper.screen.core.localized
+import dev.sandoramix.skipper.screen.service.RelayAccessibilityService
 import dev.sandoramix.skipper.screen.service.RelayForegroundService
+import dev.sandoramix.skipper.screen.service.RelayNotificationListener
 import dev.sandoramix.skipper.screen.shizuku.ShizukuBridge
 import dev.sandoramix.skipper.screen.transport.MqttTransport
 import dev.sandoramix.skipper.screen.update.UpdateState
@@ -75,6 +79,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLog.init(this)
         window.statusBarColor = BG
 
         // Two columns once there is room (a tablet, or a phone in landscape
@@ -182,6 +187,15 @@ class MainActivity : Activity() {
             text(getString(R.string.shizuku_note), 12f, MUTED),
         )
 
+        val diagnostics = card(
+            text(getString(R.string.log_note), 13f, MUTED),
+            button(getString(R.string.log_btn_share)) { shareLog() },
+            button(getString(R.string.log_btn_clear), secondary = true) {
+                AppLog.clear()
+                Toast.makeText(this, R.string.log_cleared, Toast.LENGTH_SHORT).show()
+            },
+        )
+
         val left = listOf(
             title, subtitle, languageRow(), card(statusView),
             header(getString(R.string.update_header)), updates,
@@ -191,6 +205,7 @@ class MainActivity : Activity() {
             header(getString(R.string.header_paths)), card(*boxes.toTypedArray()),
             button(getString(R.string.btn_save_restart)) { save() },
             header(getString(R.string.header_permissions)), grants,
+            header(getString(R.string.log_header)), diagnostics,
         )
         val root = if (wide) {
             LinearLayout(this).apply {
@@ -213,6 +228,27 @@ class MainActivity : Activity() {
 
         // One quiet look at GitHub per 12 hours; it never downloads or installs anything.
         if (updater.silentCheckDue()) updater.check(silent = true)
+    }
+
+    /** The log plus what a developer asks first, through the system share sheet (mail, chat, clipboard). */
+    private fun shareLog() {
+        val state = linkedMapOf(
+            "Accessibility" to if (RelayAccessibilityService.instance != null) "on" else "off",
+            "Notification access" to if (RelayNotificationListener.isBound) "on" else "off",
+            "Shizuku" to if (ShizukuBridge.running()) "running" else "not running",
+            "Paired" to if (prefs.getString(RelayForegroundService.KEY_PAIR_CODE, null).isNullOrBlank()) "no" else "yes",
+            "Paths off" to prefs.getString(RelayForegroundService.KEY_DISABLED, "").orEmpty().ifBlank { "none" },
+        )
+        val report = AppLog.report(this, updater.installedVersion(), state)
+        if (AppLog.read().isBlank()) {
+            Toast.makeText(this, R.string.log_empty, Toast.LENGTH_SHORT).show()
+        }
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, getString(R.string.log_share_title))
+            putExtra(Intent.EXTRA_TEXT, report)
+        }
+        startActivity(Intent.createChooser(send, getString(R.string.log_share_title)))
     }
 
     override fun onStart() {

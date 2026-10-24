@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import dev.sandoramix.skipper.screen.BuildConfig
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
@@ -81,7 +81,7 @@ object ShizukuBridge {
         binding = pending
         runCatching { Shizuku.bindUserService(args, connection) }
             .onFailure {
-                Log.w(TAG, "bindUserService failed", it)
+                AppLog.w(TAG, "bindUserService failed", it)
                 return null
             }
         return withTimeoutOrNull(5_000) { pending.await() }
@@ -94,6 +94,6 @@ object ShizukuBridge {
             val raw = s.run(arrayOf(*argv))
             val code = raw.substringBefore('\n').toIntOrNull() ?: -1
             code to raw.substringAfter('\n')
-        }.onFailure { Log.w(TAG, "shell call failed", it) }.getOrNull()
+        }.onFailure { AppLog.w(TAG, "shell call failed", it) }.getOrNull()
     }
 }

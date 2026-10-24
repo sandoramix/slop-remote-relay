@@ -10,7 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import androidx.core.content.ContextCompat
 import dev.sandoramix.skipper.screen.R
 import dev.sandoramix.skipper.screen.actions.AccessibilityExecutor
@@ -58,6 +58,7 @@ class RelayForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        AppLog.init(this)
         startForeground(NOTIFICATION_ID, buildNotification(str(R.string.notif_starting)))
         bootstrap()
     }
@@ -77,6 +78,7 @@ class RelayForegroundService : Service() {
 
         val secret = Codec.secretFromPairCode(pairCode)
         val room = Codec.roomFromPairCode(pairCode)
+        AppLog.hide(pairCode, secret, room)
         val recipes = RecipeEngine(this)
         val mediaSession = MediaSessionExecutor(this)
 
@@ -129,7 +131,7 @@ class RelayForegroundService : Service() {
         transports = set
 
         startStatusLoop()
-        Log.i(TAG, "relay up with ${list.size} transports")
+        AppLog.i(TAG, "relay up with ${list.size} transports: ${list.joinToString { it.id }}")
     }
 
     /**
@@ -151,6 +153,7 @@ class RelayForegroundService : Service() {
                     val summary = "${status.foregroundPackage}|${status.isPlaying}|${status.nav?.current}|${set.liveIds()}"
                     if (summary != lastSummary) {
                         lastSummary = summary
+                        AppLog.d(TAG, "status changed: $summary")
                         set.broadcast(router.event("status", status))
                         updateNotification(describe(set.liveIds()))
                     }
@@ -229,7 +232,7 @@ class RelayForegroundService : Service() {
                     Intent(context, RelayForegroundService::class.java),
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Cannot start the relay from here yet", e)
+                AppLog.w(TAG, "Cannot start the relay from here yet", e)
             }
         }
 

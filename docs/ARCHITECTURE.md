@@ -407,6 +407,43 @@ Media sessions are deliberately not consulted: on the emulator Chrome held one
 one tree walk per such command, only on a browser with a plan. Nothing is
 started after `nav.*`.
 
+## Logs
+
+Every app keeps its own log on the device, so a person can send it to the
+developer without a cable. Same shape everywhere: one line per command (what was
+asked, over which path, which layer acted, how long it took), path state changes,
+service lifecycle, and crashes. Where to find the button: receiver, the
+*Diagnostics* card; controller, *Settings → Diagnostics → Report a problem*;
+extension, *Settings → Report a problem* (copy, or save as a file).
+
+- **Receiver** (`core/AppLog.kt`): drop-in for `android.util.Log`, so call sites
+  read the same. Debug and up go to `files/log/skipper.log`, which rotates at
+  256 KB and keeps one older file; verbose lines (the status loop) stay in logcat.
+  An uncaught exception is written before the process dies. Shared through the
+  system share sheet with a header (version, device, grants).
+- **Controller** (`lib/log.ts`): newest 600 lines in AsyncStorage, written a moment
+  after the last one, immediately on a crash. Captures the global error handler
+  and `console.warn/error`.
+- **Extension** (`src/log.ts`): the worker and the offscreen document each write
+  their own storage key and the popup merges them by time, so two contexts never
+  overwrite each other.
+
+The pair code, its secret and its room are registered with `hide` / `hideFromLog`
+as soon as they are known and replaced by `‹hidden›` in every line, so a log can
+be pasted into a public issue. Nothing is uploaded: sharing is the person's act.
+
+## Why a fullscreen command used to take seconds (Android)
+
+Almost all of it was the accessibility tree. Each `getChild` is a binder call into
+the browser, and a web page is a thousand nodes: one walk measured 2.7 s on the
+emulator, and one command made several (the start check, the fullscreen state
+twice, the control twice, then the state again to verify). Now the walk asks for
+descendants to be prefetched with the child (`FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST`,
+Android 13+; the same 1280-node walk took 28 ms), the fullscreen state and the
+control are each found in one pass, and the verify step polls every 100 ms and
+returns as soon as the state flips instead of waiting a fixed 700 ms. What is left
+is the player's own load after the cover is pressed, which is the site's.
+
 ## Adding a command
 
 1. A case in `Command` in `messages.ts` and in `core/Protocol.kt`.

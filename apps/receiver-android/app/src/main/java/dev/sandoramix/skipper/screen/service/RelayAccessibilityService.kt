@@ -2,6 +2,7 @@ package dev.sandoramix.skipper.screen.service
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import dev.sandoramix.skipper.screen.core.AppLog
 
 /**
  * Provides two things: the accessibility tree of the foreground window, and
@@ -35,7 +36,9 @@ class RelayAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        AppLog.init(this)
         instance = this
+        AppLog.i("Accessibility", "service connected")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -55,6 +58,7 @@ class RelayAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        AppLog.i("Accessibility", "service destroyed")
         super.onDestroy()
     }
 

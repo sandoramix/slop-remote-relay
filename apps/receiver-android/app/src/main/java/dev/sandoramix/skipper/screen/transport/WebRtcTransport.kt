@@ -1,7 +1,7 @@
 package dev.sandoramix.skipper.screen.transport
 
 import android.content.Context
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import dev.sandoramix.skipper.screen.core.Codec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -91,7 +91,7 @@ class WebRtcTransport(
         val base = min(1000L shl min(attempt, 6), 60_000L)
         val wait = (base * (0.5 + Random.nextDouble() * 0.5)).toLong()
         attempt++
-        Log.w(TAG, "signalling down ($reason) — redial in ${wait}ms")
+        AppLog.w(TAG, "signalling down ($reason) — redial in ${wait}ms")
         scope.launch {
             delay(wait)
             dial()
@@ -106,7 +106,7 @@ class WebRtcTransport(
         val d = s.optString("d", "")
         val expected = Codec.hmacHex(secret, signable(k, msgSid, ts, d))
         if (expected != s.optString("sig")) {
-            Log.w(TAG, "unsigned or forged signalling dropped")
+            AppLog.w(TAG, "unsigned or forged signalling dropped")
             return
         }
         if (kotlin.math.abs(System.currentTimeMillis() - ts) > 60_000) return
@@ -148,7 +148,7 @@ class WebRtcTransport(
             }
             override fun onDataChannel(dc: DataChannel) = bindChannel(dc)
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
-                Log.i(TAG, "ice $state")
+                AppLog.i(TAG, "ice $state")
             }
             override fun onSignalingChange(state: PeerConnection.SignalingState) = Unit
             override fun onIceConnectionReceivingChange(receiving: Boolean) = Unit
@@ -198,7 +198,7 @@ class WebRtcTransport(
         dc.registerObserver(object : DataChannel.Observer {
             override fun onBufferedAmountChange(previous: Long) = Unit
             override fun onStateChange() {
-                Log.i(TAG, "data channel ${dc.state()}")
+                AppLog.i(TAG, "data channel ${dc.state()}")
             }
             override fun onMessage(buffer: DataChannel.Buffer) {
                 val bytes = ByteArray(buffer.data.remaining())
@@ -247,8 +247,8 @@ class WebRtcTransport(
     private open class SdpAdapter : SdpObserver {
         override fun onCreateSuccess(desc: SessionDescription) = Unit
         override fun onSetSuccess() = Unit
-        override fun onCreateFailure(error: String?) { Log.w(TAG, "sdp create: $error") }
-        override fun onSetFailure(error: String?) { Log.w(TAG, "sdp set: $error") }
+        override fun onCreateFailure(error: String?) { AppLog.w(TAG, "sdp create: $error") }
+        override fun onSetFailure(error: String?) { AppLog.w(TAG, "sdp set: $error") }
     }
 
     companion object {

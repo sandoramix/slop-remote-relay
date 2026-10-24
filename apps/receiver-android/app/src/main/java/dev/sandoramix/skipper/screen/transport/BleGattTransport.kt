@@ -21,7 +21,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelUuid
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -105,11 +105,11 @@ class BleGattTransport(
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = manager?.adapter
         if (manager == null || adapter == null || !adapter.isEnabled) {
-            Log.w(TAG, "Bluetooth unavailable or off")
+            AppLog.w(TAG, "Bluetooth unavailable or off")
             return
         }
         if (!permitted()) {
-            Log.w(TAG, "Bluetooth permissions not granted")
+            AppLog.w(TAG, "Bluetooth permissions not granted")
             return
         }
 
@@ -145,7 +145,7 @@ class BleGattTransport(
                     mtu.remove(device.address)
                     inbound.remove(device.address)
                 } else if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.i(TAG, "controller connected over BLE")
+                    AppLog.i(TAG, "controller connected over BLE")
                 }
             }
 
@@ -193,7 +193,7 @@ class BleGattTransport(
             }
         })
         if (gatt == null) {
-            Log.w(TAG, "openGattServer returned null")
+            AppLog.w(TAG, "openGattServer returned null")
             return
         }
         gatt.addService(service)
@@ -204,15 +204,15 @@ class BleGattTransport(
     @SuppressLint("MissingPermission")
     private fun advertise(adapter: BluetoothAdapter) {
         val le = adapter.bluetoothLeAdvertiser ?: run {
-            Log.w(TAG, "BLE advertising not supported on this device")
+            AppLog.w(TAG, "BLE advertising not supported on this device")
             return
         }
         val callback = object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                Log.i(TAG, "advertising relay service")
+                AppLog.i(TAG, "advertising relay service")
             }
             override fun onStartFailure(errorCode: Int) {
-                Log.w(TAG, "advertising failed: $errorCode")
+                AppLog.w(TAG, "advertising failed: $errorCode")
             }
         }
         le.startAdvertising(

@@ -1,5 +1,6 @@
 import type { Command, DeviceStatus, ExecutorId, NavStatus } from '@relay/protocol';
 import { compareVersions, LATEST_RELEASE_API, parseRelease, releaseSummary } from '@relay/protocol';
+import { captureErrors, hideFromLog, initLog, log } from './log';
 import { type NavPlan } from './nav';
 import { isPlayerFrame, needsPlayer, popupTabs, type StartPlan, startedFrames, startPlanFor, startWaitMs } from './start';
 import sites from './sites.json';
@@ -29,6 +30,9 @@ import {
  * detach. Chrome shows its "is debugging this browser" bar while attached —
  * the price of the one action a page will only take from a person.
  */
+
+initLog('worker');
+captureErrors('worker');
 
 type SiteRecipe = { fullscreenKey?: string; exitKey?: string; seekApi?: string; nav?: NavPlan; start?: StartPlan };
 const SITES = sites as unknown as Record<string, SiteRecipe>;
@@ -60,6 +64,8 @@ async function ensureOffscreen(): Promise<void> {
 async function configureOffscreen(): Promise<void> {
   await ensureOffscreen();
   const settings = await loadSettings();
+  hideFromLog(settings.pairCode);
+  log.i('worker', `configure: ${settings.pairCode ? 'paired' : 'not paired'}, relay ${settings.relayUrl ? 'set' : 'none'}, paths off: ${settings.disabled.join(',') || 'none'}`);
   await chrome.runtime.sendMessage({ to: 'offscreen', type: 'configure', settings } satisfies RuntimeMessage);
 }
 
@@ -539,9 +545,15 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage | { mediaChanged?: tru
       respond({ ok: false, detail: 'not allowed from a page' });
       return false;
     }
-    execute(msg.cmd as Command)
-      .then(respond)
-      .catch((e: Error) => respond({ ok: false, detail: e.message }));
+    const cmd = msg.cmd as Command;
+    const began = Date.now();
+    execute(cmd)
+      .catch((e: Error) => ({ ok: false, detail: e.message }) as ActionResult)
+      .then((res) => {
+        // One line per command: what, whether it worked, how long, and what it said.
+        (res.ok ? log.i : log.w)('worker', `${JSON.stringify(cmd)} -> ${res.ok ? 'ok' : 'FAILED'} (${Date.now() - began} ms)${res.detail ? `: ${res.detail}` : ''}`);
+        respond(res);
+      });
     return true;
   }
   if (msg.type === 'status') {

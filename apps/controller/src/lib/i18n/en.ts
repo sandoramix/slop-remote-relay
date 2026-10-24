@@ -80,6 +80,11 @@ export const en = {
   'state.failed': 'unreachable',
 
   // Diagnostics
+  'diag.log': 'Report a problem',
+  'diag.logHint': 'Sends the app log to the developer. It lists what the app did and when; it never contains your pair code.',
+  'diag.logShare': 'Share log',
+  'diag.logClear': 'Clear log',
+  'diag.logCleared': 'Log cleared',
   'diag.paths': 'Paths',
   'diag.noPaths': 'No active paths',
   'diag.receiver': 'Receiver',

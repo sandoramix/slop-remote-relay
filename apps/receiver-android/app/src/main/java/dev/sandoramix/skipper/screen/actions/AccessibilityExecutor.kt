@@ -9,7 +9,7 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import android.view.accessibility.AccessibilityNodeInfo
 import dev.sandoramix.skipper.screen.core.Command
 import dev.sandoramix.skipper.screen.core.ExecResult
@@ -100,19 +100,40 @@ class AccessibilityExecutor(
             )
             nodes += node
             for (i in node.childCount - 1 downTo 0) {
-                node.getChild(i)?.let { stack.addLast(it to index) }
+                childOf(node, i)?.let { stack.addLast(it to index) }
             }
         }
         return Snapshot(snaps, nodes)
     }
 
+    /**
+     * A child, asking the system to hand over the nodes below it in the same
+     * round trip (Android 13+, up to 50 per call). Every plain getChild is a
+     * binder call into the browser, which for a web page of a thousand nodes
+     * is most of what a command costs; later children come from the cache.
+     */
+    private fun childOf(node: AccessibilityNodeInfo, index: Int): AccessibilityNodeInfo? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            node.getChild(index, AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST)
+        } else {
+            node.getChild(index)
+        }
+
+    /** The active window with its first nodes prefetched; null when there is none. */
+    private fun rootOf(svc: AccessibilityService): AccessibilityNodeInfo? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            svc.getRootInActiveWindow(AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST)
+        } else {
+            svc.rootInActiveWindow
+        }
+
     private fun readNav(): Pair<NavPage, Snapshot>? {
         val svc = service ?: return null
         val nav = recipes.navFor(svc.foregroundPackage) ?: return null
-        val root = svc.rootInActiveWindow ?: return null
+        val root = rootOf(svc) ?: return null
         val started = System.currentTimeMillis()
         val snap = snapshot(root)
-        Log.v(TAG, "nav: walked ${snap.snaps.size} nodes in ${System.currentTimeMillis() - started} ms")
+        AppLog.v(TAG, "nav: walked ${snap.snaps.size} nodes in ${System.currentTimeMillis() - started} ms")
         return Navigation.read(nav, snap.snaps)?.let { it to snap }
     }
 
@@ -121,7 +142,7 @@ class AccessibilityExecutor(
         readNav()?.first?.status(withItems)
     } catch (e: Exception) {
         // The tree changes under our feet while a page loads; next poll will do.
-        Log.d(TAG, "nav status unreadable", e)
+        AppLog.d(TAG, "nav status unreadable", e)
         null
     }
 
@@ -189,11 +210,11 @@ class AccessibilityExecutor(
                 delay(POLL_MS)
                 try {
                     val front = svc.foregroundPackage
-                    val snap = snapshot(svc.rootInActiveWindow ?: continue)
+                    val snap = snapshot(rootOf(svc) ?: continue)
                     if ((front != null && front != pkg) || foreign(snap.snaps)) {
                         popupSeen = true
                         if (backs < MAX_BACKS) {
-                            Log.d(TAG, "press: popup in front (${front ?: "?"}), pressing Back")
+                            AppLog.d(TAG, "press: popup in front (${front ?: "?"}), pressing Back")
                             svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
                             backs++
                             delay(POPUP_SETTLE_MS)
@@ -202,7 +223,7 @@ class AccessibilityExecutor(
                     }
                     if (effect(snap)) return true
                 } catch (e: Exception) {
-                    Log.d(TAG, "press: tree changed while watching", e) // a page loading
+                    AppLog.d(TAG, "press: tree changed while watching", e) // a page loading
                 }
             }
             return false
@@ -242,20 +263,24 @@ class AccessibilityExecutor(
             if (System.currentTimeMillis() >= until) break
             watch.reset()
             if (!performPress(svc, node, climb, method)) {
-                Log.d(TAG, "press: $method not possible")
+                AppLog.d(TAG, "press: $method not possible")
                 continue
             }
             val last = i == order.lastIndex
             val wait = if (last) until else minOf(until, System.currentTimeMillis() + PRESS_VERIFY_MS)
-            if (watch.await(wait, effect)) return method
+            val pressedAt = System.currentTimeMillis()
+            if (watch.await(wait, effect)) {
+                AppLog.d(TAG, "press: $method took effect after ${System.currentTimeMillis() - pressedAt} ms")
+                return method
+            }
             if (watch.popupSeen) {
-                Log.d(TAG, "press: $method opened a popup and nothing else, once more")
+                AppLog.d(TAG, "press: $method opened a popup and nothing else, once more")
                 val again = if (last) until else minOf(until, System.currentTimeMillis() + PRESS_VERIFY_MS)
                 if (node.refresh() && performPress(svc, node, climb, method) && watch.await(again, effect)) {
                     return "$method again"
                 }
             }
-            Log.d(TAG, "press: $method showed no effect")
+            AppLog.d(TAG, "press: $method showed no effect")
         }
         return null
     }
@@ -301,7 +326,7 @@ class AccessibilityExecutor(
             r = bounds()
         }
         if (!onScreen(r)) {
-            Log.d(TAG, "press: node not on screen ($r)")
+            AppLog.d(TAG, "press: node not on screen ($r)")
             return false
         }
         return tapAt(svc, r.exactCenterX(), r.exactCenterY(), double = false)
@@ -328,9 +353,9 @@ class AccessibilityExecutor(
         val start = recipes.startFor(pkg) ?: return Prepared.Ready
         val bar = recipes.urlBarFor(pkg)
         val snap = try {
-            snapshot(svc.rootInActiveWindow ?: return Prepared.Ready)
+            snapshot(rootOf(svc) ?: return Prepared.Ready)
         } catch (e: Exception) {
-            Log.d(TAG, "start: tree unreadable", e)
+            AppLog.d(TAG, "start: tree unreadable", e)
             return Prepared.Ready
         }
 
@@ -369,7 +394,7 @@ class AccessibilityExecutor(
             svc, snap.nodes[step.node], plan.climb, watch,
             until = pressed + plan.waitMs, effect = started, order = plan.press ?: recipes.pressOrderFor(pkg),
         )
-        Log.d(TAG, "start: ${plan.site} control -> ${how ?: "no player"} in ${System.currentTimeMillis() - pressed} ms")
+        AppLog.d(TAG, "start: ${plan.site} control -> ${how ?: "no player"} in ${System.currentTimeMillis() - pressed} ms")
         if (how == null) return Prepared.Answer(ExecResult.fail(id, context.str(R.string.err_start_timeout, plan.site)))
 
         // A popup opens a moment after the press; give it that moment (and
@@ -389,7 +414,7 @@ class AccessibilityExecutor(
             PlayerStart.find(plan.play, s.snaps)?.let { playNode = s.nodes[it] } != null
         }
         val played = playNode?.let { pressPlay(svc, start, bar, plan, watch, it, pkg) }
-        Log.d(TAG, "start: play button -> ${played ?: "not pressed"}")
+        AppLog.d(TAG, "start: play button -> ${played ?: "not pressed"}")
         val text = if (played != null) R.string.start_started_playing else R.string.start_started
         return Prepared.Answer(ExecResult.ok(id, context.str(text, plan.site) + " ($how${played?.let { ", $it" } ?: ""})"))
     }
@@ -419,24 +444,28 @@ class AccessibilityExecutor(
      */
     fun isFullscreen(): Boolean? {
         val svc = service ?: return null
-        val root = svc.rootInActiveWindow ?: return null
+        val root = rootOf(svc) ?: return null
         val markers = recipes.forPackage(svc.foregroundPackage)?.markers
             ?: recipes.fallbackMarkers()
 
         val wanted = markers.present.map { it.lowercase() }
-        if (wanted.isNotEmpty() && findNode(root) { labelMatches(it, wanted) } != null) {
-            return true
-        }
-        if (markers.absentViewIds.isNotEmpty()) {
-            val barPresent = findNode(root) { node ->
+        // One walk for both signals: a marker ends it (fullscreen), a visible
+        // bar is noted on the way. Two walks used to cost twice the binder calls.
+        var barPresent = false
+        val marker = findNode(root) { node ->
+            if (!barPresent && markers.absentViewIds.isNotEmpty()) {
                 val viewId = node.viewIdResourceName
                 // Chromium keeps the toolbar in the tree while hiding it, so
                 // only a visible bar means "not fullscreen".
-                viewId != null && node.isVisibleToUser && markers.absentViewIds.any { viewId.endsWith(it) }
-            } != null
-            return !barPresent
+                barPresent = viewId != null && node.isVisibleToUser && markers.absentViewIds.any { viewId.endsWith(it) }
+            }
+            wanted.isNotEmpty() && labelMatches(node, wanted)
         }
-        return false
+        return when {
+            marker != null -> true
+            markers.absentViewIds.isNotEmpty() -> !barPresent
+            else -> false
+        }
     }
 
     private suspend fun enterFullscreen(): ExecResult {
@@ -448,13 +477,21 @@ class AccessibilityExecutor(
         // A click can be accepted and still not produce fullscreen: Chromium
         // does not always treat an accessibility click as a user activation.
         // So a Node step is judged by the markers, not by its return value.
+        // Polled rather than waited out: the transition usually finishes well
+        // inside VERIFY_MS, and a fixed wait made every enter cost the full time.
         val verify: suspend () -> Boolean = {
-            delay(VERIFY_MS)
-            isFullscreen() != false
+            val deadline = System.currentTimeMillis() + VERIFY_MS
+            var state: Boolean?
+            do {
+                delay(VERIFY_POLL_MS)
+                state = isFullscreen()
+            } while (state == false && System.currentTimeMillis() < deadline)
+            state != false
         }
+        val begun = System.currentTimeMillis()
         for ((index, step) in steps.withIndex()) {
             val done = if (step is Step.Node) clickMatchingNode(svc, step, verify) else runStep(svc, step)
-            Log.d(TAG, "step $index ${step::class.simpleName} -> $done")
+            AppLog.d(TAG, "step $index ${step::class.simpleName} -> $done (${System.currentTimeMillis() - begun} ms)")
             if (done) return ExecResult.ok(id, "${step::class.simpleName} on ${pkg ?: "?"}")
         }
         return ExecResult.fail(id, context.str(R.string.err_no_strategy, pkg ?: context.str(R.string.unknown_app)))
@@ -472,7 +509,7 @@ class AccessibilityExecutor(
 
         for ((index, step) in steps.withIndex()) {
             val done = runStep(svc, step)
-            Log.d(TAG, "exit step $index ${step::class.simpleName} -> $done")
+            AppLog.d(TAG, "exit step $index ${step::class.simpleName} -> $done")
             if (done) return ExecResult.ok(id, "exit ${step::class.simpleName} on ${pkg ?: "?"}")
         }
         return ExecResult.fail(id, context.str(R.string.err_cannot_exit, pkg ?: context.str(R.string.unknown_app)))
@@ -519,7 +556,7 @@ class AccessibilityExecutor(
         step: Step.Node,
         verify: (suspend () -> Boolean)? = null,
     ): Boolean {
-        val root = svc.rootInActiveWindow ?: return false
+        val root = rootOf(svc) ?: return false
         val wanted = step.descriptions.map { it.lowercase() }
 
         val matches: (AccessibilityNodeInfo) -> Boolean = { node ->
@@ -531,8 +568,13 @@ class AccessibilityExecutor(
         // keeping them in the tree, and a reveal tap can fade them out as easily
         // as in, so a faded match is still worth an ACTION_CLICK: Chromium runs
         // the element's default action whatever its opacity.
-        val visible = findNode(root) { matches(it) && it.isVisibleToUser }
-        val match = visible ?: findNode(root, matches) ?: return false
+        // One walk: stops at the first visible match, remembering the first
+        // match of any kind in case none is visible.
+        var faded: AccessibilityNodeInfo? = null
+        val visible = findNode(root) { node ->
+            matches(node) && (node.isVisibleToUser || run { if (faded == null) faded = node; false })
+        }
+        val match = visible ?: faded ?: return false
 
         var candidate: AccessibilityNodeInfo? = match
         for (level in 0..step.climb) {
@@ -573,7 +615,7 @@ class AccessibilityExecutor(
     ): AccessibilityNodeInfo? {
         if (predicate(root)) return root
         for (i in 0 until root.childCount) {
-            val child = root.getChild(i) ?: continue
+            val child = childOf(root, i) ?: continue
             findNode(child, predicate)?.let { return it }
         }
         return null
@@ -649,7 +691,7 @@ class AccessibilityExecutor(
             true
         }
     } catch (e: Exception) {
-        Log.w(TAG, "Rotation fallback failed", e)
+        AppLog.w(TAG, "Rotation fallback failed", e)
         false
     }
 
@@ -718,7 +760,10 @@ class AccessibilityExecutor(
         const val TAP_SETTLE_MS = 320L
 
         /** How long a player gets to enter fullscreen before a step is judged. */
-        const val VERIFY_MS = 700L
+        const val VERIFY_MS = 1_200L
+
+        /** How often the fullscreen state is looked at while waiting for it. */
+        const val VERIFY_POLL_MS = 100L
 
         /** Enough for any page we have seen; the walk stops here rather than run away. */
         const val MAX_NODES = 6000
@@ -743,7 +788,7 @@ class AccessibilityExecutor(
         /** After Back closes a popup, before the page underneath is read again. */
         const val POPUP_SETTLE_MS = 500L
 
-        const val POLL_MS = 300L
+        const val POLL_MS = 150L
 
         /** After a start click, how long a popup is waited for before the page is handed to a command. */
         const val POPUP_GRACE_MS = 1_200L

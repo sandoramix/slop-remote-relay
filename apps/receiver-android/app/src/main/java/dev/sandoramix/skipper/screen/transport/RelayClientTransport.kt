@@ -1,6 +1,6 @@
 package dev.sandoramix.skipper.screen.transport
 
-import android.util.Log
+import dev.sandoramix.skipper.screen.core.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -56,7 +56,7 @@ class RelayClientTransport(
             override fun onOpen(ws: WebSocket, response: Response) {
                 connected = true
                 attempt = 0
-                Log.i(TAG, "relay connected")
+                AppLog.i(TAG, "relay connected")
             }
 
             override fun onMessage(ws: WebSocket, text: String) {
@@ -83,7 +83,7 @@ class RelayClientTransport(
         val base = min(1000L shl min(attempt, 6), 60_000L)
         val delay = (base * (0.5 + Random.nextDouble() * 0.5)).toLong()
         attempt++
-        Log.w(TAG, "relay down ($reason) — redial in ${delay}ms")
+        AppLog.w(TAG, "relay down ($reason) — redial in ${delay}ms")
         scope.launch {
             kotlinx.coroutines.delay(delay)
             dial()
