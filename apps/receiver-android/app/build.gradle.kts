@@ -12,7 +12,7 @@ android {
         minSdk = 26          // MediaSession + dispatchGesture both need 24; 26 for channels
         targetSdk = 36       // Google Play requires 36 for new apps and updates (since 2026-08-31)
         versionCode = 1
-        versionName = "0.9.0"
+        versionName = "0.9.1"
     }
 
     buildTypes {
