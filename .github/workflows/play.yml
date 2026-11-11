@@ -112,6 +112,10 @@ jobs:
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
           mkdir -p "$GITHUB_WORKSPACE/out"
           cp app/build/outputs/bundle/release/*.aab "$GITHUB_WORKSPACE/out/relay-controller-${RELAY_VERSION}-play.aab"
+      # A bundle without its JavaScript installs fine and crashes on launch with
+      # "Unable to load script"; refuse to publish one.
+      - name: Verify the bundle contains the JS bundle
+        run: unzip -l "out/relay-controller-${RELAY_VERSION}-play.aab" | grep -q 'base/assets/index.android.bundle'
       - uses: actions/upload-artifact@v4
         with:
           name: controller-play
