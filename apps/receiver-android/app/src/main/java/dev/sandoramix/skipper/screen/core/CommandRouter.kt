@@ -46,6 +46,8 @@ class CommandRouter(
 
         val env = (verdict as Codec.Verdict.Valid).envelope
         val id = env.optString("id")
+        // A correctly signed frame, a heartbeat included, is proof the controller is there.
+        RelayActivity.controllerSeen(transportId)
 
         return when (env.optString("type")) {
             "ping" -> pong(env)
@@ -81,6 +83,16 @@ class CommandRouter(
             "$command via $transportId -> ${if (result.ok) "ok" else "FAILED"} " +
                 "(${result.executor?.wire ?: "none"}, ${System.currentTimeMillis() - started} ms)" +
                 (result.detail?.let { ": $it" } ?: ""),
+        )
+        RelayActivity.record(
+            RelayActivity.Entry(
+                atMs = System.currentTimeMillis(),
+                command = command,
+                ok = result.ok,
+                via = transportId,
+                executor = result.executor?.wire,
+                detail = result.detail,
+            ),
         )
         return ack(
             ref = ref,

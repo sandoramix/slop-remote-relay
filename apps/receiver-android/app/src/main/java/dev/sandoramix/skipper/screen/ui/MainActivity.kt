@@ -15,6 +15,8 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Gravity
@@ -33,9 +35,13 @@ import com.google.zxing.qrcode.QRCodeWriter
 import dev.sandoramix.skipper.screen.R
 import dev.sandoramix.skipper.screen.core.AppLog
 import dev.sandoramix.skipper.screen.core.IssueReport
+import dev.sandoramix.skipper.screen.core.RelayActivity
 import dev.sandoramix.skipper.screen.core.SUPPORTED_LANGUAGES
+import dev.sandoramix.skipper.screen.core.ago
 import dev.sandoramix.skipper.screen.core.chosenLanguage
+import dev.sandoramix.skipper.screen.core.describeCommand
 import dev.sandoramix.skipper.screen.core.localized
+import dev.sandoramix.skipper.screen.core.pathLabel
 import dev.sandoramix.skipper.screen.service.RelayAccessibilityService
 import dev.sandoramix.skipper.screen.service.RelayForegroundService
 import dev.sandoramix.skipper.screen.service.RelayNotificationListener
@@ -48,6 +54,9 @@ import dev.sandoramix.skipper.screen.update.releaseSummary
 import java.net.Inet4Address
 import java.net.URLEncoder
 import java.security.SecureRandom
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Pairing and onboarding. Its jobs: hold the pair code, show it as a QR the
@@ -60,6 +69,20 @@ import java.security.SecureRandom
 class MainActivity : Activity() {
 
     private lateinit var statusView: TextView
+    private lateinit var connDot: TextView
+    private lateinit var connTitle: TextView
+    private lateinit var connDetail: TextView
+    private lateinit var activityList: LinearLayout
+    private var lastConnColor = 0
+    private var lastActivitySignature: String? = null
+    private val timeFormat by lazy { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+    private val ticker = Handler(Looper.getMainLooper())
+    private val tick = object : Runnable {
+        override fun run() {
+            renderActivity()
+            ticker.postDelayed(this, 1_000)
+        }
+    }
     private lateinit var pairInput: EditText
     private lateinit var relayInput: EditText
     private lateinit var mqttInput: EditText
@@ -95,6 +118,26 @@ class MainActivity : Activity() {
             setPadding(0, 0, 0, dp(16))
         }
         statusView = text("", 15f, FG).apply { setLineSpacing(0f, 1.3f) }
+
+        // ------------------------------------------------------------ connection and activity
+        // First thing on the screen: is a controller really talking to this device, and what did it just ask for.
+        connDot = text("●", 22f, MUTED).apply { setPadding(0, 0, dp(12), 0) }
+        connTitle = text("", 20f, FG, bold = true)
+        connDetail = text("", 14f, MUTED).apply { setPadding(0, dp(2), 0, 0) }
+        val connectionCard = card(
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(connDot)
+                addView(
+                    column(connTitle, connDetail),
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+                )
+            },
+        )
+        activityList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val activityCard = card(activityList)
+        renderActivity()
 
         // ------------------------------------------------------------ updates
         updateVersion = text(getString(R.string.update_current, updater.installedVersion()), 14f, FG)
@@ -212,7 +255,10 @@ class MainActivity : Activity() {
 
         // The Play flavor is updated by Play: no GitHub updater card there.
         val left = listOf(
-            title, subtitle, languageRow(), card(statusView),
+            title, subtitle, languageRow(),
+            connectionCard,
+            header(getString(R.string.activity_header)), activityCard,
+            header(getString(R.string.ready_header)), card(statusView),
         ) + (if (BuildConfig.GITHUB_UPDATES) listOf(header(getString(R.string.update_header)), updates) else emptyList()) + listOf(
             header(getString(R.string.header_pairing)), pairingCard,
         )
@@ -243,6 +289,21 @@ class MainActivity : Activity() {
 
         // One quiet look at GitHub per 12 hours; it never downloads or installs anything.
         if (BuildConfig.GITHUB_UPDATES && updater.silentCheckDue()) updater.check(silent = true)
+
+        askForNotificationsOnce()
+    }
+
+    /**
+     * Without the notification permission (Android 13+) the foreground service runs
+     * with its notification hidden, so nobody can see that the receiver is on. Asked
+     * once, at first launch; "3. Bluetooth and notifications" asks again on demand.
+     */
+    private fun askForNotificationsOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        if (prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)) return
+        prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, true).apply()
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFICATIONS)
     }
 
     /** What a developer asks first: what the receiver has been granted and which paths are on. */
@@ -281,11 +342,79 @@ class MainActivity : Activity() {
         super.onStart()
         updater.listener = ::renderUpdate
         renderUpdate(updater.state)
+        ticker.post(tick)
     }
 
     override fun onStop() {
+        ticker.removeCallbacks(tick)
         updater.listener = null
         super.onStop()
+    }
+
+    /**
+     * The connection card and the recent commands. Re-drawn every second while the
+     * screen is visible, so "last signal 3 s ago" is honest and a new command shows
+     * up at once; nothing runs while the screen is not on.
+     */
+    private fun renderActivity() {
+        val now = System.currentTimeMillis()
+        val paired = !prefs.getString(RelayForegroundService.KEY_PAIR_CODE, null).isNullOrBlank()
+        val via = RelayActivity.connectedVia(now)
+        val live = RelayActivity.livePaths
+        val color: Int
+        val headline: String
+        val detail: String
+        when {
+            !paired -> {
+                color = MUTED
+                headline = getString(R.string.conn_unpaired)
+                detail = getString(R.string.conn_unpaired_hint)
+            }
+            via != null -> {
+                color = GOOD
+                headline = getString(R.string.conn_connected)
+                detail = getString(R.string.conn_via, pathLabel(this, via), ago(this, now - RelayActivity.lastSeenMs))
+            }
+            live.isNotEmpty() -> {
+                color = PRIMARY
+                headline = getString(R.string.conn_waiting)
+                detail = getString(R.string.conn_listening_on, live.joinToString(", ") { pathLabel(this, it) })
+            }
+            else -> {
+                color = MUTED
+                headline = getString(R.string.conn_waiting)
+                detail = getString(R.string.conn_no_path)
+            }
+        }
+        // Touch a view only when it changes: this runs every second, and a view that is
+        // rewritten with the same text still raises accessibility events (TalkBack, and
+        // uiautomator never reaching idle), which an accessibility-aware app must not cause.
+        if (lastConnColor != color) { lastConnColor = color; connDot.setTextColor(color) }
+        if (connTitle.text.toString() != headline) connTitle.text = headline
+        if (connDetail.text.toString() != detail) connDetail.text = detail
+
+        val recent = RelayActivity.recent()
+        val signature = recent.joinToString(",") { "${it.atMs}${it.ok}" }
+        if (signature == lastActivitySignature) return
+        lastActivitySignature = signature
+        activityList.removeAllViews()
+        if (recent.isEmpty()) {
+            activityList.addView(text(getString(R.string.activity_empty), 14f, MUTED))
+        } else {
+            recent.forEachIndexed { i, entry -> activityList.addView(activityRow(entry, gap = i > 0)) }
+        }
+    }
+
+    private fun activityRow(e: RelayActivity.Entry, gap: Boolean): View {
+        val outcome = if (e.ok) {
+            getString(R.string.act_done, pathLabel(this, e.via) + (e.executor?.let { " · $it" } ?: ""))
+        } else {
+            getString(R.string.act_failed, e.detail ?: pathLabel(this, e.via))
+        }
+        return column(
+            text("${timeFormat.format(Date(e.atMs))}  ${describeCommand(this, e.command)}", 15f, FG, bold = true),
+            text(outcome, 13f, if (e.ok) MUTED else BAD),
+        ).apply { if (gap) setPadding(0, dp(10), 0, 0) }
     }
 
     private fun renderUpdate(s: UpdateState) {
@@ -467,6 +596,12 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, results: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, results)
+        // The first-launch notification question needs no relay restart, only the
+        // notification posted again now that it may be shown.
+        if (requestCode == REQ_NOTIFICATIONS) {
+            RelayForegroundService.ensureRunning(this)
+            return
+        }
         // BLE can only start once the grant exists; a restart picks it up.
         save()
     }
@@ -551,6 +686,8 @@ class MainActivity : Activity() {
     companion object {
         /** The QR's side, in dp: big enough to scan from a phone, never the whole screen. */
         private const val QR_DP = 240
+        private const val REQ_NOTIFICATIONS = 2
+        private const val KEY_ASKED_NOTIFICATIONS = "askedNotifications"
 
         // Same palette as the controller (apps/controller/global.css).
         private val BG = Color.rgb(20, 24, 30)
@@ -560,6 +697,8 @@ class MainActivity : Activity() {
         private val MUTED = Color.rgb(139, 149, 163)
         private val PRIMARY = Color.rgb(232, 176, 75)
         private val PRIMARY_INK = Color.rgb(27, 32, 39)
+        private val GOOD = Color.rgb(106, 190, 130)
+        private val BAD = Color.rgb(224, 108, 98)
 
         private const val ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
 

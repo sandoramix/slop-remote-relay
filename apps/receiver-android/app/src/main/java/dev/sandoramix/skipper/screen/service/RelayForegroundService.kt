@@ -20,6 +20,9 @@ import dev.sandoramix.skipper.screen.actions.ShizukuExecutor
 import dev.sandoramix.skipper.screen.core.Codec
 import dev.sandoramix.skipper.screen.core.Command
 import dev.sandoramix.skipper.screen.core.CommandRouter
+import dev.sandoramix.skipper.screen.core.RelayActivity
+import dev.sandoramix.skipper.screen.core.describeCommand
+import dev.sandoramix.skipper.screen.core.pathLabel
 import dev.sandoramix.skipper.screen.recipes.RecipeEngine
 import dev.sandoramix.skipper.screen.transport.BleGattTransport
 import dev.sandoramix.skipper.screen.transport.LanServerTransport
@@ -64,6 +67,10 @@ class RelayForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Android drops a notification posted while the notification permission is
+        // missing, and does not show it again once the permission is granted. Opening
+        // the app starts the service again, so that is where it is posted a second time.
+        if (notificationText.isNotBlank()) updateNotification(notificationText)
         // START_STICKY so the system restarts us if it reclaims the process.
         return START_STICKY
     }
@@ -143,19 +150,28 @@ class RelayForegroundService : Service() {
         statusJob?.cancel()
         statusJob = scope.launch {
             var lastSummary = ""
+            var lastNotification = ""
             while (true) {
                 val router = router
                 val set = transports
                 if (router != null && set != null) {
                     val status = router.status()
+                    val live = set.liveIds()
+                    RelayActivity.livePaths = live
                     // The episode is in here so that the remote sees the new one
                     // as soon as a step has loaded, without waiting for its own poll.
-                    val summary = "${status.foregroundPackage}|${status.isPlaying}|${status.nav?.current}|${set.liveIds()}"
+                    val summary = "${status.foregroundPackage}|${status.isPlaying}|${status.nav?.current}|$live"
                     if (summary != lastSummary) {
                         lastSummary = summary
                         AppLog.d(TAG, "status changed: $summary")
                         set.broadcast(router.event("status", status))
-                        updateNotification(describe(set.liveIds()))
+                    }
+                    // Separate from the status event: who is connected, and the last
+                    // command, change on their own and the notification should follow.
+                    val text = describe(live)
+                    if (text != lastNotification) {
+                        lastNotification = text
+                        updateNotification(text)
                     }
                 }
                 delay(3_000)
@@ -163,9 +179,16 @@ class RelayForegroundService : Service() {
         }
     }
 
-    private fun describe(live: List<String>): String = when {
-        live.isEmpty() -> str(R.string.notif_listening)
-        else -> str(R.string.notif_connected, live.joinToString(", "))
+    /**
+     * "Connected" is a controller heard from lately, not a transport being up: the
+     * LAN server listening says nothing about anyone being there.
+     */
+    private fun describe(live: List<String>): String {
+        val via = RelayActivity.connectedVia() ?: return str(R.string.notif_listening)
+        val path = pathLabel(this, via)
+        val last = RelayActivity.recent().firstOrNull()
+        return if (last == null) str(R.string.notif_connected, path)
+        else str(R.string.notif_connected_last, path, describeCommand(this, last.command))
     }
 
     override fun onDestroy() {
@@ -181,12 +204,17 @@ class RelayForegroundService : Service() {
     private fun buildNotification(text: String): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // The first versions used IMPORTANCE_MIN under "relay.status": no
+            // status-bar icon and tucked away, so on many phones nobody could
+            // see that the service was running. Android ignores a raised
+            // importance on a channel that already exists, hence a new id.
+            manager.deleteNotificationChannel(OLD_CHANNEL_ID)
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
                     str(R.string.notif_channel),
-                    // MIN so the persistent notification stays out of the way.
-                    NotificationManager.IMPORTANCE_MIN,
+                    // LOW: shown in the shade and the status bar, never makes a sound.
+                    NotificationManager.IMPORTANCE_LOW,
                 ),
             )
         }
@@ -207,7 +235,12 @@ class RelayForegroundService : Service() {
             .build()
     }
 
+    /** What the notification says now, so it can be posted again without waiting for a change. */
+    @Volatile
+    private var notificationText = ""
+
     private fun updateNotification(text: String) {
+        notificationText = text
         getSystemService(NotificationManager::class.java)
             .notify(NOTIFICATION_ID, buildNotification(text))
     }
@@ -243,7 +276,8 @@ class RelayForegroundService : Service() {
         const val KEY_MQTT_URL = "mqttUrl"
         /** Comma-separated transport ids the user switched off. */
         const val KEY_DISABLED = "disabledTransports"
-        private const val CHANNEL_ID = "relay.status"
+        private const val CHANNEL_ID = "relay.status.v2"
+        private const val OLD_CHANNEL_ID = "relay.status"
         private const val NOTIFICATION_ID = 4711
         private const val TAG = "RelayForegroundService"
     }
