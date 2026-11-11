@@ -2,7 +2,11 @@
 <resources>
     <string name="app_name">Skipper Screen</string>
     <string name="accessibility_label">Skipper Screen: fullscreen</string>
-    <string name="accessibility_description">Lets the paired phone switch the app in the foreground to fullscreen. It does not read or transmit the screen content.</string>
+    <string name="accessibility_description">Lets the paired phone press fullscreen, play and episode buttons in the app in the foreground. It reads on-screen controls only to find those buttons and shares only playback status with your paired phone.</string>
+    <string name="disclosure_title">Accessibility access</string>
+    <string name="disclosure_body">Skipper Screen uses Android\'s Accessibility service so that YOUR paired phone can control playback on this screen.\n\nWhat it does: when you send a command (fullscreen, play, seek, next episode), it looks at the controls of the app in the foreground, such as Chrome or YouTube, finds the matching button and presses it.\n\nWhat it reads: on-screen control labels, the page title and, if the controller asks, the episode list of a video page. This is sent only to your paired controller, over the connection you set up. It is not stored, not sold and not shared with anyone else. It never reads passwords or what you type, and it never acts on its own.\n\nYou can turn it off at any time in Settings → Accessibility.</string>
+    <string name="disclosure_agree">Agree and continue</string>
+    <string name="disclosure_cancel">Not now</string>
     <string name="subtitle">Receiver — this phone is the one being controlled</string>
     <string name="language_label">Language</string>
     <string name="language_en">English</string>

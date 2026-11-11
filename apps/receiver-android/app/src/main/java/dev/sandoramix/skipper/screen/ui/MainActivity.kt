@@ -41,6 +41,7 @@ import dev.sandoramix.skipper.screen.service.RelayForegroundService
 import dev.sandoramix.skipper.screen.service.RelayNotificationListener
 import dev.sandoramix.skipper.screen.shizuku.ShizukuBridge
 import dev.sandoramix.skipper.screen.transport.MqttTransport
+import dev.sandoramix.skipper.screen.BuildConfig
 import dev.sandoramix.skipper.screen.update.UpdateState
 import dev.sandoramix.skipper.screen.update.Updater
 import dev.sandoramix.skipper.screen.update.releaseSummary
@@ -174,7 +175,16 @@ class MainActivity : Activity() {
                 startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             },
             button(getString(R.string.perm_accessibility), secondary = true) {
-                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                // Google Play requires a prominent in-app disclosure, with explicit
+                // consent, before the user is sent to enable an accessibility service.
+                android.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.disclosure_title)
+                    .setMessage(R.string.disclosure_body)
+                    .setPositiveButton(R.string.disclosure_agree) { _, _ ->
+                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
+                    .setNegativeButton(R.string.disclosure_cancel, null)
+                    .show()
             },
             button(getString(R.string.perm_bluetooth), secondary = true) { requestRuntimePermissions() },
             button(getString(R.string.perm_write_settings), secondary = true) {
@@ -200,9 +210,10 @@ class MainActivity : Activity() {
             },
         )
 
+        // The Play flavor is updated by Play: no GitHub updater card there.
         val left = listOf(
             title, subtitle, languageRow(), card(statusView),
-            header(getString(R.string.update_header)), updates,
+        ) + (if (BuildConfig.GITHUB_UPDATES) listOf(header(getString(R.string.update_header)), updates) else emptyList()) + listOf(
             header(getString(R.string.header_pairing)), pairingCard,
         )
         val right = listOf(
@@ -231,7 +242,7 @@ class MainActivity : Activity() {
         })
 
         // One quiet look at GitHub per 12 hours; it never downloads or installs anything.
-        if (updater.silentCheckDue()) updater.check(silent = true)
+        if (BuildConfig.GITHUB_UPDATES && updater.silentCheckDue()) updater.check(silent = true)
     }
 
     /** What a developer asks first: what the receiver has been granted and which paths are on. */
@@ -337,7 +348,7 @@ class MainActivity : Activity() {
         RelayForegroundService.ensureRunning(this)
         refresh()
         // Back from the "install unknown apps" screen: carry on with the update that asked for it.
-        updater.resumeAfterPermission(this)
+        if (BuildConfig.GITHUB_UPDATES) updater.resumeAfterPermission(this)
     }
 
     private fun save() {

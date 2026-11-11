@@ -12,7 +12,7 @@
   <header class="hero">
     <p><a href="./">← Skipper</a></p>
     <h1>Privacy policy</h1>
-    <p class="lead">Covers Skipper, Skipper Screen and Skipper for Chrome. Last updated 29 September 2026.</p>
+    <p class="lead">Covers Skipper, Skipper Screen and Skipper for Chrome. Last updated 11 November 2026.</p>
   </header>
 
   <section>
@@ -69,14 +69,24 @@
     <h2>What the Android apps read</h2>
     <p>
       Skipper Screen uses Notification access to see which media session is playing and seek it precisely,
-      and Accessibility to find and press the fullscreen button of the app in front. It doesn't record,
-      store or send the contents of your screen or your notifications.
+      and Accessibility to find and press the fullscreen, play and episode buttons of the app in front.
+      To find them it reads the labels of the on-screen controls, the page title and, when the controller
+      asks for it, the episode list of a video page. That is sent only to your paired controller, as
+      described above. It isn't stored, sold or shared with anyone else, and it never reads passwords or
+      what you type. It doesn't record the contents of your screen or read your notifications' text.
+      Both are switched on by you in Android's settings, after an in-app explanation, and can be switched
+      off there at any time.
+    </p>
+    <p>
+      Skipper uses Bluetooth and the local network (Wi-Fi) only to find and talk to your paired receiver.
+      On Android 11 and older, the system ties Bluetooth scanning to the location permission; Skipper never
+      reads or stores your location. Neither app uses your contacts, camera, microphone, photos or files.
     </p>
   </section>
 
   <section>
     <h2>Updates</h2>
-    <p>When the browser extension is installed from a GitHub release, it checks <code>api.github.com</code> twice a day for a newer version. The request carries no personal data. The Chrome Web Store version skips this check, since the store updates it. The Android apps don't check for updates.</p>
+    <p>When the browser extension is installed from a GitHub release, it checks <code>api.github.com</code> twice a day for a newer version. The request carries no personal data. The Chrome Web Store version skips this check, since the store updates it. The Android apps installed from a GitHub release check the same address at most every 12 hours and only download an update when you tap the button. The Google Play versions don't check anything, since Google Play updates them.</p>
   </section>
 
   <section>

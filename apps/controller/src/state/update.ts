@@ -16,6 +16,12 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 /** The version this build was made from; the release tag in CI. */
 export const currentVersion = (): string => Constants.expoConfig?.version ?? '0.0.0';
 
+/**
+ * True in the Google Play build (RELAY_PLAY=1 in app.config.ts). Play updates
+ * the app itself, so nothing here talks to GitHub and no update UI is shown.
+ */
+export const isPlayBuild: boolean = Constants.expoConfig?.extra?.play === true;
+
 /** How often the app asks GitHub on its own; "Check now" ignores it. */
 const CHECK_EVERY_MS = 12 * 60 * 60 * 1000;
 const CHECK_TIMEOUT_MS = 15_000;
@@ -59,7 +65,7 @@ export const useUpdate = create<UpdateState>()(
       snooze: null,
       check: async (force = false) => {
         const { checking, checkedAt } = get();
-        if (checking) return;
+        if (isPlayBuild || checking) return;
         if (!force && !isCheckDue(checkedAt ?? 0, Date.now(), CHECK_EVERY_MS)) return;
         set({ checking: true, failed: false });
         const timeout = new AbortController();
@@ -108,6 +114,7 @@ export const useUpdate = create<UpdateState>()(
 
 /** The newer release, if there is one; null when up to date or not checked yet. */
 export function newerRelease(latest: UpdateInfo | null): UpdateInfo | null {
+  if (isPlayBuild) return null;
   return latest && compareVersions(latest.version, currentVersion()) > 0 ? latest : null;
 }
 

@@ -21,7 +21,7 @@ To build one app at a given version without bumping, set `RELAY_VERSION`, e.g.
 
 | Artifact | Built by |
 |---|---|
-| `relay-receiver-<v>.apk` | Gradle, `apps/receiver-android` |
+| `relay-receiver-<v>.apk` | Gradle `assembleGithubRelease`, `apps/receiver-android` |
 | `relay-controller-<v>.apk` | `expo prebuild` + Gradle (arm64-v8a, armeabi-v7a) |
 | `relay-controller-<v>-unsigned.ipa` | `expo prebuild` + `xcodebuild` on macOS, unsigned |
 | `relay-extension-<v>.zip` | esbuild, `apps/browser-extension` |
@@ -29,6 +29,10 @@ To build one app at a given version without bumping, set `RELAY_VERSION`, e.g.
 | `relay-server-<v>.tgz` | `tsc`, `services/relay` |
 | `ghcr.io/<owner>/slop-remote-relay-server:<v>` and `:latest` | Docker, linux/amd64 + linux/arm64 |
 | `SHA256SUMS.txt` | checksums of all of the above |
+
+The Google Play bundles (`relay-receiver-<v>-play.aab`, `relay-controller-<v>-play.aab`,
+no GitHub updater) are **not** part of a tag release: run *Actions → Play bundles*
+by hand and upload them in the Play Console.
 
 Release notes are written for you: `tools/release-notes.mjs` lists the commits
 since the previous tag, grouped by Conventional Commit type (`feat`, `fix`,

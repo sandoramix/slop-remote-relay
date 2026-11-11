@@ -33,13 +33,22 @@ Seeking keeps working: it goes through notification access, which APM leaves
 alone. And fullscreen can come back through [Shizuku](SHIZUKU.md). That is the
 practical reason the execution chain has three independent layers.
 
-## 3. Google Play: not an option
+## 3. Google Play: a risk taken knowingly
 
 `isAccessibilityTool` may only be declared by services designed to assist people
 with disabilities. Relay isn't one, and declaring it would be a false
-statement. In practice: distribution by sideload (GitHub Releases) or an
-internal channel, never the Play Store.
+statement, so the manifest does not.
 
+Play still accepts non-accessibility tools that use the API, under conditions:
+a prominent in-app disclosure before the user enables the service, an
+Accessibility declaration in the Play Console with a video, and no autonomous
+behaviour (Play's January 2026 clarification bans an app planning and executing
+actions on its own). The receiver does only what the user's own paired
+controller commands. It can still be refused at review or taken down later, and
+Advanced Protection Mode (§2) still applies to a Play install.
+
+The decision is to publish both apps on Play anyway, as a separate **`play`
+flavor** with no GitHub updater. GitHub Releases stay the fallback.
 ## 4. Developer verification
 
 From 30 September 2026, apps must be registered by verified developers to

@@ -17,7 +17,7 @@ PKG=dev.sandoramix.skipper.screen
 adb wait-for-device
 until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 2; done
 
-(cd "$ROOT/apps/receiver-android" && ./gradlew -q installDebug)
+(cd "$ROOT/apps/receiver-android" && ./gradlew -q installGithubDebug)
 
 TMP="$(mktemp)"
 cat > "$TMP" <<XML

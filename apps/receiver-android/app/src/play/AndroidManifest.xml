@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Play Store flavor. Google Play updates the app, so everything that exists only
+  for the GitHub self-updater is stripped from the merged manifest:
+
+  - REQUEST_INSTALL_PACKAGES: Play policy forbids apps that install other APKs
+    or update themselves outside Play.
+  - REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: restricted by Play policy; the app only
+    opens ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS, which needs no permission.
+  - UpdateInstallReceiver: the result receiver of the PackageInstaller session.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        tools:node="remove" />
+
+    <application>
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            tools:node="remove" />
+    </application>
+</manifest>

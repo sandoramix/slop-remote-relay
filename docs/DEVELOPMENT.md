@@ -61,9 +61,14 @@ Notes from getting it to build:
 
 ```bash
 cd apps/receiver-android
-./gradlew test assembleDebug          # 42 unit tests: codec vectors, MQTT codec, commands, navigation, player start, updates
-./gradlew installDebug
+./gradlew test assembleGithubDebug    # 42 unit tests: codec vectors, MQTT codec, commands, navigation, player start, updates
+./gradlew installGithubDebug
+./gradlew bundlePlayRelease           # the Google Play bundle; needs signing properties to be uploadable
 ```
+
+Two product flavors share the code: `github` (the sideloaded APK with the GitHub
+updater) and `play` (no updater, no `REQUEST_INSTALL_PACKAGES`). The controller's
+Play build is `RELAY_PLAY=1` before `expo prebuild`.
 
 The debug build allows cleartext `ws://` (a relay on a laptop); release builds
 require `wss://`.

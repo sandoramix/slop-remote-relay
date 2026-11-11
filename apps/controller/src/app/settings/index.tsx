@@ -13,7 +13,7 @@ import { palette } from '../../lib/palette';
 import { TRANSPORTS } from '../../lib/transports/registry';
 import { startUpdate } from '../../lib/updater';
 import { isEnabled, LANGUAGES, normalizeOrder, useSettings } from '../../state/settings';
-import { currentVersion, useNewerRelease, useUpdate } from '../../state/update';
+import { currentVersion, isPlayBuild, useNewerRelease, useUpdate } from '../../state/update';
 
 const SITE = 'https://sandoramix.github.io/slop-remote-relay/';
 
@@ -124,20 +124,24 @@ export default function SettingsScreen() {
         ))}
       </Section>
 
-      <Section title={t('about.title')} footer={t('about.footer')}>
+      <Section title={t('about.title')} footer={isPlayBuild ? undefined : t('about.footer')}>
         <LinkRow
           icon={<Info size={18} color={palette.muted} />}
           label={t('about.version')}
           value={currentVersion()}
           onPress={() => void Linking.openURL(SITE)}
         />
-        <Divider />
-        <LinkRow
-          icon={<Download size={18} color={newer ? palette.primary : palette.muted} />}
-          label={t('about.updates')}
-          value={updateStatus}
-          onPress={() => (newer ? startUpdate(newer) : void update.check(true))}
-        />
+        {isPlayBuild ? null : (
+          <>
+            <Divider />
+            <LinkRow
+              icon={<Download size={18} color={newer ? palette.primary : palette.muted} />}
+              label={t('about.updates')}
+              value={updateStatus}
+              onPress={() => (newer ? startUpdate(newer) : void update.check(true))}
+            />
+          </>
+        )}
         {newer ? (
           <View className="gap-3 px-4 pb-3.5">
             {newer.summary.map((line) => (

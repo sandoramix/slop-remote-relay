@@ -102,14 +102,16 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'relay' }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'throwaway' }}
         run: |
-          ./gradlew --no-daemon test assembleRelease \
+          # The `github` flavor: the sideloaded APK with the GitHub updater. The
+          # Play bundle is built by play.yml.
+          ./gradlew --no-daemon test assembleGithubRelease \
             -PrelayVersion="$RELAY_VERSION" \
             -Pandroid.injected.signing.store.file="${{ runner.temp }}/release.jks" \
             -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
             -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
           mkdir -p "$GITHUB_WORKSPACE/out"
-          cp app/build/outputs/apk/release/*.apk "$GITHUB_WORKSPACE/out/relay-receiver-${RELAY_VERSION}.apk"
+          cp app/build/outputs/apk/github/release/*.apk "$GITHUB_WORKSPACE/out/relay-receiver-${RELAY_VERSION}.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: receiver

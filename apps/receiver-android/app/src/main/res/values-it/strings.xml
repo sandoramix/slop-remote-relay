@@ -2,7 +2,11 @@
 <resources>
     <string name="app_name">Skipper Screen</string>
     <string name="accessibility_label">Skipper Screen: schermo intero</string>
-    <string name="accessibility_description">Permette al telefono accoppiato di attivare lo schermo intero nell\'app in primo piano. Non legge né trasmette il contenuto dello schermo.</string>
+    <string name="accessibility_description">Permette al telefono accoppiato di premere i pulsanti di schermo intero, riproduzione ed episodio nell\'app in primo piano. Legge i controlli a schermo solo per trovare quei pulsanti e condivide con il telefono accoppiato soltanto lo stato della riproduzione.</string>
+    <string name="disclosure_title">Accesso all\'accessibilità</string>
+    <string name="disclosure_body">Skipper Screen usa il servizio di accessibilità di Android perché IL TUO telefono accoppiato possa controllare la riproduzione su questo schermo.\n\nCosa fa: quando invii un comando (schermo intero, play, avanzamento, episodio successivo) guarda i controlli dell\'app in primo piano, come Chrome o YouTube, trova il pulsante giusto e lo preme.\n\nCosa legge: le etichette dei controlli a schermo, il titolo della pagina e, se il controller lo chiede, l\'elenco degli episodi di una pagina video. Viene inviato solo al tuo controller accoppiato, tramite la connessione che hai configurato. Non viene salvato, venduto né condiviso con altri. Non legge mai password o ciò che digiti e non agisce mai da solo.\n\nPuoi disattivarlo in qualsiasi momento in Impostazioni → Accessibilità.</string>
+    <string name="disclosure_agree">Accetto e continuo</string>
+    <string name="disclosure_cancel">Non ora</string>
     <string name="subtitle">Ricevitore — questo telefono viene comandato</string>
     <string name="language_label">Lingua</string>
     <string name="language_en">English</string>

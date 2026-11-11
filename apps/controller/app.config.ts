@@ -11,6 +11,11 @@ const version = (process.env.RELAY_VERSION ?? '0.2.0').replace(/^v/, '');
 const [major = 0, minor = 0, patch = 0] = version.split(/[.-]/).map((n: string) => Number.parseInt(n, 10) || 0);
 /** Monotonic across releases as long as minor and patch stay below 100. */
 const versionCode = major * 10_000 + minor * 100 + patch;
+/**
+ * The Google Play build (RELAY_PLAY=1): Play updates the app, so the GitHub
+ * updater and the permission that backs it are left out. The rest is identical.
+ */
+const play = process.env.RELAY_PLAY === '1';
 
 const config: ExpoConfig = {
   name: 'Skipper',
@@ -43,16 +48,32 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // react-native-webrtc's plugin adds these even with camera and microphone
+    // off, and the controller only uses data channels. Play would ask for a
+    // justification for each, so the Play build strips them from the manifest.
+    ...(play
+      ? {
+          blockedPermissions: [
+            'android.permission.CAMERA',
+            'android.permission.RECORD_AUDIO',
+            'android.permission.MODIFY_AUDIO_SETTINGS',
+            'android.permission.SYSTEM_ALERT_WINDOW',
+          ],
+        }
+      : {}),
     permissions: [
       'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.ACCESS_WIFI_STATE',
       'android.permission.CHANGE_WIFI_MULTICAST_STATE',
       'android.permission.VIBRATE',
-      // In-app updates: hands the downloaded APK to the system installer.
-      'android.permission.REQUEST_INSTALL_PACKAGES',
+      // In-app updates (GitHub build only): hands the downloaded APK to the
+      // system installer. Play policy forbids it, so the Play build omits it.
+      ...(play ? [] : ['android.permission.REQUEST_INSTALL_PACKAGES']),
     ],
   },
+  // Read at runtime through expo-constants: hides the GitHub update UI.
+  extra: { play },
   plugins: [
     'expo-router',
     [

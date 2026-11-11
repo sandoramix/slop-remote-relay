@@ -42,8 +42,8 @@ SIGNING=(
 mkdir -p "$OUT"
 
 echo "== receiver ($VERSION)"
-(cd "$ROOT/apps/receiver-android" && ./gradlew -q assembleRelease "-PrelayVersion=$VERSION" "${SIGNING[@]}")
-cp "$ROOT/apps/receiver-android/app/build/outputs/apk/release/app-release.apk" "$OUT/relay-receiver-$VERSION.apk"
+(cd "$ROOT/apps/receiver-android" && ./gradlew -q assembleGithubRelease "-PrelayVersion=$VERSION" "${SIGNING[@]}")
+cp "$ROOT/apps/receiver-android/app/build/outputs/apk/github/release/app-github-release.apk" "$OUT/relay-receiver-$VERSION.apk"
 
 echo "== controller ($VERSION)"
 (cd "$ROOT/apps/controller" && CI=1 RELAY_VERSION="$VERSION" npx expo prebuild --platform android --clean --no-install >/dev/null)

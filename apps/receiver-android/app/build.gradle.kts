@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "dev.sandoramix.skipper.screen"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.sandoramix.skipper.screen"
         minSdk = 26          // MediaSession + dispatchGesture both need 24; 26 for channels
-        targetSdk = 35
+        targetSdk = 36       // Google Play requires 36 for new apps and updates (since 2026-08-31)
         versionCode = 1
         versionName = "0.8.1"
     }
@@ -18,6 +18,23 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+        }
+    }
+
+    // Two distributions of the same code. `github` is the sideloaded APK with
+    // its own GitHub-release updater; `play` is the Play Store bundle, which
+    // Google updates itself: no REQUEST_INSTALL_PACKAGES, no updater UI, no
+    // REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (the settings screen the app opens
+    // needs no permission). See src/play/AndroidManifest.xml.
+    flavorDimensions += "dist"
+    productFlavors {
+        create("github") {
+            dimension = "dist"
+            buildConfigField("boolean", "GITHUB_UPDATES", "true")
+        }
+        create("play") {
+            dimension = "dist"
+            buildConfigField("boolean", "GITHUB_UPDATES", "false")
         }
     }
 
