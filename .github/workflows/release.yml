@@ -436,6 +436,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHROME_WEBSTORE_URL: ${{ vars.CHROME_WEBSTORE_URL }}
+          TESTERS_GROUP_URL: ${{ vars.TESTERS_GROUP_URL }}
         run: |
           node tools/altstore-source.mjs site "${{ runner.temp }}/ios-info.json"
           tools/pages-fill.sh site

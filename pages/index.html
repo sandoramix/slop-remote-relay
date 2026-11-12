@@ -18,13 +18,39 @@
     across the room. Skipper turns the phone in your hand into its remote: jump, rewind, pause and go
     fullscreen without getting up.
   </p>
+  <div class="play" id="play">
+    <p class="play-title"><span class="badge">Beta</span> Now on Google Play</p>
+    <p class="play-sub">Join the internal testing track. Play installs the apps and keeps them up to date.</p>
+    <div class="actions">
+      <a class="button primary" href="https://play.google.com/apps/test/dev.sandoramix.skipper/901"><span class="btn-label">Skipper</span><span class="btn-sub">the remote · phone in your hand</span></a>
+      <a class="button primary" href="https://play.google.com/apps/test/dev.sandoramix.skipper.screen/902"><span class="btn-label">Skipper Screen</span><span class="btn-sub">the receiver · phone playing video</span></a>
+    </div>
+    <p class="note">Play says the app isn't available? <a href="#access">Join the closed beta in one tap.</a></p>
+  </div>
   <div class="actions">
-    <a class="button primary" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Download</a>
+    <a class="button" href="https://github.com/sandoramix/slop-remote-relay/releases/latest">Download the APKs</a>
     <a class="button" href="https://github.com/sandoramix/slop-remote-relay">Source on GitHub</a>
   </div>
 </header>
 
 <main>
+  <section id="access">
+    <h2>Can't see the app? Join the closed beta</h2>
+    <p>Google Play only shows a beta app to accounts on its tester list. Joining takes two taps:</p>
+    <ol class="steps">
+      <li>
+        <h3>Join the testers group</h3>
+        <p>Signed in with the Google account you use on Play, open the group and tap <em>Join group</em>. No approval, no form.</p>
+        <p><a class="button primary" href="__TESTERS_GROUP_URL__">Join the testers group</a></p>
+      </li>
+      <li>
+        <h3>Open the Play link and install</h3>
+        <p>Tap <a href="https://play.google.com/apps/test/dev.sandoramix.skipper/901">Skipper</a> or <a href="https://play.google.com/apps/test/dev.sandoramix.skipper.screen/902">Skipper Screen</a>, then <em>Become a tester</em> and <em>Install</em>. If Play still says it isn't available, wait a few minutes and try again: the group takes a moment to reach Play.</p>
+      </li>
+    </ol>
+    <p class="note">The group is only a tester list: Google shows your address to its managers, and you won't get messages from it. Leave it any time. Prefer not to? <a href="#install">Install the APKs</a> instead.</p>
+  </section>
+
   <section>
     <h2>What it does</h2>
     <ul class="features">
@@ -88,14 +114,23 @@
     <h2>Install</h2>
     <ol class="steps">
       <li>
-        <h3>Download</h3>
-        <p>From the <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a>:</p>
+        <h3>Install <span class="optional">recommended: Google Play</span></h3>
+        <p>Join the internal testing track on Google Play (Android), one app per phone:</p>
         <ul>
-          <li><code>relay-controller-&lt;version&gt;.apk</code> on the phone you'll hold</li>
-          <li><code>relay-receiver-&lt;version&gt;.apk</code> on the Android phone that plays video</li>
+          <li><a href="https://play.google.com/apps/test/dev.sandoramix.skipper/901"><strong>Skipper</strong></a>, the remote, on the phone you'll hold</li>
+          <li><a href="https://play.google.com/apps/test/dev.sandoramix.skipper.screen/902"><strong>Skipper Screen</strong></a>, the receiver, on the Android phone that plays video</li>
         </ul>
+        <p>Open each link, tap <em>Become a tester</em>, then install from Play. Updates arrive through Play. Not available? <a href="#access">Join the closed beta first.</a></p>
         <p>For a browser, Skipper for Chrome is on the <a href="__CHROME_WEBSTORE_URL__">Chrome Web Store</a>.</p>
-        <p class="note">Android asks you to allow installs from your browser or file manager. That's expected for apps outside the Play Store.</p>
+        <details class="alt">
+          <summary>Not on the tester list? Install the APKs instead</summary>
+          <p>From the <a href="https://github.com/sandoramix/slop-remote-relay/releases/latest">latest release</a>:</p>
+          <ul>
+            <li><code>relay-controller-&lt;version&gt;.apk</code> on the phone you'll hold</li>
+            <li><code>relay-receiver-&lt;version&gt;.apk</code> on the Android phone that plays video</li>
+          </ul>
+          <p class="note">Android asks you to allow installs from your browser or file manager. That's expected for apps installed outside Google Play. These builds check GitHub for updates themselves.</p>
+        </details>
         <p class="note"><strong>iPhone as the remote:</strong> in <a href="https://altstore.io">AltStore</a> or <a href="https://sidestore.io">SideStore</a>, go to <em>Browse → Sources → +</em> and add <code>https://sandoramix.github.io/slop-remote-relay/altstore.json</code>.</p>
       </li>
       <li>
@@ -106,7 +141,7 @@
           <li><strong>Accessibility</strong>: for fullscreen. It reads the screen only to find the fullscreen button and never records or sends it.</li>
           <li><strong>Battery optimisation and autostart</strong>: skip these and the screen stops listening overnight.</li>
         </ul>
-        <p class="note">On Android 13+ Accessibility may be greyed out for sideloaded apps. Open <em>App info → ⋮ → Allow restricted settings</em> first.</p>
+        <p class="note">If you installed the APK instead of the Play build and Android 13+ greys out Accessibility, open <em>App info → ⋮ → Allow restricted settings</em> first.</p>
         <div class="shots">
           <figure>
             <img src="img/screen-qr.png" width="420" height="680" alt="Skipper Screen on a phone: the pairing code, the relay and MQTT addresses, and the QR code to scan">

@@ -17,7 +17,7 @@
 <h1 id="title">Pair Skipper</h1>
 <p id="msg">Opening Skipper…</p>
 <a class="btn" id="open" href="#">Open in Skipper</a>
-<p class="muted"><span id="noapp">Don't have the app?</span> <a class="sub" id="get" href="../#install">Get the remote</a><span id="then">, then come back here and tap the button.</span></p>
+<p class="muted"><span id="noapp">Don't have the app?</span> <a class="sub" id="get" href="https://play.google.com/apps/test/dev.sandoramix.skipper/901">Get the remote on Google Play</a><span id="then">, then come back here and tap the button.</span> <a class="sub" id="other" href="../#install">Other ways to install</a></p>
 <p class="muted" id="manual" hidden><span id="manualText">Or enter this code by hand:</span> <code id="code"></code></p>
 <script>
   // English first, Italian when the browser asks for it.
@@ -27,8 +27,9 @@
       msg: 'Opening Skipper…',
       open: 'Open in Skipper',
       noapp: "Don't have the app?",
-      get: 'Get the remote',
+      get: 'Get the remote on Google Play',
       then: ', then come back here and tap the button.',
+      other: 'Other ways to install',
       manualText: 'Or enter this code by hand:',
       invalid: 'Invalid pairing link.',
     },
@@ -37,8 +38,9 @@
       msg: 'Apro Skipper…',
       open: 'Apri in Skipper',
       noapp: "Non hai l'app?",
-      get: 'Scarica il telecomando',
+      get: 'Scarica il telecomando da Google Play',
       then: ', poi torna qui e tocca il pulsante.',
+      other: 'Altri modi per installare',
       manualText: 'Oppure inserisci questo codice a mano:',
       invalid: 'Link di associazione non valido.',
     },
@@ -47,7 +49,7 @@
   var s = STRINGS[lang];
   document.documentElement.lang = lang;
   document.title = s.title;
-  ['title', 'msg', 'open', 'noapp', 'get', 'then', 'manualText'].forEach(function (id) {
+  ['title', 'msg', 'open', 'noapp', 'get', 'then', 'other', 'manualText'].forEach(function (id) {
     document.getElementById(id).textContent = s[id];
   });
 
